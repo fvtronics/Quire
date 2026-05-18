@@ -5,6 +5,6 @@ Icon=com.fvtronics.folios
 Terminal=false
 Type=Application
 Categories=Utility;
-Keywords=GTK;
+Keywords=PDF;Merge;Document;GTK;
 StartupNotify=true
 DBusActivatable=true

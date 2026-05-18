@@ -3,8 +3,8 @@ using Adw 1;
 
 template $FoliosWindow: Adw.ApplicationWindow {
   title: _("Folios");
-  default-width: 800;
-  default-height: 600;
+  default-width: 1000;
+  default-height: 700;
 
   content: Adw.ToolbarView {
     [top]
@@ -18,17 +18,173 @@ template $FoliosWindow: Adw.ApplicationWindow {
       }
     }
 
-    content: Gtk.Label label {
-      label: _("Hello, Blueprint!");
-      styles ["title-1"]
+    content: Adw.ToastOverlay toast_overlay {
+      child: Gtk.Box {
+        orientation: horizontal;
+
+        Gtk.Box {
+          orientation: vertical;
+          width-request: 240;
+          styles ["navigation-sidebar"]
+
+          Gtk.Label {
+            label: _("PDF Tools");
+            xalign: 0;
+            margin-start: 18;
+            margin-end: 18;
+            margin-top: 18;
+            margin-bottom: 6;
+            styles ["heading"]
+          }
+
+          Gtk.ListBox {
+            selection-mode: none;
+            margin-start: 12;
+            margin-end: 12;
+            styles ["boxed-list"]
+
+            Adw.ActionRow {
+              title: _("Merge");
+              subtitle: _("Combine PDFs");
+              icon-name: "view-paged-symbolic";
+              activatable: false;
+            }
+
+            Adw.ActionRow {
+              title: _("Organize Pages");
+              subtitle: _("Coming later");
+              icon-name: "view-grid-symbolic";
+              sensitive: false;
+              activatable: false;
+            }
+
+            Adw.ActionRow {
+              title: _("Extract Pages");
+              subtitle: _("Coming later");
+              icon-name: "edit-copy-symbolic";
+              sensitive: false;
+              activatable: false;
+            }
+          }
+        }
+
+        Gtk.Separator {
+          orientation: vertical;
+        }
+
+        Gtk.Box {
+          orientation: vertical;
+          spacing: 18;
+          hexpand: true;
+          margin-start: 36;
+          margin-end: 36;
+          margin-top: 30;
+          margin-bottom: 30;
+
+          Gtk.Box {
+            orientation: horizontal;
+            spacing: 12;
+
+            Gtk.Box {
+              orientation: vertical;
+              spacing: 3;
+              hexpand: true;
+
+              Gtk.Label {
+                label: _("Merge PDFs");
+                xalign: 0;
+                styles ["title-2"]
+              }
+
+              Gtk.Label file_count_label {
+                label: _("No files selected");
+                xalign: 0;
+                styles ["dim-label"]
+              }
+            }
+
+            Gtk.Button add_button {
+              visible: false;
+              valign: center;
+              tooltip-text: _("Add PDF Files");
+              child: Adw.ButtonContent {
+                icon-name: "list-add-symbolic";
+                label: _("Add PDFs");
+              };
+            }
+
+            Gtk.Button open_output_button {
+              visible: false;
+              sensitive: false;
+              valign: center;
+              tooltip-text: _("Open Output File");
+
+              child: Adw.ButtonContent {
+                icon-name: "document-open-symbolic";
+                label: _("Open Output");
+              };
+            }
+
+            Gtk.Button clear_button {
+              visible: false;
+              sensitive: false;
+              valign: center;
+              tooltip-text: _("Clear File List");
+
+              child: Adw.ButtonContent {
+                icon-name: "edit-clear-symbolic";
+                label: _("Clear");
+              };
+            }
+
+            Gtk.Button merge_button {
+              visible: false;
+              sensitive: false;
+              valign: center;
+              tooltip-text: _("Merge Selected PDFs");
+              styles ["suggested-action"]
+
+              child: Adw.ButtonContent {
+                icon-name: "document-save-symbolic";
+                label: _("Merge");
+              };
+            }
+          }
+
+          Adw.StatusPage empty_status {
+            icon-name: "view-paged-symbolic";
+            title: _("Add PDFs to Begin");
+            description: _("Choose two or more PDF files to combine into a new document.");
+
+            child: Gtk.Button empty_add_button {
+              halign: center;
+              tooltip-text: _("Add PDF Files");
+              styles ["suggested-action"]
+
+              child: Adw.ButtonContent {
+                icon-name: "list-add-symbolic";
+                label: _("Add PDFs");
+              };
+            };
+          }
+
+          Gtk.ScrolledWindow file_scroller {
+            vexpand: true;
+            visible: false;
+
+            child: Gtk.ListBox file_list {
+              selection-mode: none;
+              styles ["boxed-list"]
+            };
+          }
+        }
+      };
     };
   };
 }
 
 menu primary_menu {
   section {
-    item (_("_Preferences"), "app.preferences")
-    item (_("_Keyboard Shortcuts"), "app.shortcuts")
     item (_("_About Folios"), "app.about")
   }
 }
