@@ -1,7 +1,7 @@
 {
     "id" : "com.fvtronics.folios",
     "runtime" : "org.gnome.Platform",
-    "runtime-version" : "master",
+    "runtime-version" : "50",
     "sdk" : "org.gnome.Sdk",
     "sdk-extensions" : [
         "org.freedesktop.Sdk.Extension.rust-stable"
@@ -42,8 +42,8 @@
             "buildsystem" : "meson",
             "sources" : [
                 {
-                    "type" : "git",
-                    "url" : "file:///home/francisco/Código/Builder"
+                    "type" : "dir",
+                    "path" : "."
                 }
             ],
             "config-opts" : [

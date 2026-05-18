@@ -3,4 +3,5 @@
 data/com.fvtronics.folios.desktop.in
 data/com.fvtronics.folios.metainfo.xml.in
 data/com.fvtronics.folios.gschema.xml
-src/window.ui
+src/shortcuts-dialog.blp
+src/window.blp

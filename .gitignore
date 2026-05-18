@@ -11,6 +11,10 @@
 /.flatpak-builder/
 /.gnome-builder/
 
+# Meson subprojects
+/subprojects/.wraplock
+/subprojects/blueprint-compiler
+
 # Flatpak
 /.flatpak/
 /repo/
@@ -24,6 +28,7 @@ meson-logs/
 meson-info/
 
 # Generated files
+/src/config.rs
 *.gresource
 *.gresource.xml~
 *.ui~

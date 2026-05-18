@@ -1,9 +1,26 @@
 pkgdatadir = get_option('prefix') / get_option('datadir') / meson.project_name()
 gnome = import('gnome')
 
+blueprints = custom_target('blueprints',
+  input: files(
+    'shortcuts-dialog.blp',
+    'window.blp',
+  ),
+  output: '.',
+  command: [
+    find_program('blueprint-compiler'),
+    'batch-compile',
+    '--minify',
+    '@OUTPUT@',
+    '@CURRENT_SOURCE_DIR@',
+    '@INPUT@',
+  ],
+)
+
 gnome.compile_resources('folios',
   'folios.gresource.xml',
   gresource_bundle: true,
+  dependencies: blueprints,
   install: true,
   install_dir: pkgdatadir,
 )
