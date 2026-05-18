@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="paperShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#3C4A5C" flood-opacity="0.16"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#4B5E75" flood-opacity="0.12"/>
+    </filter>
+
+    <filter id="foldShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="9" stdDeviation="7" flood-color="#45576C" flood-opacity="0.22"/>
+    </filter>
+
+    <filter id="smallShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="13" flood-color="#4D5B6A" flood-opacity="0.18"/>
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#4D5B6A" flood-opacity="0.12"/>
+    </filter>
+
+    <linearGradient id="backSheet" x1="227" y1="190" x2="510" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E3F2FF"/>
+      <stop offset="1" stop-color="#A8D0FF"/>
+    </linearGradient>
+
+    <linearGradient id="frontPaper" x1="330" y1="128" x2="615" y2="790" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.58" stop-color="#FAFBFD"/>
+      <stop offset="1" stop-color="#EEF3F8"/>
+    </linearGradient>
+
+    <linearGradient id="mainFold" x1="610" y1="150" x2="742" y2="316" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.65" stop-color="#F4F7FB"/>
+      <stop offset="1" stop-color="#E4ECF6"/>
+    </linearGradient>
+
+    <linearGradient id="redFile" x1="646" y1="526" x2="812" y2="836" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFEAEA"/>
+      <stop offset="0.55" stop-color="#FFC1C1"/>
+      <stop offset="1" stop-color="#FF9D9D"/>
+    </linearGradient>
+
+    <linearGradient id="smallFold" x1="764" y1="538" x2="828" y2="615" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF7F7"/>
+      <stop offset="0.72" stop-color="#FFDCDC"/>
+      <stop offset="1" stop-color="#FFC0C0"/>
+    </linearGradient>
+
+    <linearGradient id="arrowRed" x1="438" y1="600" x2="683" y2="801" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF6868"/>
+      <stop offset="1" stop-color="#D71920"/>
+    </linearGradient>
+
+    <linearGradient id="lineGray" x1="360" y1="392" x2="624" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#CBD6E3"/>
+      <stop offset="1" stop-color="#B8C6D7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rear document -->
+  <path d="M218 225C218 207.327 232.327 193 250 193H535C552.673 193 567 207.327 567 225V784C567 801.673 552.673 816 535 816H250C232.327 816 218 801.673 218 784V225Z"
+        fill="url(#backSheet)" stroke="#9FC9F8" stroke-width="4" filter="url(#paperShadow)"/>
+
+  <!-- main document body -->
+  <g filter="url(#paperShadow)">
+    <path d="M276 162C276 144.327 290.327 130 308 130H592L770 309V748C770 765.673 755.673 780 738 780H308C290.327 780 276 765.673 276 748V162Z"
+          fill="url(#frontPaper)" stroke="#DAE4EF" stroke-width="3"/>
+  </g>
+
+  <!-- main fold: shadow is separate and consistent with fold geometry -->
+  <path d="M592 130V275C592 294.882 608.118 311 628 311H770L592 130Z"
+        fill="#CFD9E6" opacity="0.45" filter="url(#foldShadow)"/>
+  <path d="M592 130V275C592 294.882 608.118 311 628 311H770L592 130Z"
+        fill="url(#mainFold)" stroke="#D7E1EC" stroke-width="3"/>
+  
+
+  <!-- document text lines -->
+  <rect x="362" y="396" width="260" height="28" rx="14" fill="url(#lineGray)"/>
+  <rect x="362" y="464" width="260" height="28" rx="14" fill="url(#lineGray)"/>
+
+  <!-- small PDF-tinted document -->
+  <g filter="url(#smallShadow)">
+    <path d="M626 560C626 544.536 638.536 532 654 532H759L832 606V808C832 823.464 819.464 836 804 836H654C638.536 836 626 823.464 626 808V560Z"
+          fill="url(#redFile)" stroke="#E48181" stroke-width="3"/>
+  </g>
+
+  <!-- small fold with same shadow treatment as main fold -->
+  <path d="M759 532V583C759 598.464 771.536 611 787 611H832L759 532Z"
+        fill="url(#smallFold)" stroke="#E48181" stroke-width="3"/>
+  
+
+  <!-- small document text -->
+  <rect x="676" y="652" width="108" height="26" rx="13" fill="#E44949" opacity="0.76"/>
+  <rect x="676" y="704" width="108" height="26" rx="13" fill="#E44949" opacity="0.76"/>
+
+  <!-- smoother import arrow, closer to the source silhouette -->
+  <g filter="url(#smallShadow)">
+    <path d="M660 785C572 778 509 720 493 645"
+          stroke="url(#arrowRed)" stroke-width="46" stroke-linecap="round" fill="none"/>
+    <path d="M462.5 624.5L450.5 699.5C447.5 718.8 469.7 731.8 485.5 720L545.5 675.2C560.2 664.2 557.1 641.4 540.2 634.6L489.9 614.3C476.2 608.8 464.8 610.4 462.5 624.5Z"
+          fill="url(#arrowRed)" stroke="#BE171D" stroke-width="4" stroke-linejoin="round"/>
+    
+  </g>
+</svg>

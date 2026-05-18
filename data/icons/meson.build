@@ -2,7 +2,7 @@ application_id = 'com.fvtronics.folios'
 
 full_color_dir = 'hicolor' / '512x512' / 'apps'
 install_data(
-  full_color_dir / ('@0@.png').format(application_id),
+  full_color_dir / ('@0@.svg').format(application_id),
   install_dir: get_option('datadir') / 'icons' / full_color_dir
 )
 
