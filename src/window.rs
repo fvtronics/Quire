@@ -25,6 +25,14 @@ use gtk::{gio, glib};
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(super) enum PdfTool {
+    #[default]
+    Merge,
+    Organize,
+    Extract,
+}
+
 mod imp {
     use super::*;
 
@@ -33,6 +41,21 @@ mod imp {
     pub struct FoliosWindow {
         #[template_child]
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
+        #[template_child]
+        pub sidebar_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub merge_tool_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub organize_tool_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub extract_tool_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub merge_workspace: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub organize_workspace: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub extract_workspace: TemplateChild<gtk::Box>,
+
         #[template_child]
         pub add_button: TemplateChild<gtk::Button>,
         #[template_child]
@@ -52,8 +75,56 @@ mod imp {
         #[template_child]
         pub open_output_button: TemplateChild<gtk::Button>,
 
+        #[template_child]
+        pub organize_choose_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub organize_empty_choose_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub organize_detail_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub organize_empty_status: TemplateChild<adw::StatusPage>,
+        #[template_child]
+        pub organize_page_scroller: TemplateChild<gtk::ScrolledWindow>,
+        #[template_child]
+        pub organize_page_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub organize_reset_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub organize_save_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub organize_open_output_button: TemplateChild<gtk::Button>,
+
+        #[template_child]
+        pub extract_choose_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub extract_empty_choose_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub extract_detail_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub extract_empty_status: TemplateChild<adw::StatusPage>,
+        #[template_child]
+        pub extract_content: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub extract_file_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub extract_ranges_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub extract_clear_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub extract_save_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub extract_open_output_button: TemplateChild<gtk::Button>,
+
+        pub(super) active_tool: Cell<PdfTool>,
         pub input_files: RefCell<Vec<PathBuf>>,
         pub last_output: RefCell<Option<PathBuf>>,
+        pub organize_file: RefCell<Option<PathBuf>>,
+        pub organize_page_count: Cell<usize>,
+        pub organize_page_order: RefCell<Vec<u32>>,
+        pub organize_last_output: RefCell<Option<PathBuf>>,
+        pub extract_file: RefCell<Option<PathBuf>>,
+        pub extract_page_count: Cell<usize>,
+        pub extract_last_output: RefCell<Option<PathBuf>>,
         pub is_running: Cell<bool>,
     }
 
@@ -77,7 +148,8 @@ mod imp {
             self.parent_constructed();
             let obj = self.obj();
             obj.setup_callbacks();
-            obj.update_files_view();
+            obj.switch_tool(PdfTool::Merge);
+            obj.update_all_views();
         }
     }
     impl WidgetImpl for FoliosWindow {}
@@ -101,6 +173,21 @@ impl FoliosWindow {
 
     fn setup_callbacks(&self) {
         let imp = self.imp();
+
+        let window = self.clone();
+        imp.merge_tool_row.connect_activated(move |_| {
+            window.switch_tool(PdfTool::Merge);
+        });
+
+        let window = self.clone();
+        imp.organize_tool_row.connect_activated(move |_| {
+            window.switch_tool(PdfTool::Organize);
+        });
+
+        let window = self.clone();
+        imp.extract_tool_row.connect_activated(move |_| {
+            window.switch_tool(PdfTool::Extract);
+        });
 
         let window = self.clone();
         imp.add_button.connect_clicked(move |_| {
@@ -129,6 +216,83 @@ impl FoliosWindow {
         imp.open_output_button.connect_clicked(move |_| {
             window.open_last_output();
         });
+
+        let window = self.clone();
+        imp.organize_choose_button.connect_clicked(move |_| {
+            window.choose_organize_file();
+        });
+
+        let window = self.clone();
+        imp.organize_empty_choose_button.connect_clicked(move |_| {
+            window.choose_organize_file();
+        });
+
+        let window = self.clone();
+        imp.organize_reset_button.connect_clicked(move |_| {
+            window.reset_organize_pdf();
+        });
+
+        let window = self.clone();
+        imp.organize_save_button.connect_clicked(move |_| {
+            window.choose_organize_output_file();
+        });
+
+        let window = self.clone();
+        imp.organize_open_output_button.connect_clicked(move |_| {
+            window.open_last_output();
+        });
+
+        let window = self.clone();
+        imp.extract_choose_button.connect_clicked(move |_| {
+            window.choose_extract_file();
+        });
+
+        let window = self.clone();
+        imp.extract_empty_choose_button.connect_clicked(move |_| {
+            window.choose_extract_file();
+        });
+
+        let window = self.clone();
+        imp.extract_clear_button.connect_clicked(move |_| {
+            window.clear_extract_pdf();
+        });
+
+        let window = self.clone();
+        imp.extract_save_button.connect_clicked(move |_| {
+            window.choose_extract_output_file();
+        });
+
+        let window = self.clone();
+        imp.extract_open_output_button.connect_clicked(move |_| {
+            window.open_last_output();
+        });
+
+        let window = self.clone();
+        imp.extract_ranges_entry.connect_changed(move |_| {
+            window.update_extract_view();
+        });
+    }
+
+    fn switch_tool(&self, tool: PdfTool) {
+        let imp = self.imp();
+        imp.active_tool.set(tool);
+        imp.merge_workspace.set_visible(tool == PdfTool::Merge);
+        imp.organize_workspace
+            .set_visible(tool == PdfTool::Organize);
+        imp.extract_workspace.set_visible(tool == PdfTool::Extract);
+
+        let selected_row: &gtk::ListBoxRow = match tool {
+            PdfTool::Merge => imp.merge_tool_row.upcast_ref(),
+            PdfTool::Organize => imp.organize_tool_row.upcast_ref(),
+            PdfTool::Extract => imp.extract_tool_row.upcast_ref(),
+        };
+        imp.sidebar_list.select_row(Some(selected_row));
+    }
+
+    fn update_all_views(&self) {
+        self.update_files_view();
+        self.update_organize_view();
+        self.update_extract_view();
     }
 
     fn choose_pdf_files(&self) {
@@ -174,6 +338,95 @@ impl FoliosWindow {
         });
     }
 
+    fn choose_organize_file(&self) {
+        let window = self.clone();
+        glib::spawn_future_local(async move {
+            let dialog = gtk::FileDialog::builder()
+                .title(gettext("Open PDF"))
+                .accept_label(gettext("Open"))
+                .modal(true)
+                .filters(&pdf_filters())
+                .build();
+
+            if let Ok(file) = dialog.open_future(Some(&window)).await {
+                if let Some(path) = file.path() {
+                    window.load_organize_pdf(path);
+                }
+            }
+        });
+    }
+
+    fn choose_organize_output_file(&self) {
+        let window = self.clone();
+        glib::spawn_future_local(async move {
+            let dialog = gtk::FileDialog::builder()
+                .title(gettext("Save Organized PDF"))
+                .accept_label(gettext("Save"))
+                .initial_name("Organized.pdf")
+                .modal(true)
+                .filters(&pdf_filters())
+                .build();
+
+            if let Ok(file) = dialog.save_future(Some(&window)).await {
+                if let Some(path) = file.path() {
+                    window.organize_to(path);
+                }
+            }
+        });
+    }
+
+    fn choose_extract_file(&self) {
+        let window = self.clone();
+        glib::spawn_future_local(async move {
+            let dialog = gtk::FileDialog::builder()
+                .title(gettext("Open PDF"))
+                .accept_label(gettext("Open"))
+                .modal(true)
+                .filters(&pdf_filters())
+                .build();
+
+            if let Ok(file) = dialog.open_future(Some(&window)).await {
+                if let Some(path) = file.path() {
+                    window.load_extract_pdf(path);
+                }
+            }
+        });
+    }
+
+    fn choose_extract_output_file(&self) {
+        let imp = self.imp();
+        let Some(input_file) = imp.extract_file.borrow().clone() else {
+            return;
+        };
+        let pages = match crate::pdf::parse_page_ranges(
+            imp.extract_ranges_entry.text().as_str(),
+            imp.extract_page_count.get(),
+        ) {
+            Ok(pages) => pages,
+            Err(error) => {
+                self.show_toast(&error.to_string());
+                return;
+            }
+        };
+
+        let window = self.clone();
+        glib::spawn_future_local(async move {
+            let dialog = gtk::FileDialog::builder()
+                .title(gettext("Save Extracted Pages"))
+                .accept_label(gettext("Extract"))
+                .initial_name("Extracted.pdf")
+                .modal(true)
+                .filters(&pdf_filters())
+                .build();
+
+            if let Ok(file) = dialog.save_future(Some(&window)).await {
+                if let Some(path) = file.path() {
+                    window.extract_to(input_file, pages, path);
+                }
+            }
+        });
+    }
+
     fn add_files(&self, paths: Vec<PathBuf>) {
         if paths.is_empty() {
             return;
@@ -185,13 +438,103 @@ impl FoliosWindow {
         self.update_files_view();
     }
 
+    fn load_organize_pdf(&self, path: PathBuf) {
+        let imp = self.imp();
+        imp.is_running.set(true);
+        imp.organize_last_output.borrow_mut().take();
+        self.update_organize_view();
+
+        let window = self.clone();
+        glib::spawn_future_local(async move {
+            let result = crate::pdf::page_count(path.clone()).await;
+            let imp = window.imp();
+            imp.is_running.set(false);
+
+            match result {
+                Ok(page_count) => {
+                    imp.organize_file.borrow_mut().replace(path);
+                    imp.organize_page_count.set(page_count);
+                    let mut page_order = imp.organize_page_order.borrow_mut();
+                    page_order.clear();
+                    page_order.extend(1..=page_count as u32);
+                }
+                Err(error) => {
+                    window.show_toast(&error.to_string());
+                }
+            }
+
+            window.update_organize_view();
+        });
+    }
+
+    fn load_extract_pdf(&self, path: PathBuf) {
+        let imp = self.imp();
+        imp.is_running.set(true);
+        imp.extract_last_output.borrow_mut().take();
+        self.update_extract_view();
+
+        let window = self.clone();
+        glib::spawn_future_local(async move {
+            let result = crate::pdf::page_count(path.clone()).await;
+            let imp = window.imp();
+            imp.is_running.set(false);
+
+            match result {
+                Ok(page_count) => {
+                    imp.extract_file.borrow_mut().replace(path);
+                    imp.extract_page_count.set(page_count);
+                    imp.extract_ranges_entry.set_text("");
+                }
+                Err(error) => {
+                    window.show_toast(&error.to_string());
+                }
+            }
+
+            window.update_extract_view();
+        });
+    }
+
+    fn clear_organize_pdf(&self) {
+        let imp = self.imp();
+        imp.organize_file.borrow_mut().take();
+        imp.organize_page_count.set(0);
+        imp.organize_page_order.borrow_mut().clear();
+        imp.organize_last_output.borrow_mut().take();
+        self.update_organize_view();
+    }
+
+    fn reset_organize_pdf(&self) {
+        let imp = self.imp();
+        let page_count = imp.organize_page_count.get();
+
+        if imp.organize_file.borrow().is_none() || page_count == 0 {
+            return;
+        }
+
+        let mut page_order = imp.organize_page_order.borrow_mut();
+        page_order.clear();
+        page_order.extend(1..=page_count as u32);
+        imp.organize_last_output.borrow_mut().take();
+        drop(page_order);
+        self.update_organize_view();
+    }
+
+    fn clear_extract_pdf(&self) {
+        let imp = self.imp();
+        imp.extract_file.borrow_mut().take();
+        imp.extract_page_count.set(0);
+        imp.extract_ranges_entry.set_text("");
+        imp.extract_last_output.borrow_mut().take();
+        self.update_extract_view();
+    }
+
     fn merge_to(&self, output_file: PathBuf) {
         let imp = self.imp();
         let input_files = imp.input_files.borrow().clone();
 
         imp.is_running.set(true);
         imp.last_output.borrow_mut().take();
-        self.update_files_view();
+        self.update_all_views();
 
         let window = self.clone();
         glib::spawn_future_local(async move {
@@ -209,7 +552,64 @@ impl FoliosWindow {
                 }
             }
 
-            window.update_files_view();
+            window.update_all_views();
+        });
+    }
+
+    fn organize_to(&self, output_file: PathBuf) {
+        let imp = self.imp();
+        let Some(input_file) = imp.organize_file.borrow().clone() else {
+            return;
+        };
+        let page_order = imp.organize_page_order.borrow().clone();
+
+        imp.is_running.set(true);
+        imp.organize_last_output.borrow_mut().take();
+        self.update_all_views();
+
+        let window = self.clone();
+        glib::spawn_future_local(async move {
+            let result = crate::pdf::organize_pdf(input_file, page_order, output_file).await;
+            let imp = window.imp();
+            imp.is_running.set(false);
+
+            match result {
+                Ok(path) => {
+                    imp.organize_last_output.borrow_mut().replace(path);
+                    window.show_toast(&gettext("Organized PDF saved"));
+                }
+                Err(error) => {
+                    window.show_toast(&error.to_string());
+                }
+            }
+
+            window.update_all_views();
+        });
+    }
+
+    fn extract_to(&self, input_file: PathBuf, pages: Vec<u32>, output_file: PathBuf) {
+        let imp = self.imp();
+        imp.is_running.set(true);
+        imp.extract_last_output.borrow_mut().take();
+        self.update_all_views();
+
+        let window = self.clone();
+        glib::spawn_future_local(async move {
+            let result = crate::pdf::extract_pages(input_file, pages, output_file).await;
+            let imp = window.imp();
+            imp.is_running.set(false);
+
+            match result {
+                Ok(path) => {
+                    imp.extract_last_output.borrow_mut().replace(path);
+                    window.show_toast(&gettext("Extracted pages saved"));
+                }
+                Err(error) => {
+                    window.show_toast(&error.to_string());
+                }
+            }
+
+            window.update_all_views();
         });
     }
 
@@ -253,6 +653,89 @@ impl FoliosWindow {
         imp.file_count_label.set_label(&count_text);
     }
 
+    fn update_organize_view(&self) {
+        let imp = self.imp();
+        let page_order = imp.organize_page_order.borrow();
+        let has_file = imp.organize_file.borrow().is_some();
+        let has_pages = !page_order.is_empty();
+
+        imp.organize_page_list.remove_all();
+        for (index, page_number) in page_order.iter().enumerate() {
+            imp.organize_page_list
+                .append(&self.page_row(index, *page_number, page_order.len()));
+        }
+
+        imp.organize_empty_status.set_visible(!has_file);
+        imp.organize_page_scroller.set_visible(has_file);
+        imp.organize_choose_button.set_visible(has_file);
+        imp.organize_reset_button.set_visible(has_file);
+        imp.organize_save_button.set_visible(has_file);
+        imp.organize_open_output_button
+            .set_visible(imp.organize_last_output.borrow().is_some());
+
+        imp.organize_choose_button
+            .set_sensitive(!imp.is_running.get());
+        imp.organize_empty_choose_button
+            .set_sensitive(!imp.is_running.get());
+        imp.organize_reset_button
+            .set_sensitive(has_file && !imp.is_running.get());
+        imp.organize_save_button
+            .set_sensitive(has_pages && !imp.is_running.get());
+        imp.organize_open_output_button
+            .set_sensitive(imp.organize_last_output.borrow().is_some() && !imp.is_running.get());
+
+        let detail = if imp.is_running.get() {
+            gettext("Working...")
+        } else if has_file {
+            page_count_label(page_order.len())
+        } else {
+            gettext("No PDF selected")
+        };
+        imp.organize_detail_label.set_label(&detail);
+    }
+
+    fn update_extract_view(&self) {
+        let imp = self.imp();
+        let has_file = imp.extract_file.borrow().is_some();
+        let has_ranges = !imp.extract_ranges_entry.text().trim().is_empty();
+
+        imp.extract_file_list.remove_all();
+        if let Some(path) = imp.extract_file.borrow().as_ref() {
+            imp.extract_file_list
+                .append(&self.extract_file_row(path, imp.extract_page_count.get()));
+        }
+
+        imp.extract_empty_status.set_visible(!has_file);
+        imp.extract_content.set_visible(has_file);
+        imp.extract_choose_button.set_visible(has_file);
+        imp.extract_clear_button.set_visible(has_file);
+        imp.extract_save_button.set_visible(has_file);
+        imp.extract_open_output_button
+            .set_visible(imp.extract_last_output.borrow().is_some());
+
+        imp.extract_choose_button
+            .set_sensitive(!imp.is_running.get());
+        imp.extract_empty_choose_button
+            .set_sensitive(!imp.is_running.get());
+        imp.extract_clear_button
+            .set_sensitive(has_file && !imp.is_running.get());
+        imp.extract_save_button
+            .set_sensitive(has_file && has_ranges && !imp.is_running.get());
+        imp.extract_open_output_button
+            .set_sensitive(imp.extract_last_output.borrow().is_some() && !imp.is_running.get());
+        imp.extract_ranges_entry
+            .set_sensitive(has_file && !imp.is_running.get());
+
+        let detail = if imp.is_running.get() {
+            gettext("Working...")
+        } else if has_file {
+            page_count_label(imp.extract_page_count.get())
+        } else {
+            gettext("No PDF selected")
+        };
+        imp.extract_detail_label.set_label(&detail);
+    }
+
     fn file_row(&self, index: usize, path: &Path, count: usize) -> adw::ActionRow {
         let title = path
             .file_name()
@@ -267,8 +750,9 @@ impl FoliosWindow {
         let icon = gtk::Image::from_icon_name("view-paged-symbolic");
         row.add_prefix(&icon);
 
+        let controls_sensitive = !self.imp().is_running.get();
         let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
-        up_button.set_sensitive(index > 0);
+        up_button.set_sensitive(controls_sensitive && index > 0);
         let window = self.clone();
         up_button.connect_clicked(move |_| {
             window.move_file(index, index - 1);
@@ -276,7 +760,7 @@ impl FoliosWindow {
         row.add_suffix(&up_button);
 
         let down_button = icon_button("go-down-symbolic", &gettext("Move Down"));
-        down_button.set_sensitive(index + 1 < count);
+        down_button.set_sensitive(controls_sensitive && index + 1 < count);
         let window = self.clone();
         down_button.connect_clicked(move |_| {
             window.move_file(index, index + 1);
@@ -284,12 +768,72 @@ impl FoliosWindow {
         row.add_suffix(&down_button);
 
         let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
+        remove_button.set_sensitive(controls_sensitive);
         let window = self.clone();
         remove_button.connect_clicked(move |_| {
             window.remove_file(index);
         });
         row.add_suffix(&remove_button);
 
+        row
+    }
+
+    fn page_row(&self, index: usize, page_number: u32, count: usize) -> adw::ActionRow {
+        let row = adw::ActionRow::builder()
+            .title(format!("{} {page_number}", gettext("Page")))
+            .subtitle(format!(
+                "{} {} {} {count}",
+                gettext("Position"),
+                index + 1,
+                gettext("of")
+            ))
+            .activatable(false)
+            .build();
+
+        let icon = gtk::Image::from_icon_name("view-paged-symbolic");
+        row.add_prefix(&icon);
+
+        let controls_sensitive = !self.imp().is_running.get();
+        let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
+        up_button.set_sensitive(controls_sensitive && index > 0);
+        let window = self.clone();
+        up_button.connect_clicked(move |_| {
+            window.move_page(index, index - 1);
+        });
+        row.add_suffix(&up_button);
+
+        let down_button = icon_button("go-down-symbolic", &gettext("Move Down"));
+        down_button.set_sensitive(controls_sensitive && index + 1 < count);
+        let window = self.clone();
+        down_button.connect_clicked(move |_| {
+            window.move_page(index, index + 1);
+        });
+        row.add_suffix(&down_button);
+
+        let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
+        remove_button.set_sensitive(controls_sensitive);
+        let window = self.clone();
+        remove_button.connect_clicked(move |_| {
+            window.remove_page(index);
+        });
+        row.add_suffix(&remove_button);
+
+        row
+    }
+
+    fn extract_file_row(&self, path: &Path, page_count: usize) -> adw::ActionRow {
+        let title = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("PDF");
+        let row = adw::ActionRow::builder()
+            .title(title)
+            .subtitle(page_count_label(page_count))
+            .activatable(false)
+            .build();
+
+        let icon = gtk::Image::from_icon_name("view-paged-symbolic");
+        row.add_prefix(&icon);
         row
     }
 
@@ -309,9 +853,36 @@ impl FoliosWindow {
         self.update_files_view();
     }
 
+    fn move_page(&self, from: usize, to: usize) {
+        let imp = self.imp();
+        let mut pages = imp.organize_page_order.borrow_mut();
+        pages.swap(from, to);
+        imp.organize_last_output.borrow_mut().take();
+        drop(pages);
+        self.update_organize_view();
+    }
+
+    fn remove_page(&self, index: usize) {
+        let imp = self.imp();
+        imp.organize_page_order.borrow_mut().remove(index);
+        imp.organize_last_output.borrow_mut().take();
+
+        if imp.organize_page_order.borrow().is_empty() {
+            self.clear_organize_pdf();
+            return;
+        }
+
+        self.update_organize_view();
+    }
+
     fn open_last_output(&self) {
         let imp = self.imp();
-        let Some(path) = imp.last_output.borrow().clone() else {
+        let path = match imp.active_tool.get() {
+            PdfTool::Merge => imp.last_output.borrow().clone(),
+            PdfTool::Organize => imp.organize_last_output.borrow().clone(),
+            PdfTool::Extract => imp.extract_last_output.borrow().clone(),
+        };
+        let Some(path) = path else {
             return;
         };
 
@@ -369,5 +940,12 @@ fn format_size(bytes: u64) -> String {
         format!("{:.1} KB", bytes / KB)
     } else {
         format!("{bytes:.0} B")
+    }
+}
+
+fn page_count_label(count: usize) -> String {
+    match count {
+        1 => gettext("1 page"),
+        count => format!("{count} pages"),
     }
 }

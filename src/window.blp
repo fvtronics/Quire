@@ -37,33 +37,31 @@ template $FoliosWindow: Adw.ApplicationWindow {
             styles ["heading"]
           }
 
-          Gtk.ListBox {
-            selection-mode: none;
+          Gtk.ListBox sidebar_list {
+            selection-mode: single;
             margin-start: 12;
             margin-end: 12;
             styles ["boxed-list"]
 
-            Adw.ActionRow {
+            Adw.ActionRow merge_tool_row {
               title: _("Merge");
               subtitle: _("Combine PDFs");
               icon-name: "view-paged-symbolic";
-              activatable: false;
+              activatable: true;
             }
 
-            Adw.ActionRow {
+            Adw.ActionRow organize_tool_row {
               title: _("Organize Pages");
-              subtitle: _("Coming later");
+              subtitle: _("Reorder or remove pages");
               icon-name: "view-grid-symbolic";
-              sensitive: false;
-              activatable: false;
+              activatable: true;
             }
 
-            Adw.ActionRow {
+            Adw.ActionRow extract_tool_row {
               title: _("Extract Pages");
-              subtitle: _("Coming later");
+              subtitle: _("Save selected pages");
               icon-name: "edit-copy-symbolic";
-              sensitive: false;
-              activatable: false;
+              activatable: true;
             }
           }
         }
@@ -72,7 +70,7 @@ template $FoliosWindow: Adw.ApplicationWindow {
           orientation: vertical;
         }
 
-        Gtk.Box {
+        Gtk.Box merge_workspace {
           orientation: vertical;
           spacing: 18;
           hexpand: true;
@@ -176,6 +174,233 @@ template $FoliosWindow: Adw.ApplicationWindow {
               selection-mode: none;
               styles ["boxed-list"]
             };
+          }
+        }
+
+        Gtk.Box organize_workspace {
+          orientation: vertical;
+          spacing: 18;
+          hexpand: true;
+          visible: false;
+          margin-start: 36;
+          margin-end: 36;
+          margin-top: 30;
+          margin-bottom: 30;
+
+          Gtk.Box {
+            orientation: horizontal;
+            spacing: 12;
+
+            Gtk.Box {
+              orientation: vertical;
+              spacing: 3;
+              hexpand: true;
+
+              Gtk.Label {
+                label: _("Organize Pages");
+                xalign: 0;
+                styles ["title-2"]
+              }
+
+              Gtk.Label organize_detail_label {
+                label: _("No PDF selected");
+                xalign: 0;
+                styles ["dim-label"]
+              }
+            }
+
+            Gtk.Button organize_choose_button {
+              visible: false;
+              valign: center;
+              tooltip-text: _("Open PDF");
+              child: Adw.ButtonContent {
+                icon-name: "document-open-symbolic";
+                label: _("Open PDF");
+              };
+            }
+
+            Gtk.Button organize_open_output_button {
+              visible: false;
+              sensitive: false;
+              valign: center;
+              tooltip-text: _("Open Output File");
+
+              child: Adw.ButtonContent {
+                icon-name: "document-open-symbolic";
+                label: _("Open Output");
+              };
+            }
+
+            Gtk.Button organize_reset_button {
+              visible: false;
+              sensitive: false;
+              valign: center;
+              tooltip-text: _("Reset Page Order");
+
+              child: Adw.ButtonContent {
+                icon-name: "edit-undo-symbolic";
+                label: _("Reset");
+              };
+            }
+
+            Gtk.Button organize_save_button {
+              visible: false;
+              sensitive: false;
+              valign: center;
+              tooltip-text: _("Save Organized PDF");
+              styles ["suggested-action"]
+
+              child: Adw.ButtonContent {
+                icon-name: "document-save-symbolic";
+                label: _("Save");
+              };
+            }
+          }
+
+          Adw.StatusPage organize_empty_status {
+            icon-name: "view-grid-symbolic";
+            title: _("Open a PDF to Organize");
+            description: _("Reorder or remove pages, then save a new document.");
+
+            child: Gtk.Button organize_empty_choose_button {
+              halign: center;
+              tooltip-text: _("Open PDF");
+              styles ["suggested-action"]
+
+              child: Adw.ButtonContent {
+                icon-name: "document-open-symbolic";
+                label: _("Open PDF");
+              };
+            };
+          }
+
+          Gtk.ScrolledWindow organize_page_scroller {
+            vexpand: true;
+            visible: false;
+
+            child: Gtk.ListBox organize_page_list {
+              selection-mode: none;
+              styles ["boxed-list"]
+            };
+          }
+        }
+
+        Gtk.Box extract_workspace {
+          orientation: vertical;
+          spacing: 18;
+          hexpand: true;
+          visible: false;
+          margin-start: 36;
+          margin-end: 36;
+          margin-top: 30;
+          margin-bottom: 30;
+
+          Gtk.Box {
+            orientation: horizontal;
+            spacing: 12;
+
+            Gtk.Box {
+              orientation: vertical;
+              spacing: 3;
+              hexpand: true;
+
+              Gtk.Label {
+                label: _("Extract Pages");
+                xalign: 0;
+                styles ["title-2"]
+              }
+
+              Gtk.Label extract_detail_label {
+                label: _("No PDF selected");
+                xalign: 0;
+                styles ["dim-label"]
+              }
+            }
+
+            Gtk.Button extract_choose_button {
+              visible: false;
+              valign: center;
+              tooltip-text: _("Open PDF");
+              child: Adw.ButtonContent {
+                icon-name: "document-open-symbolic";
+                label: _("Open PDF");
+              };
+            }
+
+            Gtk.Button extract_open_output_button {
+              visible: false;
+              sensitive: false;
+              valign: center;
+              tooltip-text: _("Open Output File");
+
+              child: Adw.ButtonContent {
+                icon-name: "document-open-symbolic";
+                label: _("Open Output");
+              };
+            }
+
+            Gtk.Button extract_clear_button {
+              visible: false;
+              sensitive: false;
+              valign: center;
+              tooltip-text: _("Clear PDF");
+
+              child: Adw.ButtonContent {
+                icon-name: "edit-clear-symbolic";
+                label: _("Clear");
+              };
+            }
+
+            Gtk.Button extract_save_button {
+              visible: false;
+              sensitive: false;
+              valign: center;
+              tooltip-text: _("Extract Selected Pages");
+              styles ["suggested-action"]
+
+              child: Adw.ButtonContent {
+                icon-name: "document-save-symbolic";
+                label: _("Extract");
+              };
+            }
+          }
+
+          Adw.StatusPage extract_empty_status {
+            icon-name: "edit-copy-symbolic";
+            title: _("Open a PDF to Extract Pages");
+            description: _("Choose page ranges, then save them as a new document.");
+
+            child: Gtk.Button extract_empty_choose_button {
+              halign: center;
+              tooltip-text: _("Open PDF");
+              styles ["suggested-action"]
+
+              child: Adw.ButtonContent {
+                icon-name: "document-open-symbolic";
+                label: _("Open PDF");
+              };
+            };
+          }
+
+          Gtk.Box extract_content {
+            orientation: vertical;
+            spacing: 18;
+            visible: false;
+
+            Gtk.ListBox extract_file_list {
+              selection-mode: none;
+              styles ["boxed-list"]
+            }
+
+            Gtk.ListBox {
+              selection-mode: none;
+              styles ["boxed-list"]
+
+              Adw.EntryRow extract_ranges_entry {
+                title: _("Pages");
+                text: "";
+              }
+            }
           }
         }
       };
