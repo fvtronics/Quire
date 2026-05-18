@@ -1,9 +1,9 @@
 application_id = 'com.fvtronics.folios'
 
-scalable_dir = 'hicolor' / 'scalable' / 'apps'
+full_color_dir = 'hicolor' / '512x512' / 'apps'
 install_data(
-  scalable_dir / ('@0@.svg').format(application_id),
-  install_dir: get_option('datadir') / 'icons' / scalable_dir
+  full_color_dir / ('@0@.png').format(application_id),
+  install_dir: get_option('datadir') / 'icons' / full_color_dir
 )
 
 symbolic_dir = 'hicolor' / 'symbolic' / 'apps'
