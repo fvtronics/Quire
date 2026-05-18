@@ -1,0 +1,48 @@
+# Rust / Cargo
+/target/
+
+# Backups
+*~
+*.swp
+*.swo
+
+# GNOME Builder
+/.build/
+/.flatpak-builder/
+/.gnome-builder/
+
+# Flatpak
+/.flatpak/
+/repo/
+/build/
+/builddir/
+/_build/
+
+# Meson
+meson-private/
+meson-logs/
+meson-info/
+
+# Generated files
+*.gresource
+*.gresource.xml~
+*.ui~
+*.css~
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# IntelliJ / RustRover
+.idea/
+
+# Direnv
+.direnv/
+
+# Environment files
+.env
+
+# Logs
+*.log

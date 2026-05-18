@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Folios
+Exec=folios
+Icon=com.fvtronics.folios
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=GTK;
+StartupNotify=true
+DBusActivatable=true
