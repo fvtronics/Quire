@@ -21,6 +21,7 @@
 mod application;
 mod config;
 mod pdf;
+mod preview;
 mod window;
 
 use self::application::FoliosApplication;

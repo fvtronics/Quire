@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+cairo-rs = { version = "0.20", features = ["png"] }
 gettext-rs = { version = "0.7", features = ["gettext-system"] }
 gtk = { version = "0.9", package = "gtk4", features = ["gnome_47"] }
 lopdf = { version = "0.36", default-features = false }
+poppler-rs = "0.24"
 
 [dependencies.adw]
 package = "libadwaita"

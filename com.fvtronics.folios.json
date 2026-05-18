@@ -37,6 +37,35 @@
     ],
     "modules" : [
         {
+            "name" : "poppler",
+            "buildsystem" : "cmake-ninja",
+            "builddir" : true,
+            "config-opts" : [
+                "-DBUILD_GTK_TEST=OFF",
+                "-DBUILD_QT5_TESTS=OFF",
+                "-DBUILD_QT6_TESTS=OFF",
+                "-DBUILD_CPP_TESTS=OFF",
+                "-DBUILD_MANUAL_TESTS=OFF",
+                "-DENABLE_GOBJECT_INTROSPECTION=OFF",
+                "-DENABLE_UTILS=OFF",
+                "-DENABLE_CPP=OFF",
+                "-DENABLE_GLIB=ON",
+                "-DENABLE_LIBOPENJPEG=openjpeg2",
+                "-DENABLE_BOOST=OFF",
+                "-DENABLE_NSS3=OFF",
+                "-DENABLE_GPGME=OFF",
+                "-DENABLE_QT5=OFF",
+                "-DENABLE_QT6=OFF"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://poppler.freedesktop.org/poppler-26.05.0.tar.xz",
+                    "sha256" : "6fef27ff04f37db43054c86bcdff6128c9fb1f6af4ef3c8b369a7e9abd68d0bb"
+                }
+            ]
+        },
+        {
             "name" : "folios",
             "builddir" : true,
             "buildsystem" : "meson",

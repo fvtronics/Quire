@@ -23,6 +23,7 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use std::cell::{Cell, RefCell};
+use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -109,6 +110,8 @@ mod imp {
         #[template_child]
         pub extract_ranges_entry: TemplateChild<adw::EntryRow>,
         #[template_child]
+        pub extract_page_grid: TemplateChild<gtk::FlowBox>,
+        #[template_child]
         pub extract_clear_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub extract_save_button: TemplateChild<gtk::Button>,
@@ -124,6 +127,8 @@ mod imp {
         pub organize_last_output: RefCell<Option<PathBuf>>,
         pub extract_file: RefCell<Option<PathBuf>>,
         pub extract_page_count: Cell<usize>,
+        pub extract_previews: RefCell<Vec<crate::preview::PagePreview>>,
+        pub extract_selected_pages: RefCell<Vec<u32>>,
         pub extract_last_output: RefCell<Option<PathBuf>>,
         pub is_running: Cell<bool>,
     }
@@ -268,7 +273,10 @@ impl FoliosWindow {
         });
 
         let window = self.clone();
-        imp.extract_ranges_entry.connect_changed(move |_| {
+        imp.extract_ranges_entry.connect_changed(move |entry| {
+            if !entry.text().trim().is_empty() {
+                window.imp().extract_selected_pages.borrow_mut().clear();
+            }
             window.update_extract_view();
         });
     }
@@ -398,14 +406,23 @@ impl FoliosWindow {
         let Some(input_file) = imp.extract_file.borrow().clone() else {
             return;
         };
-        let pages = match crate::pdf::parse_page_ranges(
-            imp.extract_ranges_entry.text().as_str(),
-            imp.extract_page_count.get(),
-        ) {
-            Ok(pages) => pages,
-            Err(error) => {
-                self.show_toast(&error.to_string());
+        let pages = if imp.extract_ranges_entry.text().trim().is_empty() {
+            let pages = imp.extract_selected_pages.borrow().clone();
+            if pages.is_empty() {
+                self.show_toast(&gettext("Choose at least one page to extract."));
                 return;
+            }
+            pages
+        } else {
+            match crate::pdf::parse_page_ranges(
+                imp.extract_ranges_entry.text().as_str(),
+                imp.extract_page_count.get(),
+            ) {
+                Ok(pages) => pages,
+                Err(error) => {
+                    self.show_toast(&error.to_string());
+                    return;
+                }
             }
         };
 
@@ -475,14 +492,17 @@ impl FoliosWindow {
 
         let window = self.clone();
         glib::spawn_future_local(async move {
-            let result = crate::pdf::page_count(path.clone()).await;
+            let result = crate::preview::render_page_previews(path.clone()).await;
             let imp = window.imp();
             imp.is_running.set(false);
 
             match result {
-                Ok(page_count) => {
+                Ok(previews) => {
+                    let page_count = previews.len();
                     imp.extract_file.borrow_mut().replace(path);
                     imp.extract_page_count.set(page_count);
+                    *imp.extract_previews.borrow_mut() = previews;
+                    imp.extract_selected_pages.borrow_mut().clear();
                     imp.extract_ranges_entry.set_text("");
                 }
                 Err(error) => {
@@ -523,6 +543,8 @@ impl FoliosWindow {
         let imp = self.imp();
         imp.extract_file.borrow_mut().take();
         imp.extract_page_count.set(0);
+        imp.extract_previews.borrow_mut().clear();
+        imp.extract_selected_pages.borrow_mut().clear();
         imp.extract_ranges_entry.set_text("");
         imp.extract_last_output.borrow_mut().take();
         self.update_extract_view();
@@ -698,11 +720,20 @@ impl FoliosWindow {
         let imp = self.imp();
         let has_file = imp.extract_file.borrow().is_some();
         let has_ranges = !imp.extract_ranges_entry.text().trim().is_empty();
+        let has_selected_pages = !imp.extract_selected_pages.borrow().is_empty();
 
         imp.extract_file_list.remove_all();
         if let Some(path) = imp.extract_file.borrow().as_ref() {
             imp.extract_file_list
                 .append(&self.extract_file_row(path, imp.extract_page_count.get()));
+        }
+
+        imp.extract_page_grid.remove_all();
+        let selected_pages = imp.extract_selected_pages.borrow();
+        for preview in imp.extract_previews.borrow().iter() {
+            imp.extract_page_grid.append(
+                &self.extract_page_tile(preview, selected_pages.contains(&preview.page_number)),
+            );
         }
 
         imp.extract_empty_status.set_visible(!has_file);
@@ -720,7 +751,7 @@ impl FoliosWindow {
         imp.extract_clear_button
             .set_sensitive(has_file && !imp.is_running.get());
         imp.extract_save_button
-            .set_sensitive(has_file && has_ranges && !imp.is_running.get());
+            .set_sensitive(has_file && (has_ranges || has_selected_pages) && !imp.is_running.get());
         imp.extract_open_output_button
             .set_sensitive(imp.extract_last_output.borrow().is_some() && !imp.is_running.get());
         imp.extract_ranges_entry
@@ -837,6 +868,54 @@ impl FoliosWindow {
         row
     }
 
+    fn extract_page_tile(&self, preview: &crate::preview::PagePreview, selected: bool) -> gtk::Box {
+        let tile = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(6)
+            .width_request(180)
+            .build();
+
+        let picture =
+            match gtk::gdk_pixbuf::Pixbuf::from_read(Cursor::new(preview.png_data.clone())) {
+                Ok(pixbuf) => {
+                    let texture = gtk::gdk::Texture::for_pixbuf(&pixbuf);
+                    gtk::Picture::for_paintable(&texture)
+                }
+                Err(_) => gtk::Picture::new(),
+            };
+        picture.set_size_request(160, 220);
+        picture.set_can_shrink(true);
+        picture.set_content_fit(gtk::ContentFit::Contain);
+        tile.append(&picture);
+
+        let footer = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .spacing(6)
+            .build();
+        let label = gtk::Label::builder()
+            .label(format!("{} {}", gettext("Page"), preview.page_number))
+            .xalign(0.0)
+            .hexpand(true)
+            .build();
+        let check_button = gtk::CheckButton::builder()
+            .active(selected)
+            .tooltip_text(gettext("Select Page"))
+            .valign(gtk::Align::Center)
+            .build();
+
+        let window = self.clone();
+        let page_number = preview.page_number;
+        check_button.connect_toggled(move |button| {
+            window.toggle_extract_page(page_number, button.is_active());
+        });
+
+        footer.append(&label);
+        footer.append(&check_button);
+        tile.append(&footer);
+
+        tile
+    }
+
     fn move_file(&self, from: usize, to: usize) {
         let imp = self.imp();
         let mut files = imp.input_files.borrow_mut();
@@ -873,6 +952,29 @@ impl FoliosWindow {
         }
 
         self.update_organize_view();
+    }
+
+    fn toggle_extract_page(&self, page_number: u32, selected: bool) {
+        let imp = self.imp();
+        let mut pages = imp.extract_selected_pages.borrow_mut();
+
+        if selected {
+            if !pages.contains(&page_number) {
+                pages.push(page_number);
+                pages.sort_unstable();
+            }
+        } else {
+            pages.retain(|page| *page != page_number);
+        }
+
+        imp.extract_last_output.borrow_mut().take();
+        drop(pages);
+
+        if !imp.extract_ranges_entry.text().is_empty() {
+            imp.extract_ranges_entry.set_text("");
+        }
+
+        self.update_extract_view();
     }
 
     fn open_last_output(&self) {

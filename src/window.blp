@@ -387,19 +387,38 @@ template $FoliosWindow: Adw.ApplicationWindow {
             spacing: 18;
             visible: false;
 
-            Gtk.ListBox extract_file_list {
-              selection-mode: none;
-              styles ["boxed-list"]
+            Gtk.Box {
+              orientation: horizontal;
+              spacing: 12;
+
+              Gtk.ListBox extract_file_list {
+                selection-mode: none;
+                hexpand: true;
+                styles ["boxed-list"]
+              }
+
+              Gtk.ListBox {
+                selection-mode: none;
+                width-request: 280;
+                styles ["boxed-list"]
+
+                Adw.EntryRow extract_ranges_entry {
+                  title: _("Pages");
+                  text: "";
+                }
+              }
             }
 
-            Gtk.ListBox {
-              selection-mode: none;
-              styles ["boxed-list"]
-
-              Adw.EntryRow extract_ranges_entry {
-                title: _("Pages");
-                text: "";
-              }
+            Gtk.ScrolledWindow extract_page_scroller {
+              vexpand: true;
+              child: Gtk.FlowBox extract_page_grid {
+                column-spacing: 12;
+                row-spacing: 12;
+                homogeneous: true;
+                selection-mode: none;
+                min-children-per-line: 2;
+                max-children-per-line: 5;
+              };
             }
           }
         }
