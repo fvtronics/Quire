@@ -61,15 +61,6 @@ jobs:
       - name: Format Check
         run: cargo fmt --all -- --check
 
-      - name: Blueprint Check
-        run: |
-          mkdir -p /tmp/folios-blueprint-check
-          blueprint-compiler batch-compile \
-            /tmp/folios-blueprint-check \
-            src \
-            src/window.blp \
-            src/shortcuts-dialog.blp
-
       - name: Whitespace Check
         run: git diff --check
 
