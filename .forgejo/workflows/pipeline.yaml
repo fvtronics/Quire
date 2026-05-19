@@ -27,7 +27,11 @@ jobs:
 
           $SUDO apt-get update
           $SUDO apt-get install -y --no-install-recommends \
+            appstream \
             blueprint-compiler \
+            desktop-file-utils \
+            gettext \
+            libglib2.0-bin \
             libadwaita-1-dev \
             libgtk-4-dev \
             libpoppler-glib-dev \
