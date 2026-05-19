@@ -1,5 +1,5 @@
 use adw::prelude::*;
-use gettextrs::gettext;
+use gettextrs::{gettext, ngettext};
 use gtk::gio;
 use std::io::Cursor;
 use std::path::Path;
@@ -111,10 +111,7 @@ pub(super) fn format_page_ranges(pages: &[u32]) -> String {
 }
 
 pub(super) fn page_count_label(count: usize) -> String {
-    match count {
-        1 => gettext("1 page"),
-        count => format!("{count} pages"),
-    }
+    ngettext("1 page", "{} pages", count as u32).replace("{}", &count.to_string())
 }
 
 fn format_size(bytes: u64) -> String {

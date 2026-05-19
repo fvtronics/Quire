@@ -4,7 +4,7 @@ use super::ui::{
 use super::FoliosWindow;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use gettextrs::gettext;
+use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
 use std::path::{Path, PathBuf};
 
@@ -194,8 +194,8 @@ impl FoliosWindow {
         } else {
             match files.len() {
                 0 => gettext("No files selected"),
-                1 => gettext("1 PDF selected"),
-                count => format!("{count} PDFs selected"),
+                count => ngettext("1 PDF selected", "{} PDFs selected", count as u32)
+                    .replace("{}", &count.to_string()),
             }
         };
         imp.file_count_label.set_label(&count_text);

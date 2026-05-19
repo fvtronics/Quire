@@ -2,14 +2,15 @@
 # Copyright (C) 2026 Francisco Vásquez Cuevas
 # This file is distributed under the same license as the folios package.
 # FVtronics <fvasquez.public@fvtronics.com>, 2026.
+# Francisco <fvasquez>, 2026.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: Folios 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-19 08:29-0400\n"
-"PO-Revision-Date: 2026-05-19 09:01-0400\n"
-"Last-Translator: FVtronics <fvasquez.public@fvtronics.com>\n"
+"POT-Creation-Date: 2026-05-19 14:43-0400\n"
+"PO-Revision-Date: 2026-05-19 14:49-0400\n"
+"Last-Translator: Francisco <fvasquez>\n"
 "Language-Team: es_DO\n"
 "Language: es\n"
 "MIME-Version: 1.0\n"
@@ -23,13 +24,14 @@ msgstr ""
 msgid "Folios"
 msgstr "Folios"
 
-#: data/com.fvtronics.folios.desktop.in:8
-msgid "PDF;Merge;Document;GTK;"
-msgstr "PDF;Combinar;Documento;GTK;"
-
+#: data/com.fvtronics.folios.desktop.in:3
 #: data/com.fvtronics.folios.metainfo.xml.in:8
-msgid "Work with PDFs locally"
-msgstr "Trabajar con archivos PDF localmente"
+msgid "Combine and edit PDF files"
+msgstr "Combinar y editar archivos PDF"
+
+#: data/com.fvtronics.folios.desktop.in:9
+msgid "PDF;Merge;Split;Compress;Extract;Organize;Page;Document;GTK;"
+msgstr "PDF;Combinar;Dividir;Comprimir;Extraer;Organizar;Página;Documento;GTK;"
 
 #: data/com.fvtronics.folios.metainfo.xml.in:10
 msgid ""
@@ -44,12 +46,28 @@ msgid ""
 "Merge multiple PDFs, organize pages, extract page ranges, split documents, "
 "and compress files without sending them to an online service."
 msgstr ""
-"Combina varios PDF, organiza páginas, extrae rangos de páginas, divide "
-"documentos y comprime archivos sin enviarlos a un servicio en línea."
+"Combine varios PDF, organice páginas, extraiga rangos de páginas, divida "
+"documentos y comprima archivos sin enviarlos a un servicio en línea."
 
 #: data/com.fvtronics.folios.metainfo.xml.in:15
 msgid "Francisco Vásquez Cuevas"
 msgstr "Francisco Vásquez Cuevas"
+
+#: data/com.fvtronics.folios.metainfo.xml.in:35
+msgid "Merge multiple PDF files into a single document"
+msgstr "Combinar varios archivos PDF en un solo documento"
+
+#: data/com.fvtronics.folios.metainfo.xml.in:39
+msgid "Reorder and remove pages before saving a new PDF"
+msgstr "Reordenar y eliminar páginas antes de guardar un nuevo PDF"
+
+#: data/com.fvtronics.folios.metainfo.xml.in:43
+msgid "Extract selected pages into a new document"
+msgstr "Extraer páginas seleccionadas en un nuevo documento"
+
+#: data/com.fvtronics.folios.metainfo.xml.in:47
+msgid "Split a PDF into multiple documents"
+msgstr "Dividir un PDF en varios documentos"
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
 #: src/application.rs:107
@@ -86,7 +104,7 @@ msgstr "Vista de cuadrícula"
 msgid "PDF Tools"
 msgstr "Herramientas de PDF"
 
-#: src/window.blp:69 src/window.blp:183
+#: src/window.blp:69 src/window.blp:183 src/window/merge.rs:74
 msgid "Merge"
 msgstr "Combinar"
 
@@ -110,7 +128,7 @@ msgstr "Extraer páginas"
 msgid "Save selected pages"
 msgstr "Guardar páginas seleccionadas"
 
-#: src/window.blp:90 src/window.blp:706
+#: src/window.blp:90 src/window.blp:706 src/window/split.rs:122
 msgid "Split"
 msgstr "Dividir"
 
@@ -118,7 +136,7 @@ msgstr "Dividir"
 msgid "Split by page"
 msgstr "Dividir por página"
 
-#: src/window.blp:97 src/window.blp:300
+#: src/window.blp:97 src/window.blp:300 src/window/compress.rs:61
 msgid "Compress"
 msgstr "Comprimir"
 
@@ -130,7 +148,7 @@ msgstr "Reducir el tamaño del PDF"
 msgid "Merge PDFs"
 msgstr "Combinar archivos PDF"
 
-#: src/window.blp:134
+#: src/window.blp:134 src/window/merge.rs:196
 msgid "No files selected"
 msgstr "No hay archivos seleccionados"
 
@@ -138,7 +156,7 @@ msgstr "No hay archivos seleccionados"
 msgid "Add PDF Files"
 msgstr "Añadir archivos PDF"
 
-#: src/window.blp:146 src/window.blp:200
+#: src/window.blp:146 src/window.blp:200 src/window/merge.rs:49
 msgid "Add PDFs"
 msgstr "Añadir archivos PDF"
 
@@ -168,13 +186,15 @@ msgstr "Abra archivos PDF para combinarlos"
 
 #: src/window.blp:191
 msgid "Choose two or more PDF files to combine into a new document."
-msgstr "Elige dos o más archivos PDF para combinarlos en un nuevo documento."
+msgstr "Elija dos o más archivos PDF para combinarlos en un nuevo documento."
 
 #: src/window.blp:257 src/window.blp:295
 msgid "Compress PDF"
 msgstr "Comprimir PDF"
 
 #: src/window.blp:263 src/window.blp:388 src/window.blp:521 src/window.blp:669
+#: src/window/compress.rs:174 src/window/extract.rs:230
+#: src/window/organize.rs:208 src/window/split.rs:248
 msgid "No PDF selected"
 msgstr "Ningún archivo PDF seleccionado"
 
@@ -182,6 +202,8 @@ msgstr "Ningún archivo PDF seleccionado"
 #: src/window.blp:397 src/window.blp:400 src/window.blp:449 src/window.blp:454
 #: src/window.blp:530 src/window.blp:533 src/window.blp:570 src/window.blp:575
 #: src/window.blp:678 src/window.blp:681 src/window.blp:718 src/window.blp:723
+#: src/window/compress.rs:38 src/window/extract.rs:59 src/window/organize.rs:43
+#: src/window/split.rs:90
 msgid "Open PDF"
 msgstr "Abrir PDF"
 
@@ -191,7 +213,7 @@ msgstr "Abra un archivo PDF para comprimirlo"
 
 #: src/window.blp:308
 msgid "Choose a PDF, then save a smaller copy."
-msgstr "Elige un PDF y luego guarda una copia reducida."
+msgstr "Elija un PDF y luego guarde una copia reducida."
 
 #: src/window.blp:347
 msgid "Remove Unused Data"
@@ -217,11 +239,11 @@ msgstr "Restablecer orden de páginas"
 msgid "Reset"
 msgstr "Restablecer"
 
-#: src/window.blp:432
+#: src/window.blp:432 src/window/organize.rs:61
 msgid "Save Organized PDF"
 msgstr "Guardar PDF organizado"
 
-#: src/window.blp:437
+#: src/window.blp:437 src/window/organize.rs:62
 msgid "Save"
 msgstr "Guardar"
 
@@ -231,7 +253,7 @@ msgstr "Abra un archivo PDF para organizarlo"
 
 #: src/window.blp:445
 msgid "Reorder or remove pages, then save a new document."
-msgstr "Reordena o elimina páginas y luego guarda un nuevo documento."
+msgstr "Reordene o elimine páginas y luego guarde un nuevo documento."
 
 #: src/window.blp:465 src/window.blp:612
 msgid "List"
@@ -245,7 +267,7 @@ msgstr "Cuadrícula"
 msgid "Extract Selected Pages"
 msgstr "Extraer páginas seleccionadas"
 
-#: src/window.blp:558
+#: src/window.blp:558 src/window/extract.rs:99
 msgid "Extract"
 msgstr "Extraer"
 
@@ -255,7 +277,7 @@ msgstr "Abra un archivo PDF para extraer páginas"
 
 #: src/window.blp:566
 msgid "Choose page ranges, then save them as a new document."
-msgstr "Elige rangos de páginas y guarda la selección como un nuevo documento."
+msgstr "Elija rangos de páginas y guarde la selección como un nuevo documento."
 
 #: src/window.blp:601
 msgid "Pages"
@@ -279,17 +301,17 @@ msgstr "Abra un archivo PDF para dividirlo"
 
 #: src/window.blp:714
 msgid "Choose where the PDF should be split by page."
-msgstr "Elige cómo dividir el PDF por páginas."
+msgstr "Elija cómo dividir el PDF por páginas."
 
 #: src/window.blp:753
 msgid "Split After"
 msgstr "Dividir después de"
 
-#: src/window.blp:757
+#: src/window.blp:757 src/window/split.rs:25
 msgid "Specific Pages"
 msgstr "Páginas específicas"
 
-#: src/window.blp:761
+#: src/window.blp:761 src/window/split.rs:26
 msgid "Every N Pages"
 msgstr "Cada N páginas"
 
@@ -300,3 +322,138 @@ msgstr "Prefijo del nombre de salida"
 #: src/window.blp:780
 msgid "_About Folios"
 msgstr "_Acerca de Folios"
+
+#: src/window/compress.rs:39 src/window/extract.rs:60 src/window/organize.rs:44
+#: src/window/split.rs:91
+msgid "Open"
+msgstr "Abrir"
+
+#: src/window/compress.rs:60
+msgid "Save Compressed PDF"
+msgstr "Guardar archivo PDF comprimido"
+
+#: src/window/compress.rs:124
+msgid "Compressed PDF saved"
+msgstr "Archivo PDF comprimido guardado"
+
+#: src/window/compress.rs:170
+msgid "Compressing PDF..."
+msgstr "Comprimiendo archivo PDF..."
+
+#: src/window/extract.rs:81
+msgid "Choose at least one page to extract."
+msgstr "Elija al menos una página para extraer."
+
+#: src/window/extract.rs:98
+msgid "Save Extracted Pages"
+msgstr "Guardar páginas extraídas"
+
+#: src/window/extract.rs:158
+msgid "Extracted pages saved"
+msgstr "Páginas extraídas guardadas"
+
+#: src/window/extract.rs:226
+msgid "Extracting pages..."
+msgstr "Extrayendo páginas..."
+
+#: src/window/extract.rs:263 src/window/extract.rs:290
+msgid "Select Page"
+msgstr "Seleccionar página"
+
+#: src/window/extract.rs:267 src/window/extract.rs:309
+#: src/window/organize.rs:221 src/window/organize.rs:280
+msgid "Page"
+msgstr "Página"
+
+#: src/window/merge.rs:50
+msgid "Add"
+msgstr "Añadir"
+
+#: src/window/merge.rs:73
+msgid "Save Merged PDF"
+msgstr "Guardar PDF combinado"
+
+#: src/window/merge.rs:143
+msgid "Merged PDF saved"
+msgstr "Archivos PDF combinados guardados"
+
+#: src/window/merge.rs:193
+msgid "Merging PDFs..."
+msgstr "Combinando archivos PDF..."
+
+#: src/window/merge.rs:197
+#, rust-format
+msgid "1 PDF selected"
+msgid_plural "{} PDFs selected"
+msgstr[0] "1 PDF seleccionado"
+msgstr[1] "{} PDF seleccionados"
+
+#: src/window/merge.rs:220 src/window/merge.rs:292 src/window/organize.rs:234
+#: src/window/organize.rs:299
+msgid "Move Up"
+msgstr "Mover arriba"
+
+#: src/window/merge.rs:228 src/window/merge.rs:300 src/window/organize.rs:242
+#: src/window/organize.rs:307
+msgid "Move Down"
+msgstr "Mover abajo"
+
+#: src/window/merge.rs:236 src/window/merge.rs:308 src/window/organize.rs:250
+#: src/window/organize.rs:315
+msgid "Remove"
+msgstr "Eliminar"
+
+#: src/window/organize.rs:143
+msgid "Organized PDF saved"
+msgstr "Archivo PDF organizado guardado"
+
+#: src/window/organize.rs:204
+msgid "Organizing pages..."
+msgstr "Organizando páginas..."
+
+#: src/window/organize.rs:224
+msgid "Position"
+msgstr "Posición"
+
+#: src/window/organize.rs:226
+msgid "of"
+msgstr "de"
+
+#: src/window/split.rs:22
+msgid "Every Page"
+msgstr "Cada página"
+
+#: src/window/split.rs:23
+msgid "Even Pages"
+msgstr "Páginas pares"
+
+#: src/window/split.rs:24
+msgid "Odd Pages"
+msgstr "Páginas impares"
+
+#: src/window/split.rs:121
+msgid "Choose Output Folder"
+msgstr "Elegir carpeta de salida"
+
+#: src/window/split.rs:188
+msgid "Split PDFs saved"
+msgstr "Archivos PDF divididos guardados"
+
+#: src/window/split.rs:244
+msgid "Splitting PDF..."
+msgstr "Dividiendo archivo PDF..."
+
+#: src/window/ui.rs:9
+msgid "PDF Documents"
+msgstr "Documentos PDF"
+
+#: src/window/ui.rs:37
+msgid "Size unavailable"
+msgstr "Tamaño no disponible"
+
+#: src/window/ui.rs:114
+#, rust-format
+msgid "1 page"
+msgid_plural "{} pages"
+msgstr[0] "1 página"
+msgstr[1] "{} páginas"

@@ -7,3 +7,9 @@ src/application.rs
 src/shortcuts-dialog.blp
 src/window.rs
 src/window.blp
+src/window/compress.rs
+src/window/extract.rs
+src/window/merge.rs
+src/window/organize.rs
+src/window/split.rs
+src/window/ui.rs
