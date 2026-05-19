@@ -104,7 +104,7 @@ impl FoliosApplication {
             .version(VERSION)
             .developers(vec!["Francisco Vásquez Cuevas"])
             // Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-            .translator_credits(&gettext("translator-credits"))
+            .translator_credits(gettext("translator-credits"))
             .copyright("© 2026 Francisco Vásquez Cuevas")
             .build();
 

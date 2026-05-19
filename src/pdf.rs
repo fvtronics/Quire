@@ -568,3 +568,292 @@ fn split_output_prefix(input_file: &Path, prefix: &str) -> String {
         prefix.to_string()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lopdf::{dictionary, Stream};
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct TestDir {
+        path: PathBuf,
+    }
+
+    impl TestDir {
+        fn new(name: &str) -> Self {
+            let unique = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system time should be after unix epoch")
+                .as_nanos();
+            let directory_name = format!("folios-{name}-{}-{unique}", std::process::id());
+            let path = std::env::temp_dir().join(directory_name);
+
+            fs::create_dir(&path).expect("test directory should be created");
+            Self { path }
+        }
+
+        fn join(&self, name: &str) -> PathBuf {
+            self.path.join(name)
+        }
+    }
+
+    impl Drop for TestDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    #[test]
+    fn parse_page_ranges_accepts_single_pages_and_ranges() {
+        assert_eq!(parse_page_ranges("1", 10).unwrap(), vec![1]);
+        assert_eq!(parse_page_ranges("1,3-5", 10).unwrap(), vec![1, 3, 4, 5]);
+        assert_eq!(
+            parse_page_ranges("2, 4-8, 10", 10).unwrap(),
+            vec![2, 4, 5, 6, 7, 8, 10]
+        );
+    }
+
+    #[test]
+    fn parse_page_ranges_rejects_invalid_input() {
+        assert_error(
+            parse_page_ranges("", 10),
+            "Choose at least one page to save.",
+        );
+        assert_error(parse_page_ranges("0", 10), "Page 0 is not in this PDF.");
+        assert_error(parse_page_ranges("abc", 10), "abc is not a page number.");
+        assert_error(parse_page_ranges("5-3", 10), "Page range 5-3 is backwards.");
+        assert_error(parse_page_ranges("11", 10), "Page 11 is not in this PDF.");
+        assert_error(
+            parse_page_ranges("1,,3", 10),
+            "Enter page ranges like 1,3-5,8.",
+        );
+    }
+
+    #[test]
+    fn parse_page_numbers_accepts_comma_only_pages() {
+        assert_eq!(parse_page_numbers("2,4,8", 10).unwrap(), vec![2, 4, 8]);
+
+        assert_error(parse_page_numbers("", 10), "Enter pages like 2,4,7.");
+        assert_error(parse_page_numbers("2-4", 10), "2-4 is not a page number.");
+        assert_error(parse_page_numbers("2,,4", 10), "Enter pages like 2,4,7.");
+    }
+
+    #[test]
+    fn merge_pdfs_preserves_page_count_and_order() {
+        let dir = TestDir::new("merge");
+        let first = dir.join("first.pdf");
+        let second = dir.join("second.pdf");
+        let output = dir.join("merged.pdf");
+        write_test_pdf(&first, &[10, 20]);
+        write_test_pdf(&second, &[30]);
+
+        let result = merge_pdfs_blocking(vec![first.clone(), second.clone()], output.clone());
+
+        assert_eq!(result.unwrap(), output);
+        assert_eq!(page_markers(&output), vec![10, 20, 30]);
+        assert!(!temporary_output_path(&output).exists());
+    }
+
+    #[test]
+    fn merge_pdfs_rejects_too_few_inputs_and_input_overwrite() {
+        let dir = TestDir::new("merge-invalid");
+        let input = dir.join("input.pdf");
+        write_test_pdf(&input, &[10]);
+
+        assert_error(
+            merge_pdfs_blocking(vec![input.clone()], dir.join("out.pdf")),
+            "Choose at least two PDF files to merge.",
+        );
+        assert_error(
+            merge_pdfs_blocking(vec![input.clone(), dir.join("other.pdf")], input),
+            "Save the PDF as a new file, not over the input file.",
+        );
+    }
+
+    #[test]
+    fn write_selected_pages_uses_requested_order() {
+        let dir = TestDir::new("selected-pages");
+        let input = dir.join("input.pdf");
+        let output = dir.join("output.pdf");
+        write_test_pdf(&input, &[10, 20, 30]);
+
+        let result = write_selected_pages(input.clone(), vec![3, 1], output.clone());
+
+        assert_eq!(result.unwrap(), output);
+        assert_eq!(page_markers(&output), vec![30, 10]);
+    }
+
+    #[test]
+    fn write_selected_pages_rejects_empty_pages_and_input_overwrite() {
+        let dir = TestDir::new("selected-pages-invalid");
+        let input = dir.join("input.pdf");
+        write_test_pdf(&input, &[10, 20]);
+
+        assert_error(
+            write_selected_pages(input.clone(), Vec::new(), dir.join("empty.pdf")),
+            "Choose at least one page to save.",
+        );
+        assert_error(
+            write_selected_pages(input.clone(), vec![1], input.clone()),
+            "Save the PDF as a new file, not over the input file.",
+        );
+        assert_error(
+            write_selected_pages(input, vec![3], dir.join("missing.pdf")),
+            "Page 3 is not in this PDF.",
+        );
+    }
+
+    #[test]
+    fn split_pdf_creates_expected_files_for_every_n_pages() {
+        let dir = TestDir::new("split");
+        let input = dir.join("input.pdf");
+        let output_folder = dir.join("parts");
+        fs::create_dir(&output_folder).expect("output folder should be created");
+        write_test_pdf(&input, &[10, 20, 30, 40, 50]);
+
+        let result = split_pdf_blocking(
+            input,
+            output_folder.clone(),
+            "Chapter".to_string(),
+            SplitRule::EveryNPages(2),
+        );
+
+        assert_eq!(result.unwrap(), output_folder);
+        let files = sorted_pdf_files(&dir.join("parts"));
+        assert_eq!(files.len(), 3);
+        assert_eq!(page_markers(&files[0]), vec![10, 20]);
+        assert_eq!(page_markers(&files[1]), vec![30, 40]);
+        assert_eq!(page_markers(&files[2]), vec![50]);
+    }
+
+    #[test]
+    fn split_breaks_normalizes_and_rejects_invalid_rules() {
+        assert_eq!(
+            split_breaks(SplitRule::EveryPage, 3).unwrap(),
+            vec![1, 2, 3]
+        );
+        assert_eq!(split_breaks(SplitRule::EvenPages, 5).unwrap(), vec![2, 4]);
+        assert_eq!(split_breaks(SplitRule::OddPages, 5).unwrap(), vec![1, 3, 5]);
+        assert_eq!(
+            split_breaks(SplitRule::SpecificPages(vec![4, 2, 2]), 5).unwrap(),
+            vec![2, 4]
+        );
+
+        assert_error(
+            split_breaks(SplitRule::SpecificPages(Vec::new()), 5),
+            "Enter pages like 2,4,7.",
+        );
+        assert_error(
+            split_breaks(SplitRule::EveryNPages(0), 5),
+            "Enter a page count of 1 or more.",
+        );
+        assert_error(
+            split_breaks(SplitRule::SpecificPages(vec![6]), 5),
+            "Page 6 is not in this PDF.",
+        );
+    }
+
+    #[test]
+    fn compress_pdf_writes_valid_output_and_rejects_input_overwrite() {
+        let dir = TestDir::new("compress");
+        let input = dir.join("input.pdf");
+        let output = dir.join("compressed.pdf");
+        write_test_pdf(&input, &[10, 20]);
+
+        let result = compress_pdf_blocking(
+            input.clone(),
+            output.clone(),
+            CompressOptions {
+                remove_empty_streams: true,
+                prune_objects: true,
+            },
+        );
+
+        assert_eq!(result.unwrap(), output);
+        assert_eq!(page_markers(&output), vec![10, 20]);
+        assert_error(
+            compress_pdf_blocking(
+                input.clone(),
+                input,
+                CompressOptions {
+                    remove_empty_streams: false,
+                    prune_objects: false,
+                },
+            ),
+            "Save the PDF as a new file, not over the input file.",
+        );
+    }
+
+    fn assert_error<T: std::fmt::Debug>(result: Result<T, PdfBackendError>, message: &str) {
+        assert_eq!(result.unwrap_err().to_string(), message);
+    }
+
+    fn write_test_pdf(path: &Path, page_markers: &[i64]) {
+        let mut document = Document::with_version("1.5");
+        let pages_id = document.new_object_id();
+        let mut kids = Vec::with_capacity(page_markers.len());
+
+        for marker in page_markers {
+            let content_id = document.add_object(Stream::new(dictionary! {}, Vec::new()));
+            let page_id = document.add_object(dictionary! {
+                "Type" => "Page",
+                "Parent" => pages_id,
+                "Contents" => content_id,
+                "Resources" => dictionary! {},
+                "MediaBox" => vec![0.into(), 0.into(), (*marker).into(), 100.into()],
+            });
+            kids.push(page_id.into());
+        }
+
+        document.objects.insert(
+            pages_id,
+            Object::Dictionary(dictionary! {
+                "Type" => "Pages",
+                "Kids" => kids,
+                "Count" => page_markers.len() as i64,
+            }),
+        );
+        let catalog_id = document.add_object(dictionary! {
+            "Type" => "Catalog",
+            "Pages" => pages_id,
+        });
+        document.trailer.set("Root", catalog_id);
+        document.compress();
+        document.save(path).expect("test PDF should be saved");
+    }
+
+    fn page_markers(path: &Path) -> Vec<i64> {
+        let document = Document::load(path).expect("test PDF should load");
+        document
+            .get_pages()
+            .into_values()
+            .map(|object_id| {
+                let page = document
+                    .get_object(object_id)
+                    .expect("page object should exist")
+                    .as_dict()
+                    .expect("page should be a dictionary");
+                let media_box = page
+                    .get(b"MediaBox")
+                    .expect("page should have a media box")
+                    .as_array()
+                    .expect("media box should be an array");
+
+                media_box[2]
+                    .as_i64()
+                    .expect("media box marker should be an integer")
+            })
+            .collect()
+    }
+
+    fn sorted_pdf_files(folder: &Path) -> Vec<PathBuf> {
+        let mut files = fs::read_dir(folder)
+            .expect("folder should exist")
+            .map(|entry| entry.expect("entry should be readable").path())
+            .filter(|path| path.extension().is_some_and(|extension| extension == "pdf"))
+            .collect::<Vec<_>>();
+        files.sort();
+        files
+    }
+}
