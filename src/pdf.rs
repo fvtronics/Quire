@@ -720,11 +720,201 @@ mod tests {
         );
 
         assert_eq!(result.unwrap(), output_folder);
-        let files = sorted_pdf_files(&dir.join("parts"));
-        assert_eq!(files.len(), 3);
-        assert_eq!(page_markers(&files[0]), vec![10, 20]);
-        assert_eq!(page_markers(&files[1]), vec![30, 40]);
-        assert_eq!(page_markers(&files[2]), vec![50]);
+        assert_split_outputs(
+            &dir.join("parts"),
+            &[
+                ("Chapter 1.pdf", &[10, 20]),
+                ("Chapter 2.pdf", &[30, 40]),
+                ("Chapter 3.pdf", &[50]),
+            ],
+        );
+    }
+
+    #[test]
+    fn split_pdf_creates_one_file_per_page() {
+        let dir = TestDir::new("split-every-page");
+        let input = dir.join("input.pdf");
+        let output_folder = dir.join("parts");
+        fs::create_dir(&output_folder).expect("output folder should be created");
+        write_test_pdf(&input, &[10, 20, 30]);
+
+        let result = split_pdf_blocking(
+            input,
+            output_folder.clone(),
+            "Page".to_string(),
+            SplitRule::EveryPage,
+        );
+
+        assert_eq!(result.unwrap(), output_folder);
+        assert_split_outputs(
+            &dir.join("parts"),
+            &[
+                ("Page 1.pdf", &[10]),
+                ("Page 2.pdf", &[20]),
+                ("Page 3.pdf", &[30]),
+            ],
+        );
+    }
+
+    #[test]
+    fn split_pdf_groups_even_page_breaks_with_trailing_remainder() {
+        let dir = TestDir::new("split-even");
+        let input = dir.join("input.pdf");
+        let output_folder = dir.join("parts");
+        fs::create_dir(&output_folder).expect("output folder should be created");
+        write_test_pdf(&input, &[10, 20, 30, 40, 50]);
+
+        let result = split_pdf_blocking(
+            input,
+            output_folder.clone(),
+            "Even".to_string(),
+            SplitRule::EvenPages,
+        );
+
+        assert_eq!(result.unwrap(), output_folder);
+        assert_split_outputs(
+            &dir.join("parts"),
+            &[
+                ("Even 1.pdf", &[10, 20]),
+                ("Even 2.pdf", &[30, 40]),
+                ("Even 3.pdf", &[50]),
+            ],
+        );
+    }
+
+    #[test]
+    fn split_pdf_groups_odd_page_breaks() {
+        let dir = TestDir::new("split-odd");
+        let input = dir.join("input.pdf");
+        let output_folder = dir.join("parts");
+        fs::create_dir(&output_folder).expect("output folder should be created");
+        write_test_pdf(&input, &[10, 20, 30, 40, 50]);
+
+        let result = split_pdf_blocking(
+            input,
+            output_folder.clone(),
+            "Odd".to_string(),
+            SplitRule::OddPages,
+        );
+
+        assert_eq!(result.unwrap(), output_folder);
+        assert_split_outputs(
+            &dir.join("parts"),
+            &[
+                ("Odd 1.pdf", &[10]),
+                ("Odd 2.pdf", &[20, 30]),
+                ("Odd 3.pdf", &[40, 50]),
+            ],
+        );
+    }
+
+    #[test]
+    fn split_pdf_sorts_and_deduplicates_specific_page_breaks() {
+        let dir = TestDir::new("split-specific");
+        let input = dir.join("input.pdf");
+        let output_folder = dir.join("parts");
+        fs::create_dir(&output_folder).expect("output folder should be created");
+        write_test_pdf(&input, &[10, 20, 30, 40, 50]);
+
+        let result = split_pdf_blocking(
+            input,
+            output_folder.clone(),
+            "Specific".to_string(),
+            SplitRule::SpecificPages(vec![4, 2, 2]),
+        );
+
+        assert_eq!(result.unwrap(), output_folder);
+        assert_split_outputs(
+            &dir.join("parts"),
+            &[
+                ("Specific 1.pdf", &[10, 20]),
+                ("Specific 2.pdf", &[30, 40]),
+                ("Specific 3.pdf", &[50]),
+            ],
+        );
+    }
+
+    #[test]
+    fn split_pdf_uses_input_stem_for_blank_prefix() {
+        let dir = TestDir::new("split-default-prefix");
+        let input = dir.join("source document.pdf");
+        let output_folder = dir.join("parts");
+        fs::create_dir(&output_folder).expect("output folder should be created");
+        write_test_pdf(&input, &[10, 20]);
+
+        let result = split_pdf_blocking(
+            input,
+            output_folder.clone(),
+            "   ".to_string(),
+            SplitRule::EveryPage,
+        );
+
+        assert_eq!(result.unwrap(), output_folder);
+        assert_split_outputs(
+            &dir.join("parts"),
+            &[
+                ("source document 1.pdf", &[10]),
+                ("source document 2.pdf", &[20]),
+            ],
+        );
+    }
+
+    #[test]
+    fn split_pdf_rejects_empty_pdf() {
+        let dir = TestDir::new("split-empty");
+        let input = dir.join("empty.pdf");
+        let output_folder = dir.join("parts");
+        fs::create_dir(&output_folder).expect("output folder should be created");
+        write_test_pdf(&input, &[]);
+
+        assert_error(
+            split_pdf_blocking(
+                input,
+                output_folder,
+                "Empty".to_string(),
+                SplitRule::EveryPage,
+            ),
+            "Choose at least one page to save.",
+        );
+    }
+
+    #[test]
+    fn split_pdf_reports_load_error_with_input_filename() {
+        let dir = TestDir::new("split-corrupt");
+        let input = dir.join("broken.pdf");
+        let output_folder = dir.join("parts");
+        fs::create_dir(&output_folder).expect("output folder should be created");
+        fs::write(&input, b"not a pdf").expect("corrupt PDF fixture should be written");
+
+        let error = split_pdf_blocking(
+            input,
+            output_folder,
+            "Broken".to_string(),
+            SplitRule::EveryPage,
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(error.starts_with("Could not read broken.pdf:"));
+    }
+
+    #[test]
+    fn split_pdf_failed_write_does_not_create_requested_output() {
+        let dir = TestDir::new("split-write-failure");
+        let input = dir.join("input.pdf");
+        let missing_output_folder = dir.join("missing").join("parts");
+        let requested_output = missing_output_folder.join("Split 1.pdf");
+        write_test_pdf(&input, &[10]);
+
+        let result = split_pdf_blocking(
+            input,
+            missing_output_folder,
+            "Split".to_string(),
+            SplitRule::EveryPage,
+        );
+
+        assert!(matches!(result, Err(PdfBackendError::Write(_))));
+        assert!(!requested_output.exists());
     }
 
     #[test]
@@ -787,6 +977,28 @@ mod tests {
 
     fn assert_error<T: std::fmt::Debug>(result: Result<T, PdfBackendError>, message: &str) {
         assert_eq!(result.unwrap_err().to_string(), message);
+    }
+
+    fn assert_split_outputs(folder: &Path, expected: &[(&str, &[i64])]) {
+        let files = sorted_pdf_files(folder);
+        let actual_names = files
+            .iter()
+            .map(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .expect("test output should have a UTF-8 filename")
+                    .to_string()
+            })
+            .collect::<Vec<_>>();
+        let expected_names = expected
+            .iter()
+            .map(|(name, _)| name.to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(actual_names, expected_names);
+        for (file, (_, expected_markers)) in files.iter().zip(expected.iter()) {
+            assert_eq!(page_markers(file), *expected_markers);
+        }
     }
 
     fn write_test_pdf(path: &Path, page_markers: &[i64]) {

@@ -138,3 +138,25 @@ fn format_page_range(start: u32, end: u32) -> String {
         format!("{start}-{end}")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_pages_sorts_and_removes_duplicates() {
+        assert_eq!(normalize_pages(vec![3, 1, 3, 2]), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn format_page_ranges_groups_contiguous_pages() {
+        assert_eq!(format_page_ranges(&[1, 2, 3, 5, 7, 8]), "1-3,5,7-8");
+    }
+
+    #[test]
+    fn format_page_ranges_handles_empty_single_and_sparse_pages() {
+        assert_eq!(format_page_ranges(&[]), "");
+        assert_eq!(format_page_ranges(&[4]), "4");
+        assert_eq!(format_page_ranges(&[1, 3, 5]), "1,3,5");
+    }
+}
