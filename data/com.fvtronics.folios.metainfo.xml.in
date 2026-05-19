@@ -5,10 +5,10 @@
   <project_license>GPL-3.0-or-later</project_license>
 
   <name>Folios</name>
-  <summary>Merge PDFs locally</summary>
+  <summary>Work with PDFs locally</summary>
   <description>
-    <p>Folios is a simple GNOME utility for everyday PDF tasks, starting with a calm workflow for merging local PDF files into a new document.</p>
-    <p>The first version focuses on merging local PDF files into a new document.</p>
+    <p>Folios is a simple GNOME utility for working with local PDF files without a complex document suite.</p>
+    <p>Merge multiple PDFs, organize pages, extract page ranges, split documents, and compress files without sending them to an online service.</p>
   </description>
 
   <developer id="com.fvtronics">
@@ -27,10 +27,12 @@
   <releases>
     <release version="0.1.0" date="2026-05-18">
       <description translate="no">
-        <p>Initial minimal version.</p>
+        <p>Initial version with the core PDF tools.</p>
         <ul>
           <li>Add a native GTK and libadwaita application shell.</li>
-          <li>Add a simple PDF merge workflow.</li>
+          <li>Add tools to merge, organize, extract, split, and compress PDFs.</li>
+          <li>Add page previews, list and grid views, reordering, and drag-and-drop where useful.</li>
+          <li>Add local output actions for generated PDFs and split output folders.</li>
         </ul>
       </description>
     </release>

@@ -1,0 +1,302 @@
+# Folios translations.
+# Copyright (C) 2026 Francisco Vásquez Cuevas
+# This file is distributed under the same license as the folios package.
+# FVtronics <fvasquez.public@fvtronics.com>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Folios 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-19 08:29-0400\n"
+"PO-Revision-Date: 2026-05-19 09:01-0400\n"
+"Last-Translator: FVtronics <fvasquez.public@fvtronics.com>\n"
+"Language-Team: es_DO\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Gtranslator 50.0\n"
+
+#: data/com.fvtronics.folios.desktop.in:2
+#: data/com.fvtronics.folios.metainfo.xml.in:7 src/window.blp:5
+msgid "Folios"
+msgstr "Folios"
+
+#: data/com.fvtronics.folios.desktop.in:8
+msgid "PDF;Merge;Document;GTK;"
+msgstr "PDF;Combinar;Documento;GTK;"
+
+#: data/com.fvtronics.folios.metainfo.xml.in:8
+msgid "Work with PDFs locally"
+msgstr "Trabajar con archivos PDF localmente"
+
+#: data/com.fvtronics.folios.metainfo.xml.in:10
+msgid ""
+"Folios is a simple GNOME utility for working with local PDF files without a "
+"complex document suite."
+msgstr ""
+"Folios es una utilidad sencilla de GNOME para trabajar con archivos PDF "
+"locales sin una suite de documentos compleja."
+
+#: data/com.fvtronics.folios.metainfo.xml.in:11
+msgid ""
+"Merge multiple PDFs, organize pages, extract page ranges, split documents, "
+"and compress files without sending them to an online service."
+msgstr ""
+"Combina varios PDF, organiza páginas, extrae rangos de páginas, divide "
+"documentos y comprime archivos sin enviarlos a un servicio en línea."
+
+#: data/com.fvtronics.folios.metainfo.xml.in:15
+msgid "Francisco Vásquez Cuevas"
+msgstr "Francisco Vásquez Cuevas"
+
+#. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
+#: src/application.rs:107
+msgid "translator-credits"
+msgstr "FVtronics <fvasquez.public@fvtronics.com>"
+
+#: src/shortcuts-dialog.blp:6
+msgid "Shortcuts"
+msgstr "Atajos de teclado"
+
+#: src/shortcuts-dialog.blp:9
+msgctxt "shortcut window"
+msgid "Show Shortcuts"
+msgstr "Mostrar atajos de teclado"
+
+#: src/shortcuts-dialog.blp:14
+msgctxt "shortcut window"
+msgid "Quit"
+msgstr "Salir"
+
+#: src/window.blp:16
+msgid "Main Menu"
+msgstr "Menú principal"
+
+#: src/window.blp:26
+msgid "List View"
+msgstr "Vista de lista"
+
+#: src/window.blp:34
+msgid "Grid View"
+msgstr "Vista de cuadrícula"
+
+#: src/window.blp:53
+msgid "PDF Tools"
+msgstr "Herramientas de PDF"
+
+#: src/window.blp:69 src/window.blp:183
+msgid "Merge"
+msgstr "Combinar"
+
+#: src/window.blp:70
+msgid "Combine PDFs"
+msgstr "Combinar archivos PDF"
+
+#: src/window.blp:76 src/window.blp:382
+msgid "Organize Pages"
+msgstr "Organizar páginas"
+
+#: src/window.blp:77
+msgid "Reorder or remove pages"
+msgstr "Reordenar o eliminar páginas"
+
+#: src/window.blp:83 src/window.blp:515
+msgid "Extract Pages"
+msgstr "Extraer páginas"
+
+#: src/window.blp:84
+msgid "Save selected pages"
+msgstr "Guardar páginas seleccionadas"
+
+#: src/window.blp:90 src/window.blp:706
+msgid "Split"
+msgstr "Dividir"
+
+#: src/window.blp:91
+msgid "Split by page"
+msgstr "Dividir por página"
+
+#: src/window.blp:97 src/window.blp:300
+msgid "Compress"
+msgstr "Comprimir"
+
+#: src/window.blp:98
+msgid "Reduce PDF size"
+msgstr "Reducir el tamaño del PDF"
+
+#: src/window.blp:128
+msgid "Merge PDFs"
+msgstr "Combinar archivos PDF"
+
+#: src/window.blp:134
+msgid "No files selected"
+msgstr "No hay archivos seleccionados"
+
+#: src/window.blp:143 src/window.blp:195
+msgid "Add PDF Files"
+msgstr "Añadir archivos PDF"
+
+#: src/window.blp:146 src/window.blp:200
+msgid "Add PDFs"
+msgstr "Añadir archivos PDF"
+
+#: src/window.blp:154 src/window.blp:283 src/window.blp:408 src/window.blp:541
+msgid "Open Output File"
+msgstr "Abrir archivo de salida"
+
+#: src/window.blp:158 src/window.blp:287 src/window.blp:412 src/window.blp:545
+msgid "Open Output"
+msgstr "Abrir resultado"
+
+#: src/window.blp:166
+msgid "Clear File List"
+msgstr "Limpiar lista de archivos"
+
+#: src/window.blp:170
+msgid "Clear"
+msgstr "Limpiar"
+
+#: src/window.blp:178
+msgid "Merge Selected PDFs"
+msgstr "Combinar los PDF seleccionados"
+
+#: src/window.blp:190
+msgid "Add PDFs to Begin"
+msgstr "Añadir archivos PDF para comenzar"
+
+#: src/window.blp:191
+msgid "Choose two or more PDF files to combine into a new document."
+msgstr "Elige dos o más archivos PDF para combinarlos en un nuevo documento."
+
+#: src/window.blp:257 src/window.blp:295
+msgid "Compress PDF"
+msgstr "Comprimir PDF"
+
+#: src/window.blp:263 src/window.blp:388 src/window.blp:521 src/window.blp:669
+msgid "No PDF selected"
+msgstr "Ningún PDF seleccionado"
+
+#: src/window.blp:272 src/window.blp:275 src/window.blp:312 src/window.blp:317
+#: src/window.blp:397 src/window.blp:400 src/window.blp:449 src/window.blp:454
+#: src/window.blp:530 src/window.blp:533 src/window.blp:570 src/window.blp:575
+#: src/window.blp:678 src/window.blp:681 src/window.blp:718 src/window.blp:723
+msgid "Open PDF"
+msgstr "Abrir PDF"
+
+#: src/window.blp:307
+msgid "Open a PDF to Compress"
+msgstr "Abre un PDF para comprimirlo"
+
+#: src/window.blp:308
+msgid "Choose a PDF, then save a smaller copy."
+msgstr "Elige un PDF y luego guarda una copia reducida."
+
+#: src/window.blp:347
+msgid "Remove Unused Data"
+msgstr "Eliminar datos no usados"
+
+#: src/window.blp:348
+msgid "Discard unreferenced PDF objects"
+msgstr "Descartar objetos PDF no referenciados"
+
+#: src/window.blp:353
+msgid "Remove Empty Streams"
+msgstr "Eliminar flujos vacíos"
+
+#: src/window.blp:354
+msgid "Discard empty PDF data streams"
+msgstr "Descartar flujos de datos PDF vacíos"
+
+#: src/window.blp:420
+msgid "Reset Page Order"
+msgstr "Restablecer orden de páginas"
+
+#: src/window.blp:424
+msgid "Reset"
+msgstr "Restablecer"
+
+#: src/window.blp:432
+msgid "Save Organized PDF"
+msgstr "Guardar PDF organizado"
+
+#: src/window.blp:437
+msgid "Save"
+msgstr "Guardar"
+
+#: src/window.blp:444
+msgid "Open a PDF to Organize"
+msgstr "Abre un PDF para organizarlo"
+
+#: src/window.blp:445
+msgid "Reorder or remove pages, then save a new document."
+msgstr "Reordena o elimina páginas y luego guarda un nuevo documento."
+
+#: src/window.blp:465 src/window.blp:612
+msgid "List"
+msgstr "Lista"
+
+#: src/window.blp:478 src/window.blp:625
+msgid "Grid"
+msgstr "Cuadrícula"
+
+#: src/window.blp:553
+msgid "Extract Selected Pages"
+msgstr "Extraer páginas seleccionadas"
+
+#: src/window.blp:558
+msgid "Extract"
+msgstr "Extraer"
+
+#: src/window.blp:565
+msgid "Open a PDF to Extract Pages"
+msgstr "Abre un PDF para extraer páginas"
+
+#: src/window.blp:566
+msgid "Choose page ranges, then save them as a new document."
+msgstr "Elige rangos de páginas y guarda la selección como un nuevo documento."
+
+#: src/window.blp:601
+msgid "Pages"
+msgstr "Páginas"
+
+#: src/window.blp:663 src/window.blp:701
+msgid "Split PDF"
+msgstr "Dividir PDF"
+
+#: src/window.blp:689
+msgid "Open Output Folder"
+msgstr "Abrir carpeta de salida"
+
+#: src/window.blp:693
+msgid "Open Folder"
+msgstr "Abrir carpeta"
+
+#: src/window.blp:713
+msgid "Open a PDF to Split"
+msgstr "Abre un PDF para dividirlo"
+
+#: src/window.blp:714
+msgid "Choose where the PDF should be split by page."
+msgstr "Elige cómo dividir el PDF por páginas."
+
+#: src/window.blp:753
+msgid "Split After"
+msgstr "Dividir después de"
+
+#: src/window.blp:757
+msgid "Specific Pages"
+msgstr "Páginas específicas"
+
+#: src/window.blp:761
+msgid "Every N Pages"
+msgstr "Cada N páginas"
+
+#: src/window.blp:766
+msgid "Output Name Prefix"
+msgstr "Prefijo del nombre de salida"
+
+#: src/window.blp:780
+msgid "_About Folios"
+msgstr "_Acerca de Folios"
