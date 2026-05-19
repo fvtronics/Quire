@@ -29,9 +29,9 @@ jobs:
           $SUDO apt-get update
           $SUDO apt-get install -y --no-install-recommends \
             appstream \
-            blueprint-compiler \
             desktop-file-utils \
             gettext \
+            git \
             libglib2.0-bin \
             libadwaita-1-dev \
             libgtk-4-dev \
@@ -56,8 +56,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Download Blueprint Compiler
+        run: meson subprojects download blueprint-compiler
+
       - name: Generate Build Configuration
-        run: meson setup builddir
+        run: meson setup builddir --wrap-mode=forcefallback
 
       - name: Format Check
         run: cargo fmt --all -- --check
@@ -92,9 +95,9 @@ jobs:
           $SUDO apt-get update
           $SUDO apt-get install -y --no-install-recommends \
             appstream \
-            blueprint-compiler \
             desktop-file-utils \
             gettext \
+            git \
             libglib2.0-bin \
             libadwaita-1-dev \
             libgtk-4-dev \
@@ -130,9 +133,12 @@ jobs:
           test "$VERSION" = "$MESON_VERSION"
           grep -q "<release version=\"$VERSION\"" data/com.fvtronics.folios.metainfo.xml.in
 
+      - name: Download Blueprint Compiler
+        run: meson subprojects download blueprint-compiler
+
       - name: Build Release
         run: |
-          meson setup builddir-release --buildtype=release
+          meson setup builddir-release --buildtype=release --wrap-mode=forcefallback
           meson compile -C builddir-release
 
       - name: Validate App Metadata

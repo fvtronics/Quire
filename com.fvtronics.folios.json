@@ -74,6 +74,7 @@
             ],
             "config-opts" : [
                 "--libdir=lib",
+                "--wrap-mode=forcefallback",
                 "-Dcargo-home=/run/build/folios/cargo"
             ]
         }
