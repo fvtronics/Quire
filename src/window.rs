@@ -37,6 +37,9 @@ pub(super) enum PdfTool {
 const EXTRACT_LIST_VIEW_NAME: &str = "list";
 const EXTRACT_PREVIEW_VIEW_NAME: &str = "preview";
 const EXTRACT_PREVIEW_PAGE_LIMIT: usize = 15;
+const ORGANIZE_LIST_VIEW_NAME: &str = "list";
+const ORGANIZE_PREVIEW_VIEW_NAME: &str = "preview";
+const ORGANIZE_PREVIEW_PAGE_LIMIT: usize = 15;
 
 mod imp {
     use super::*;
@@ -89,9 +92,13 @@ mod imp {
         #[template_child]
         pub organize_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
-        pub organize_page_scroller: TemplateChild<gtk::ScrolledWindow>,
+        pub organize_view_switcher: TemplateChild<adw::ViewSwitcher>,
+        #[template_child]
+        pub organize_view_stack: TemplateChild<adw::ViewStack>,
         #[template_child]
         pub organize_page_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub organize_page_grid: TemplateChild<gtk::FlowBox>,
         #[template_child]
         pub organize_reset_button: TemplateChild<gtk::Button>,
         #[template_child]
@@ -131,6 +138,7 @@ mod imp {
         pub last_output: RefCell<Option<PathBuf>>,
         pub organize_file: RefCell<Option<PathBuf>>,
         pub organize_page_count: Cell<usize>,
+        pub organize_previews: RefCell<Vec<crate::preview::PagePreview>>,
         pub organize_page_order: RefCell<Vec<u32>>,
         pub organize_last_output: RefCell<Option<PathBuf>>,
         pub extract_file: RefCell<Option<PathBuf>>,
@@ -481,17 +489,26 @@ impl FoliosWindow {
 
         let window = self.clone();
         glib::spawn_future_local(async move {
-            let result = crate::pdf::page_count(path.clone()).await;
+            let result = crate::preview::render_page_previews(path.clone()).await;
             let imp = window.imp();
             imp.is_running.set(false);
 
             match result {
-                Ok(page_count) => {
+                Ok(previews) => {
+                    let page_count = previews.len();
                     imp.organize_file.borrow_mut().replace(path);
                     imp.organize_page_count.set(page_count);
+                    *imp.organize_previews.borrow_mut() = previews;
                     let mut page_order = imp.organize_page_order.borrow_mut();
                     page_order.clear();
                     page_order.extend(1..=page_count as u32);
+                    imp.organize_view_stack.set_visible_child_name(
+                        if page_count <= ORGANIZE_PREVIEW_PAGE_LIMIT {
+                            ORGANIZE_PREVIEW_VIEW_NAME
+                        } else {
+                            ORGANIZE_LIST_VIEW_NAME
+                        },
+                    );
                 }
                 Err(error) => {
                     window.show_toast(&error.to_string());
@@ -543,8 +560,11 @@ impl FoliosWindow {
         let imp = self.imp();
         imp.organize_file.borrow_mut().take();
         imp.organize_page_count.set(0);
+        imp.organize_previews.borrow_mut().clear();
         imp.organize_page_order.borrow_mut().clear();
         imp.organize_last_output.borrow_mut().take();
+        imp.organize_view_stack
+            .set_visible_child_name(ORGANIZE_LIST_VIEW_NAME);
         self.update_organize_view();
     }
 
@@ -707,15 +727,32 @@ impl FoliosWindow {
         let page_order = imp.organize_page_order.borrow();
         let has_file = imp.organize_file.borrow().is_some();
         let has_pages = !page_order.is_empty();
+        let previews = imp.organize_previews.borrow();
 
         imp.organize_page_list.remove_all();
+        imp.organize_page_grid.remove_all();
         for (index, page_number) in page_order.iter().enumerate() {
-            imp.organize_page_list
-                .append(&self.page_row(index, *page_number, page_order.len()));
+            let preview = previews
+                .iter()
+                .find(|preview| preview.page_number == *page_number);
+            imp.organize_page_list.append(&self.page_row(
+                index,
+                *page_number,
+                page_order.len(),
+                preview,
+            ));
+            if let Some(preview) = preview {
+                imp.organize_page_grid.append(&self.organize_page_tile(
+                    preview,
+                    index,
+                    page_order.len(),
+                ));
+            }
         }
 
         imp.organize_empty_status.set_visible(!has_file);
-        imp.organize_page_scroller.set_visible(has_file);
+        imp.organize_view_switcher.set_visible(has_file);
+        imp.organize_view_stack.set_visible(has_file);
         imp.organize_choose_button.set_visible(has_file);
         imp.organize_reset_button.set_visible(has_file);
         imp.organize_save_button.set_visible(has_file);
@@ -758,11 +795,18 @@ impl FoliosWindow {
         imp.extract_page_list.remove_all();
         imp.extract_page_grid.remove_all();
         let selected_pages = imp.extract_selected_pages.borrow();
+        let previews = imp.extract_previews.borrow();
         for page_number in 1..=imp.extract_page_count.get() as u32 {
-            imp.extract_page_list
-                .append(&self.extract_page_row(page_number, selected_pages.contains(&page_number)));
+            let preview = previews
+                .iter()
+                .find(|preview| preview.page_number == page_number);
+            imp.extract_page_list.append(&self.extract_page_row(
+                page_number,
+                selected_pages.contains(&page_number),
+                preview,
+            ));
         }
-        for preview in imp.extract_previews.borrow().iter() {
+        for preview in previews.iter() {
             imp.extract_page_grid.append(
                 &self.extract_page_tile(preview, selected_pages.contains(&preview.page_number)),
             );
@@ -841,7 +885,13 @@ impl FoliosWindow {
         row
     }
 
-    fn page_row(&self, index: usize, page_number: u32, count: usize) -> adw::ActionRow {
+    fn page_row(
+        &self,
+        index: usize,
+        page_number: u32,
+        count: usize,
+        preview: Option<&crate::preview::PagePreview>,
+    ) -> adw::ActionRow {
         let row = adw::ActionRow::builder()
             .title(format!("{} {page_number}", gettext("Page")))
             .subtitle(format!(
@@ -853,8 +903,14 @@ impl FoliosWindow {
             .activatable(false)
             .build();
 
-        let icon = gtk::Image::from_icon_name("view-paged-symbolic");
-        row.add_prefix(&icon);
+        if let Some(preview) = preview {
+            let picture = preview_picture(preview);
+            picture.set_size_request(48, 68);
+            row.add_prefix(&picture);
+        } else {
+            let icon = gtk::Image::from_icon_name("view-paged-symbolic");
+            row.add_prefix(&icon);
+        }
 
         let controls_sensitive = !self.imp().is_running.get();
         let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
@@ -881,7 +937,48 @@ impl FoliosWindow {
         });
         row.add_suffix(&remove_button);
 
+        self.add_page_drag_and_drop(&row, page_number);
+
         row
+    }
+
+    fn organize_page_tile(
+        &self,
+        preview: &crate::preview::PagePreview,
+        index: usize,
+        count: usize,
+    ) -> gtk::Box {
+        let tile = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(6)
+            .width_request(180)
+            .build();
+
+        let picture = preview_picture(preview);
+        picture.set_size_request(160, 220);
+        tile.append(&picture);
+
+        let footer = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .spacing(6)
+            .build();
+        let label = gtk::Label::builder()
+            .label(format!("{} {}", gettext("Page"), preview.page_number))
+            .xalign(0.0)
+            .hexpand(true)
+            .build();
+        let position = gtk::Label::builder()
+            .label(format!("{}/{}", index + 1, count))
+            .build();
+        position.add_css_class("dim-label");
+
+        footer.append(&label);
+        footer.append(&position);
+        tile.append(&footer);
+
+        self.add_page_drag_and_drop(&tile, preview.page_number);
+
+        tile
     }
 
     fn extract_file_row(&self, path: &Path, page_count: usize) -> adw::ActionRow {
@@ -900,7 +997,12 @@ impl FoliosWindow {
         row
     }
 
-    fn extract_page_row(&self, page_number: u32, selected: bool) -> adw::ActionRow {
+    fn extract_page_row(
+        &self,
+        page_number: u32,
+        selected: bool,
+        preview: Option<&crate::preview::PagePreview>,
+    ) -> adw::ActionRow {
         let check_button = gtk::CheckButton::builder()
             .active(selected)
             .tooltip_text(gettext("Select Page"))
@@ -912,8 +1014,14 @@ impl FoliosWindow {
             .activatable_widget(&check_button)
             .build();
 
-        let icon = gtk::Image::from_icon_name("view-paged-symbolic");
-        row.add_prefix(&icon);
+        if let Some(preview) = preview {
+            let picture = preview_picture(preview);
+            picture.set_size_request(48, 68);
+            row.add_prefix(&picture);
+        } else {
+            let icon = gtk::Image::from_icon_name("view-paged-symbolic");
+            row.add_prefix(&icon);
+        }
         row.add_suffix(&check_button);
 
         let window = self.clone();
@@ -941,17 +1049,8 @@ impl FoliosWindow {
             .spacing(6)
             .build();
 
-        let picture =
-            match gtk::gdk_pixbuf::Pixbuf::from_read(Cursor::new(preview.png_data.clone())) {
-                Ok(pixbuf) => {
-                    let texture = gtk::gdk::Texture::for_pixbuf(&pixbuf);
-                    gtk::Picture::for_paintable(&texture)
-                }
-                Err(_) => gtk::Picture::new(),
-            };
+        let picture = preview_picture(preview);
         picture.set_size_request(160, 220);
-        picture.set_can_shrink(true);
-        picture.set_content_fit(gtk::ContentFit::Contain);
         tile.append(&picture);
 
         let footer = gtk::Box::builder()
@@ -1004,6 +1103,52 @@ impl FoliosWindow {
         imp.organize_last_output.borrow_mut().take();
         drop(pages);
         self.update_organize_view();
+    }
+
+    fn reorder_page(&self, dragged_page: u32, target_page: u32) {
+        if dragged_page == target_page {
+            return;
+        }
+
+        let imp = self.imp();
+        let mut pages = imp.organize_page_order.borrow_mut();
+        let Some(from) = pages.iter().position(|page| *page == dragged_page) else {
+            return;
+        };
+        let Some(to) = pages.iter().position(|page| *page == target_page) else {
+            return;
+        };
+
+        let page = pages.remove(from);
+        pages.insert(to, page);
+        imp.organize_last_output.borrow_mut().take();
+        drop(pages);
+
+        self.update_organize_view();
+    }
+
+    fn add_page_drag_and_drop(&self, widget: &impl IsA<gtk::Widget>, page_number: u32) {
+        let drag_source = gtk::DragSource::builder()
+            .actions(gtk::gdk::DragAction::MOVE)
+            .build();
+        drag_source.connect_prepare(move |_, _, _| {
+            Some(gtk::gdk::ContentProvider::for_value(
+                &page_number.to_value(),
+            ))
+        });
+        widget.add_controller(drag_source);
+
+        let drop_target = gtk::DropTarget::new(u32::static_type(), gtk::gdk::DragAction::MOVE);
+        let window = self.clone();
+        drop_target.connect_drop(move |_, value, _, _| {
+            let Ok(dragged_page) = value.get::<u32>() else {
+                return false;
+            };
+
+            window.reorder_page(dragged_page, page_number);
+            true
+        });
+        widget.add_controller(drop_target);
     }
 
     fn remove_page(&self, index: usize) {
@@ -1104,6 +1249,19 @@ fn file_subtitle(path: &Path) -> String {
         Ok(metadata) => format_size(metadata.len()),
         Err(_) => gettext("Size unavailable"),
     }
+}
+
+fn preview_picture(preview: &crate::preview::PagePreview) -> gtk::Picture {
+    let picture = match gtk::gdk_pixbuf::Pixbuf::from_read(Cursor::new(preview.png_data.clone())) {
+        Ok(pixbuf) => {
+            let texture = gtk::gdk::Texture::for_pixbuf(&pixbuf);
+            gtk::Picture::for_paintable(&texture)
+        }
+        Err(_) => gtk::Picture::new(),
+    };
+    picture.set_can_shrink(true);
+    picture.set_content_fit(gtk::ContentFit::Contain);
+    picture
 }
 
 fn format_size(bytes: u64) -> String {

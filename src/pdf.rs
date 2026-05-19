@@ -48,12 +48,6 @@ impl fmt::Display for PdfBackendError {
     }
 }
 
-pub async fn page_count(input_file: PathBuf) -> Result<usize, PdfBackendError> {
-    gio::spawn_blocking(move || page_count_blocking(&input_file))
-        .await
-        .unwrap_or(Err(PdfBackendError::WorkerStopped))
-}
-
 pub async fn merge_pdfs(
     input_files: Vec<PathBuf>,
     output_file: PathBuf,
@@ -115,15 +109,6 @@ pub fn parse_page_ranges(input: &str, page_count: usize) -> Result<Vec<u32>, Pdf
     }
 
     Ok(pages)
-}
-
-fn page_count_blocking(input_file: &Path) -> Result<usize, PdfBackendError> {
-    let document = Document::load(input_file).map_err(|error| PdfBackendError::Load {
-        path: input_file.to_path_buf(),
-        message: error.to_string(),
-    })?;
-
-    Ok(document.get_pages().len())
 }
 
 fn merge_pdfs_blocking(
