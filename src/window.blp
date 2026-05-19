@@ -16,6 +16,28 @@ template $FoliosWindow: Adw.ApplicationWindow {
         tooltip-text: _("Main Menu");
         menu-model: primary_menu;
       }
+
+      [end]
+      Gtk.Box {
+        styles ["linked"]
+
+        Gtk.ToggleButton list_view_button {
+          active: true;
+          tooltip-text: _("List View");
+
+          child: Gtk.Image {
+            icon-name: "view-list-symbolic";
+          };
+        }
+
+        Gtk.ToggleButton grid_view_button {
+          tooltip-text: _("Grid View");
+
+          child: Gtk.Image {
+            icon-name: "view-grid-symbolic";
+          };
+        }
+      }
     }
 
     content: Adw.ToastOverlay toast_overlay {
@@ -166,14 +188,35 @@ template $FoliosWindow: Adw.ApplicationWindow {
             };
           }
 
-          Gtk.ScrolledWindow file_scroller {
+          Adw.ViewStack merge_view_stack {
             vexpand: true;
             visible: false;
 
-            child: Gtk.ListBox file_list {
-              selection-mode: none;
-              styles ["boxed-list"]
-            };
+            Adw.ViewStackPage {
+              name: "list";
+
+              child: Gtk.ScrolledWindow {
+                child: Gtk.ListBox file_list {
+                  selection-mode: none;
+                  styles ["boxed-list"]
+                };
+              };
+            }
+
+            Adw.ViewStackPage {
+              name: "grid";
+
+              child: Gtk.ScrolledWindow {
+                child: Gtk.FlowBox merge_file_grid {
+                  column-spacing: 12;
+                  row-spacing: 12;
+                  homogeneous: true;
+                  selection-mode: none;
+                  min-children-per-line: 2;
+                  max-children-per-line: 5;
+                };
+              };
+            }
           }
         }
 
@@ -274,13 +317,6 @@ template $FoliosWindow: Adw.ApplicationWindow {
             };
           }
 
-          Adw.ViewSwitcher organize_view_switcher {
-            stack: organize_view_stack;
-            policy: wide;
-            halign: center;
-            visible: false;
-          }
-
           Adw.ViewStack organize_view_stack {
             vexpand: true;
             visible: false;
@@ -299,7 +335,7 @@ template $FoliosWindow: Adw.ApplicationWindow {
             }
 
             Adw.ViewStackPage {
-              name: "preview";
+              name: "grid";
               title: _("Preview");
               icon-name: "view-grid-symbolic";
 
@@ -441,12 +477,6 @@ template $FoliosWindow: Adw.ApplicationWindow {
               }
             }
 
-            Adw.ViewSwitcher {
-              stack: extract_view_stack;
-              policy: wide;
-              halign: center;
-            }
-
             Adw.ViewStack extract_view_stack {
               vexpand: true;
 
@@ -464,7 +494,7 @@ template $FoliosWindow: Adw.ApplicationWindow {
               }
 
               Adw.ViewStackPage {
-                name: "preview";
+                name: "grid";
                 title: _("Preview");
                 icon-name: "view-grid-symbolic";
 

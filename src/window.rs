@@ -23,6 +23,7 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use std::cell::{Cell, RefCell};
+use std::collections::BTreeMap;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
@@ -34,12 +35,15 @@ pub(super) enum PdfTool {
     Extract,
 }
 
-const EXTRACT_LIST_VIEW_NAME: &str = "list";
-const EXTRACT_PREVIEW_VIEW_NAME: &str = "preview";
-const EXTRACT_PREVIEW_PAGE_LIMIT: usize = 15;
-const ORGANIZE_LIST_VIEW_NAME: &str = "list";
-const ORGANIZE_PREVIEW_VIEW_NAME: &str = "preview";
-const ORGANIZE_PREVIEW_PAGE_LIMIT: usize = 15;
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+enum ViewMode {
+    #[default]
+    List,
+    Grid,
+}
+
+const LIST_VIEW_NAME: &str = "list";
+const GRID_VIEW_NAME: &str = "grid";
 
 mod imp {
     use super::*;
@@ -51,6 +55,10 @@ mod imp {
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
         #[template_child]
         pub sidebar_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub list_view_button: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
+        pub grid_view_button: TemplateChild<gtk::ToggleButton>,
         #[template_child]
         pub merge_tool_row: TemplateChild<adw::ActionRow>,
         #[template_child]
@@ -73,9 +81,11 @@ mod imp {
         #[template_child]
         pub empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
-        pub file_scroller: TemplateChild<gtk::ScrolledWindow>,
+        pub merge_view_stack: TemplateChild<adw::ViewStack>,
         #[template_child]
         pub file_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub merge_file_grid: TemplateChild<gtk::FlowBox>,
         #[template_child]
         pub clear_button: TemplateChild<gtk::Button>,
         #[template_child]
@@ -91,8 +101,6 @@ mod imp {
         pub organize_detail_label: TemplateChild<gtk::Label>,
         #[template_child]
         pub organize_empty_status: TemplateChild<adw::StatusPage>,
-        #[template_child]
-        pub organize_view_switcher: TemplateChild<adw::ViewSwitcher>,
         #[template_child]
         pub organize_view_stack: TemplateChild<adw::ViewStack>,
         #[template_child]
@@ -134,7 +142,9 @@ mod imp {
         pub extract_open_output_button: TemplateChild<gtk::Button>,
 
         pub(super) active_tool: Cell<PdfTool>,
+        pub(super) view_mode: Cell<ViewMode>,
         pub input_files: RefCell<Vec<PathBuf>>,
+        pub merge_previews: RefCell<BTreeMap<PathBuf, crate::preview::PagePreview>>,
         pub last_output: RefCell<Option<PathBuf>>,
         pub organize_file: RefCell<Option<PathBuf>>,
         pub organize_page_count: Cell<usize>,
@@ -196,6 +206,16 @@ impl FoliosWindow {
         let imp = self.imp();
 
         let window = self.clone();
+        imp.list_view_button.connect_clicked(move |_| {
+            window.set_view_mode(ViewMode::List);
+        });
+
+        let window = self.clone();
+        imp.grid_view_button.connect_clicked(move |_| {
+            window.set_view_mode(ViewMode::Grid);
+        });
+
+        let window = self.clone();
         imp.merge_tool_row.connect_activated(move |_| {
             window.switch_tool(PdfTool::Merge);
         });
@@ -224,6 +244,7 @@ impl FoliosWindow {
         imp.clear_button.connect_clicked(move |_| {
             let imp = window.imp();
             imp.input_files.borrow_mut().clear();
+            imp.merge_previews.borrow_mut().clear();
             imp.last_output.borrow_mut().take();
             window.update_files_view();
         });
@@ -321,9 +342,31 @@ impl FoliosWindow {
             PdfTool::Extract => imp.extract_tool_row.upcast_ref(),
         };
         imp.sidebar_list.select_row(Some(selected_row));
+        self.update_view_mode();
+    }
+
+    fn set_view_mode(&self, view_mode: ViewMode) {
+        self.imp().view_mode.set(view_mode);
+        self.update_view_mode();
+    }
+
+    fn update_view_mode(&self) {
+        let imp = self.imp();
+        let view_mode = imp.view_mode.get();
+        let view_name = match view_mode {
+            ViewMode::List => LIST_VIEW_NAME,
+            ViewMode::Grid => GRID_VIEW_NAME,
+        };
+
+        imp.list_view_button.set_active(view_mode == ViewMode::List);
+        imp.grid_view_button.set_active(view_mode == ViewMode::Grid);
+        imp.merge_view_stack.set_visible_child_name(view_name);
+        imp.organize_view_stack.set_visible_child_name(view_name);
+        imp.extract_view_stack.set_visible_child_name(view_name);
     }
 
     fn update_all_views(&self) {
+        self.update_view_mode();
         self.update_files_view();
         self.update_organize_view();
         self.update_extract_view();
@@ -476,9 +519,36 @@ impl FoliosWindow {
         }
 
         let imp = self.imp();
+        let paths_to_preview = {
+            let previews = imp.merge_previews.borrow();
+            paths
+                .iter()
+                .filter(|path| !previews.contains_key(*path))
+                .cloned()
+                .collect::<Vec<_>>()
+        };
         imp.input_files.borrow_mut().extend(paths);
         imp.last_output.borrow_mut().take();
         self.update_files_view();
+
+        for path in paths_to_preview {
+            self.load_merge_preview(path);
+        }
+    }
+
+    fn load_merge_preview(&self, path: PathBuf) {
+        let window = self.clone();
+        glib::spawn_future_local(async move {
+            let result = crate::preview::render_first_page_preview(path.clone()).await;
+            let imp = window.imp();
+
+            if let Ok(Some(preview)) = result {
+                if imp.input_files.borrow().contains(&path) {
+                    imp.merge_previews.borrow_mut().insert(path, preview);
+                    window.update_files_view();
+                }
+            }
+        });
     }
 
     fn load_organize_pdf(&self, path: PathBuf) {
@@ -502,13 +572,6 @@ impl FoliosWindow {
                     let mut page_order = imp.organize_page_order.borrow_mut();
                     page_order.clear();
                     page_order.extend(1..=page_count as u32);
-                    imp.organize_view_stack.set_visible_child_name(
-                        if page_count <= ORGANIZE_PREVIEW_PAGE_LIMIT {
-                            ORGANIZE_PREVIEW_VIEW_NAME
-                        } else {
-                            ORGANIZE_LIST_VIEW_NAME
-                        },
-                    );
                 }
                 Err(error) => {
                     window.show_toast(&error.to_string());
@@ -539,13 +602,6 @@ impl FoliosWindow {
                     *imp.extract_previews.borrow_mut() = previews;
                     imp.extract_selected_pages.borrow_mut().clear();
                     imp.extract_ranges_entry.set_text("");
-                    imp.extract_view_stack.set_visible_child_name(
-                        if page_count <= EXTRACT_PREVIEW_PAGE_LIMIT {
-                            EXTRACT_PREVIEW_VIEW_NAME
-                        } else {
-                            EXTRACT_LIST_VIEW_NAME
-                        },
-                    );
                 }
                 Err(error) => {
                     window.show_toast(&error.to_string());
@@ -563,8 +619,6 @@ impl FoliosWindow {
         imp.organize_previews.borrow_mut().clear();
         imp.organize_page_order.borrow_mut().clear();
         imp.organize_last_output.borrow_mut().take();
-        imp.organize_view_stack
-            .set_visible_child_name(ORGANIZE_LIST_VIEW_NAME);
         self.update_organize_view();
     }
 
@@ -592,8 +646,6 @@ impl FoliosWindow {
         imp.extract_selected_pages.borrow_mut().clear();
         imp.extract_ranges_entry.set_text("");
         imp.extract_last_output.borrow_mut().take();
-        imp.extract_view_stack
-            .set_visible_child_name(EXTRACT_LIST_VIEW_NAME);
         self.update_extract_view();
     }
 
@@ -687,15 +739,23 @@ impl FoliosWindow {
         let files = imp.input_files.borrow();
         let has_files = !files.is_empty();
         let can_merge = files.len() > 1 && !imp.is_running.get();
+        let previews = imp.merge_previews.borrow();
 
         imp.file_list.remove_all();
+        imp.merge_file_grid.remove_all();
         for (index, path) in files.iter().enumerate() {
             imp.file_list
-                .append(&self.file_row(index, path, files.len()));
+                .append(&self.file_row(index, path, files.len(), previews.get(path)));
+            imp.merge_file_grid.append(&self.file_tile(
+                index,
+                path,
+                files.len(),
+                previews.get(path),
+            ));
         }
 
         imp.empty_status.set_visible(!has_files);
-        imp.file_scroller.set_visible(has_files);
+        imp.merge_view_stack.set_visible(has_files);
         imp.add_button.set_visible(has_files);
         imp.clear_button.set_visible(has_files);
         imp.merge_button.set_visible(has_files);
@@ -751,7 +811,6 @@ impl FoliosWindow {
         }
 
         imp.organize_empty_status.set_visible(!has_file);
-        imp.organize_view_switcher.set_visible(has_file);
         imp.organize_view_stack.set_visible(has_file);
         imp.organize_choose_button.set_visible(has_file);
         imp.organize_reset_button.set_visible(has_file);
@@ -843,7 +902,13 @@ impl FoliosWindow {
         imp.extract_detail_label.set_label(&detail);
     }
 
-    fn file_row(&self, index: usize, path: &Path, count: usize) -> adw::ActionRow {
+    fn file_row(
+        &self,
+        index: usize,
+        path: &Path,
+        count: usize,
+        preview: Option<&crate::preview::PagePreview>,
+    ) -> adw::ActionRow {
         let title = path
             .file_name()
             .and_then(|name| name.to_str())
@@ -854,8 +919,14 @@ impl FoliosWindow {
             .activatable(false)
             .build();
 
-        let icon = gtk::Image::from_icon_name("view-paged-symbolic");
-        row.add_prefix(&icon);
+        if let Some(preview) = preview {
+            let picture = preview_picture(preview);
+            picture.set_size_request(48, 68);
+            row.add_prefix(&picture);
+        } else {
+            let icon = gtk::Image::from_icon_name("view-paged-symbolic");
+            row.add_prefix(&icon);
+        }
 
         let controls_sensitive = !self.imp().is_running.get();
         let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
@@ -882,7 +953,86 @@ impl FoliosWindow {
         });
         row.add_suffix(&remove_button);
 
+        self.add_file_drag_and_drop(&row, index);
+
         row
+    }
+
+    fn file_tile(
+        &self,
+        index: usize,
+        path: &Path,
+        count: usize,
+        preview: Option<&crate::preview::PagePreview>,
+    ) -> gtk::Box {
+        let tile = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(6)
+            .width_request(180)
+            .build();
+
+        if let Some(preview) = preview {
+            let picture = preview_picture(preview);
+            picture.set_size_request(160, 220);
+            tile.append(&picture);
+        } else {
+            let placeholder = gtk::Image::from_icon_name("view-paged-symbolic");
+            placeholder.set_size_request(160, 220);
+            tile.append(&placeholder);
+        }
+
+        let title = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("PDF");
+        let label = gtk::Label::builder()
+            .label(title)
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .build();
+        tile.append(&label);
+
+        let controls = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .spacing(6)
+            .build();
+        let size = gtk::Label::builder()
+            .label(file_subtitle(path))
+            .xalign(0.0)
+            .hexpand(true)
+            .build();
+        size.add_css_class("dim-label");
+        controls.append(&size);
+
+        let controls_sensitive = !self.imp().is_running.get();
+        let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
+        up_button.set_sensitive(controls_sensitive && index > 0);
+        let window = self.clone();
+        up_button.connect_clicked(move |_| {
+            window.move_file(index, index - 1);
+        });
+        controls.append(&up_button);
+
+        let down_button = icon_button("go-down-symbolic", &gettext("Move Down"));
+        down_button.set_sensitive(controls_sensitive && index + 1 < count);
+        let window = self.clone();
+        down_button.connect_clicked(move |_| {
+            window.move_file(index, index + 1);
+        });
+        controls.append(&down_button);
+
+        let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
+        remove_button.set_sensitive(controls_sensitive);
+        let window = self.clone();
+        remove_button.connect_clicked(move |_| {
+            window.remove_file(index);
+        });
+        controls.append(&remove_button);
+
+        tile.append(&controls);
+        self.add_file_drag_and_drop(&tile, index);
+
+        tile
     }
 
     fn page_row(
@@ -958,23 +1108,51 @@ impl FoliosWindow {
         picture.set_size_request(160, 220);
         tile.append(&picture);
 
-        let footer = gtk::Box::builder()
-            .orientation(gtk::Orientation::Horizontal)
-            .spacing(6)
-            .build();
         let label = gtk::Label::builder()
             .label(format!("{} {}", gettext("Page"), preview.page_number))
             .xalign(0.0)
-            .hexpand(true)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .build();
+        tile.append(&label);
+
+        let controls = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .spacing(6)
             .build();
         let position = gtk::Label::builder()
             .label(format!("{}/{}", index + 1, count))
+            .xalign(0.0)
+            .hexpand(true)
             .build();
         position.add_css_class("dim-label");
+        controls.append(&position);
 
-        footer.append(&label);
-        footer.append(&position);
-        tile.append(&footer);
+        let controls_sensitive = !self.imp().is_running.get();
+        let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
+        up_button.set_sensitive(controls_sensitive && index > 0);
+        let window = self.clone();
+        up_button.connect_clicked(move |_| {
+            window.move_page(index, index - 1);
+        });
+        controls.append(&up_button);
+
+        let down_button = icon_button("go-down-symbolic", &gettext("Move Down"));
+        down_button.set_sensitive(controls_sensitive && index + 1 < count);
+        let window = self.clone();
+        down_button.connect_clicked(move |_| {
+            window.move_page(index, index + 1);
+        });
+        controls.append(&down_button);
+
+        let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
+        remove_button.set_sensitive(controls_sensitive);
+        let window = self.clone();
+        remove_button.connect_clicked(move |_| {
+            window.remove_page(index);
+        });
+        controls.append(&remove_button);
+
+        tile.append(&controls);
 
         self.add_page_drag_and_drop(&tile, preview.page_number);
 
@@ -1087,6 +1265,49 @@ impl FoliosWindow {
         imp.last_output.borrow_mut().take();
         drop(files);
         self.update_files_view();
+    }
+
+    fn reorder_file(&self, from: usize, to: usize) {
+        if from == to {
+            return;
+        }
+
+        let imp = self.imp();
+        let mut files = imp.input_files.borrow_mut();
+        if from >= files.len() || to >= files.len() {
+            return;
+        }
+
+        let file = files.remove(from);
+        files.insert(to, file);
+        imp.last_output.borrow_mut().take();
+        drop(files);
+
+        self.update_files_view();
+    }
+
+    fn add_file_drag_and_drop(&self, widget: &impl IsA<gtk::Widget>, index: usize) {
+        let drag_source = gtk::DragSource::builder()
+            .actions(gtk::gdk::DragAction::MOVE)
+            .build();
+        drag_source.connect_prepare(move |_, _, _| {
+            Some(gtk::gdk::ContentProvider::for_value(
+                &(index as u32).to_value(),
+            ))
+        });
+        widget.add_controller(drag_source);
+
+        let drop_target = gtk::DropTarget::new(u32::static_type(), gtk::gdk::DragAction::MOVE);
+        let window = self.clone();
+        drop_target.connect_drop(move |_, value, _, _| {
+            let Ok(from) = value.get::<u32>() else {
+                return false;
+            };
+
+            window.reorder_file(from as usize, index);
+            true
+        });
+        widget.add_controller(drop_target);
     }
 
     fn remove_file(&self, index: usize) {
