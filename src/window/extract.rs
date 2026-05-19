@@ -82,10 +82,7 @@ impl FoliosWindow {
             }
             pages
         } else {
-            match crate::pdf::parse_page_ranges(
-                imp.extract_ranges_entry.text().as_str(),
-                imp.extract_page_count.get(),
-            ) {
+            match self.extract_pages_from_ranges() {
                 Ok(pages) => pages,
                 Err(error) => {
                     self.show_toast(&error.to_string());
@@ -172,6 +169,7 @@ impl FoliosWindow {
         let imp = self.imp();
         let has_file = imp.extract_file.borrow().is_some();
         let has_ranges = !imp.extract_ranges_entry.text().trim().is_empty();
+        let has_valid_ranges = has_ranges && self.extract_pages_from_ranges().is_ok();
         let has_selected_pages = !imp.extract_selected_pages.borrow().is_empty();
 
         imp.extract_file_list.remove_all();
@@ -211,8 +209,11 @@ impl FoliosWindow {
             .set_sensitive(!imp.is_running.get());
         imp.extract_empty_choose_button
             .set_sensitive(!imp.is_running.get());
-        imp.extract_save_button
-            .set_sensitive(has_file && (has_ranges || has_selected_pages) && !imp.is_running.get());
+        imp.extract_save_button.set_sensitive(
+            has_file
+                && (has_valid_ranges || (!has_ranges && has_selected_pages))
+                && !imp.is_running.get(),
+        );
         imp.extract_open_output_button
             .set_sensitive(imp.extract_last_output.borrow().is_some() && !imp.is_running.get());
         imp.extract_ranges_entry
@@ -226,6 +227,14 @@ impl FoliosWindow {
             gettext("No PDF selected")
         };
         imp.extract_detail_label.set_label(&detail);
+    }
+
+    fn extract_pages_from_ranges(&self) -> Result<Vec<u32>, crate::pdf::PdfBackendError> {
+        let imp = self.imp();
+        crate::pdf::parse_page_ranges(
+            imp.extract_ranges_entry.text().as_str(),
+            imp.extract_page_count.get(),
+        )
     }
 
     fn extract_file_row(&self, path: &Path, page_count: usize) -> adw::ActionRow {
