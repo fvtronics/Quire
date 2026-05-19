@@ -22,8 +22,6 @@ documents, and compress files without sending them to an online service.
 
 ## How to install
 
-Folios is being prepared for Flathub.
-
 ### Flatpak
 
 Folios can be built and installed locally with Flatpak Builder:

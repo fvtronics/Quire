@@ -1,4 +1,7 @@
-use super::ui::{icon_button, list_preview_prefix, page_count_label, pdf_filters, preview_picture};
+use super::ui::{
+    icon_button, page_count_label, pdf_filters, rotated_list_preview_prefix,
+    rotated_preview_picture,
+};
 use super::FoliosWindow;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -94,6 +97,7 @@ impl FoliosWindow {
                     let mut page_order = imp.organize_page_order.borrow_mut();
                     page_order.clear();
                     page_order.extend(1..=page_count as u32);
+                    imp.organize_rotations.borrow_mut().clear();
                 }
                 Err(error) => {
                     window.show_toast(&error.to_string());
@@ -115,6 +119,7 @@ impl FoliosWindow {
         let mut page_order = imp.organize_page_order.borrow_mut();
         page_order.clear();
         page_order.extend(1..=page_count as u32);
+        imp.organize_rotations.borrow_mut().clear();
         imp.organize_last_output.borrow_mut().take();
         drop(page_order);
         self.update_organize_view();
@@ -125,7 +130,16 @@ impl FoliosWindow {
         let Some(input_file) = imp.organize_file.borrow().clone() else {
             return;
         };
-        let page_order = imp.organize_page_order.borrow().clone();
+        let rotations = imp.organize_rotations.borrow();
+        let page_order = imp
+            .organize_page_order
+            .borrow()
+            .iter()
+            .map(|page_number| crate::pdf::PageSelection {
+                page_number: *page_number,
+                rotation: *rotations.get(page_number).unwrap_or(&0),
+            })
+            .collect::<Vec<_>>();
 
         imp.is_running.set(true);
         imp.organize_last_output.borrow_mut().take();
@@ -159,6 +173,7 @@ impl FoliosWindow {
         let has_file = imp.organize_file.borrow().is_some();
         let has_pages = !page_order.is_empty();
         let previews = imp.organize_previews.borrow();
+        let rotations = imp.organize_rotations.borrow();
 
         imp.organize_page_list.remove_all();
         imp.organize_page_grid.remove_all();
@@ -166,17 +181,20 @@ impl FoliosWindow {
             let preview = previews
                 .iter()
                 .find(|preview| preview.page_number == *page_number);
+            let rotation = *rotations.get(page_number).unwrap_or(&0);
             imp.organize_page_list.append(&self.page_row(
                 index,
                 *page_number,
                 page_order.len(),
                 preview,
+                rotation,
             ));
             if let Some(preview) = preview {
                 imp.organize_page_grid.append(&self.organize_page_tile(
                     preview,
                     index,
                     page_order.len(),
+                    rotation,
                 ));
             }
         }
@@ -216,6 +234,7 @@ impl FoliosWindow {
         page_number: u32,
         count: usize,
         preview: Option<&crate::preview::PagePreview>,
+        rotation: i64,
     ) -> adw::ActionRow {
         let row = adw::ActionRow::builder()
             .title(format!("{} {page_number}", gettext("Page")))
@@ -228,7 +247,7 @@ impl FoliosWindow {
             .activatable(false)
             .build();
 
-        row.add_prefix(&list_preview_prefix(preview));
+        row.add_prefix(&rotated_list_preview_prefix(preview, rotation));
 
         let controls_sensitive = !self.imp().is_running.get();
         let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
@@ -246,6 +265,15 @@ impl FoliosWindow {
             window.move_page(index, index + 1);
         });
         row.add_suffix(&down_button);
+
+        let rotate_button =
+            icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
+        rotate_button.set_sensitive(controls_sensitive);
+        let window = self.clone();
+        rotate_button.connect_clicked(move |_| {
+            window.rotate_page(page_number);
+        });
+        row.add_suffix(&rotate_button);
 
         let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
         remove_button.set_sensitive(controls_sensitive && count > 1);
@@ -265,6 +293,7 @@ impl FoliosWindow {
         preview: &crate::preview::PagePreview,
         index: usize,
         count: usize,
+        rotation: i64,
     ) -> gtk::Box {
         let tile = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -272,7 +301,7 @@ impl FoliosWindow {
             .width_request(180)
             .build();
 
-        let picture = preview_picture(preview);
+        let picture = rotated_preview_picture(preview, rotation);
         picture.set_size_request(160, 220);
         tile.append(&picture);
 
@@ -291,6 +320,7 @@ impl FoliosWindow {
             .label(format!("{}/{}", index + 1, count))
             .xalign(0.0)
             .hexpand(true)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
             .build();
         position.add_css_class("dim-label");
         controls.append(&position);
@@ -311,6 +341,16 @@ impl FoliosWindow {
             window.move_page(index, index + 1);
         });
         controls.append(&down_button);
+
+        let rotate_button =
+            icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
+        rotate_button.set_sensitive(controls_sensitive);
+        let page_number = preview.page_number;
+        let window = self.clone();
+        rotate_button.connect_clicked(move |_| {
+            window.rotate_page(page_number);
+        });
+        controls.append(&rotate_button);
 
         let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
         remove_button.set_sensitive(controls_sensitive && count > 1);
@@ -333,6 +373,21 @@ impl FoliosWindow {
         pages.swap(from, to);
         imp.organize_last_output.borrow_mut().take();
         drop(pages);
+        self.update_organize_view();
+    }
+
+    fn rotate_page(&self, page_number: u32) {
+        let imp = self.imp();
+        let mut rotations = imp.organize_rotations.borrow_mut();
+        let rotation = (rotations.get(&page_number).copied().unwrap_or(0) + 90).rem_euclid(360);
+        if rotation == 0 {
+            rotations.remove(&page_number);
+        } else {
+            rotations.insert(page_number, rotation);
+        }
+        imp.organize_last_output.borrow_mut().take();
+        drop(rotations);
+
         self.update_organize_view();
     }
 
@@ -388,7 +443,8 @@ impl FoliosWindow {
             return;
         }
 
-        imp.organize_page_order.borrow_mut().remove(index);
+        let page_number = imp.organize_page_order.borrow_mut().remove(index);
+        imp.organize_rotations.borrow_mut().remove(&page_number);
         imp.organize_last_output.borrow_mut().take();
 
         self.update_organize_view();

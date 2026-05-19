@@ -11,6 +11,18 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+#[derive(Clone, Debug)]
+pub struct PdfInput {
+    pub path: PathBuf,
+    pub rotation: i64,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PageSelection {
+    pub page_number: u32,
+    pub rotation: i64,
+}
+
 #[derive(Debug)]
 pub enum PdfBackendError {
     NotEnoughInputs,
@@ -64,7 +76,7 @@ impl fmt::Display for PdfBackendError {
 }
 
 pub async fn merge_pdfs(
-    input_files: Vec<PathBuf>,
+    input_files: Vec<PdfInput>,
     output_file: PathBuf,
 ) -> Result<PathBuf, PdfBackendError> {
     gio::spawn_blocking(move || merge_pdfs_blocking(input_files, output_file))
@@ -74,7 +86,7 @@ pub async fn merge_pdfs(
 
 pub async fn organize_pdf(
     input_file: PathBuf,
-    page_order: Vec<u32>,
+    page_order: Vec<PageSelection>,
     output_file: PathBuf,
 ) -> Result<PathBuf, PdfBackendError> {
     gio::spawn_blocking(move || write_selected_pages(input_file, page_order, output_file))
@@ -84,7 +96,7 @@ pub async fn organize_pdf(
 
 pub async fn extract_pages(
     input_file: PathBuf,
-    pages: Vec<u32>,
+    pages: Vec<PageSelection>,
     output_file: PathBuf,
 ) -> Result<PathBuf, PdfBackendError> {
     gio::spawn_blocking(move || write_selected_pages(input_file, pages, output_file))
@@ -171,14 +183,14 @@ pub fn parse_page_numbers(input: &str, page_count: usize) -> Result<Vec<u32>, Pd
 }
 
 fn merge_pdfs_blocking(
-    input_files: Vec<PathBuf>,
+    input_files: Vec<PdfInput>,
     output_file: PathBuf,
 ) -> Result<PathBuf, PdfBackendError> {
     if input_files.len() < 2 {
         return Err(PdfBackendError::NotEnoughInputs);
     }
 
-    if input_files.iter().any(|path| path == &output_file) {
+    if input_files.iter().any(|input| input.path == output_file) {
         return Err(PdfBackendError::OutputMatchesInput);
     }
 
@@ -188,9 +200,9 @@ fn merge_pdfs_blocking(
     let mut document_objects = BTreeMap::new();
     let mut merged = Document::with_version("1.5");
 
-    for path in input_files {
-        let mut document = Document::load(&path).map_err(|error| PdfBackendError::Load {
-            path: path.clone(),
+    for input in input_files {
+        let mut document = Document::load(&input.path).map_err(|error| PdfBackendError::Load {
+            path: input.path.clone(),
             message: error.to_string(),
         })?;
 
@@ -198,11 +210,17 @@ fn merge_pdfs_blocking(
         max_id = document.max_id + 1;
 
         for object_id in document.get_pages().into_values() {
+            let page_rotation = inherited_page_rotation(&document, object_id);
             let object = document
                 .get_object(object_id)
                 .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
                 .to_owned();
-            page_objects.insert(object_id, object);
+            let mut dictionary = object
+                .as_dict()
+                .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
+                .clone();
+            set_page_rotation(&mut dictionary, page_rotation, input.rotation);
+            page_objects.insert(object_id, Object::Dictionary(dictionary));
         }
 
         document_objects.extend(document.objects);
@@ -227,6 +245,7 @@ fn merge_pdfs_blocking(
         .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
         .clone();
     pages_dictionary.set("Count", page_objects.len() as u32);
+    pages_dictionary.remove(b"Rotate");
     pages_dictionary.set(
         "Kids",
         page_objects
@@ -263,7 +282,7 @@ fn merge_pdfs_blocking(
 
 fn write_selected_pages(
     input_file: PathBuf,
-    page_numbers: Vec<u32>,
+    page_numbers: Vec<PageSelection>,
     output_file: PathBuf,
 ) -> Result<PathBuf, PdfBackendError> {
     let document = Document::load(&input_file).map_err(|error| PdfBackendError::Load {
@@ -277,7 +296,7 @@ fn write_selected_pages(
 fn write_selected_pages_from_document(
     input_file: &Path,
     document: &Document,
-    page_numbers: Vec<u32>,
+    page_numbers: Vec<PageSelection>,
     output_file: &Path,
 ) -> Result<PathBuf, PdfBackendError> {
     if page_numbers.is_empty() {
@@ -292,15 +311,24 @@ fn write_selected_pages_from_document(
     let mut selected_ids = Vec::with_capacity(page_numbers.len());
     let mut page_objects = BTreeMap::new();
 
-    for page_number in page_numbers {
-        let object_id = pages.get(&page_number).ok_or_else(|| {
-            PdfBackendError::InvalidPageRange(format!("Page {page_number} is not in this PDF."))
+    for selection in page_numbers {
+        let object_id = pages.get(&selection.page_number).ok_or_else(|| {
+            PdfBackendError::InvalidPageRange(format!(
+                "Page {} is not in this PDF.",
+                selection.page_number
+            ))
         })?;
+        let page_rotation = inherited_page_rotation(document, *object_id);
         let object = document
             .get_object(*object_id)
             .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
             .to_owned();
-        page_objects.insert(*object_id, object);
+        let mut dictionary = object
+            .as_dict()
+            .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
+            .clone();
+        set_page_rotation(&mut dictionary, page_rotation, selection.rotation);
+        page_objects.insert(*object_id, Object::Dictionary(dictionary));
         selected_ids.push(*object_id);
     }
 
@@ -325,6 +353,7 @@ fn write_selected_pages_from_document(
         .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
         .clone();
     pages_dictionary.set("Count", selected_ids.len() as u32);
+    pages_dictionary.remove(b"Rotate");
     pages_dictionary.set(
         "Kids",
         selected_ids
@@ -373,7 +402,7 @@ fn split_pdf_blocking(
         }
 
         let output_file = output_folder.join(format!("{} {}.pdf", prefix, index));
-        let page_numbers = (start..=end).collect();
+        let page_numbers = page_selections(start..=end);
         write_selected_pages_from_document(&input_file, &document, page_numbers, &output_file)?;
         start = end + 1;
         index += 1;
@@ -381,11 +410,52 @@ fn split_pdf_blocking(
 
     if start <= page_count {
         let output_file = output_folder.join(format!("{} {}.pdf", prefix, index));
-        let page_numbers = (start..=page_count).collect();
+        let page_numbers = page_selections(start..=page_count);
         write_selected_pages_from_document(&input_file, &document, page_numbers, &output_file)?;
     }
 
     Ok(output_folder)
+}
+
+fn page_selections(pages: std::ops::RangeInclusive<u32>) -> Vec<PageSelection> {
+    pages
+        .map(|page_number| PageSelection {
+            page_number,
+            rotation: 0,
+        })
+        .collect()
+}
+
+fn inherited_page_rotation(document: &Document, mut object_id: ObjectId) -> i64 {
+    for _ in 0..document.objects.len() {
+        let Ok(dictionary) = document.get_object(object_id).and_then(Object::as_dict) else {
+            break;
+        };
+
+        if let Ok(rotation) = dictionary.get(b"Rotate").and_then(Object::as_i64) {
+            return normalize_rotation(rotation);
+        }
+
+        let Ok(parent_id) = dictionary.get(b"Parent").and_then(Object::as_reference) else {
+            break;
+        };
+        object_id = parent_id;
+    }
+
+    0
+}
+
+fn set_page_rotation(dictionary: &mut lopdf::Dictionary, current_rotation: i64, rotation: i64) {
+    let rotation = normalize_rotation(current_rotation + rotation);
+    if rotation == 0 {
+        dictionary.remove(b"Rotate");
+    } else {
+        dictionary.set("Rotate", rotation);
+    }
+}
+
+fn normalize_rotation(rotation: i64) -> i64 {
+    rotation.rem_euclid(360)
 }
 
 fn split_breaks(rule: SplitRule, page_count: u32) -> Result<Vec<u32>, PdfBackendError> {
@@ -648,7 +718,10 @@ mod tests {
         write_test_pdf(&first, &[10, 20]);
         write_test_pdf(&second, &[30]);
 
-        let result = merge_pdfs_blocking(vec![first.clone(), second.clone()], output.clone());
+        let result = merge_pdfs_blocking(
+            vec![pdf_input(first.clone(), 0), pdf_input(second.clone(), 0)],
+            output.clone(),
+        );
 
         assert_eq!(result.unwrap(), output);
         assert_eq!(page_markers(&output), vec![10, 20, 30]);
@@ -662,13 +735,37 @@ mod tests {
         write_test_pdf(&input, &[10]);
 
         assert_error(
-            merge_pdfs_blocking(vec![input.clone()], dir.join("out.pdf")),
+            merge_pdfs_blocking(vec![pdf_input(input.clone(), 0)], dir.join("out.pdf")),
             "Choose at least two PDF files to merge.",
         );
         assert_error(
-            merge_pdfs_blocking(vec![input.clone(), dir.join("other.pdf")], input),
+            merge_pdfs_blocking(
+                vec![
+                    pdf_input(input.clone(), 0),
+                    pdf_input(dir.join("other.pdf"), 0),
+                ],
+                input,
+            ),
             "Save the PDF as a new file, not over the input file.",
         );
+    }
+
+    #[test]
+    fn merge_pdfs_rotates_all_pages_from_input_file() {
+        let dir = TestDir::new("merge-rotation");
+        let first = dir.join("first.pdf");
+        let second = dir.join("second.pdf");
+        let output = dir.join("merged.pdf");
+        write_test_pdf(&first, &[10, 20]);
+        write_test_pdf(&second, &[30]);
+
+        let result = merge_pdfs_blocking(
+            vec![pdf_input(first, 90), pdf_input(second, 180)],
+            output.clone(),
+        );
+
+        assert_eq!(result.unwrap(), output);
+        assert_eq!(page_rotations(&output), vec![90, 90, 180]);
     }
 
     #[test]
@@ -678,10 +775,32 @@ mod tests {
         let output = dir.join("output.pdf");
         write_test_pdf(&input, &[10, 20, 30]);
 
-        let result = write_selected_pages(input.clone(), vec![3, 1], output.clone());
+        let result = write_selected_pages(
+            input.clone(),
+            vec![page_selection(3, 0), page_selection(1, 0)],
+            output.clone(),
+        );
 
         assert_eq!(result.unwrap(), output);
         assert_eq!(page_markers(&output), vec![30, 10]);
+    }
+
+    #[test]
+    fn write_selected_pages_rotates_requested_pages() {
+        let dir = TestDir::new("selected-pages-rotation");
+        let input = dir.join("input.pdf");
+        let output = dir.join("output.pdf");
+        write_test_pdf(&input, &[10, 20, 30]);
+
+        let result = write_selected_pages(
+            input.clone(),
+            vec![page_selection(3, 90), page_selection(1, 270)],
+            output.clone(),
+        );
+
+        assert_eq!(result.unwrap(), output);
+        assert_eq!(page_markers(&output), vec![30, 10]);
+        assert_eq!(page_rotations(&output), vec![90, 270]);
     }
 
     #[test]
@@ -695,11 +814,11 @@ mod tests {
             "Choose at least one page to save.",
         );
         assert_error(
-            write_selected_pages(input.clone(), vec![1], input.clone()),
+            write_selected_pages(input.clone(), vec![page_selection(1, 0)], input.clone()),
             "Save the PDF as a new file, not over the input file.",
         );
         assert_error(
-            write_selected_pages(input, vec![3], dir.join("missing.pdf")),
+            write_selected_pages(input, vec![page_selection(3, 0)], dir.join("missing.pdf")),
             "Page 3 is not in this PDF.",
         );
     }
@@ -1035,6 +1154,17 @@ mod tests {
         document.save(path).expect("test PDF should be saved");
     }
 
+    fn pdf_input(path: PathBuf, rotation: i64) -> PdfInput {
+        PdfInput { path, rotation }
+    }
+
+    fn page_selection(page_number: u32, rotation: i64) -> PageSelection {
+        PageSelection {
+            page_number,
+            rotation,
+        }
+    }
+
     fn page_markers(path: &Path) -> Vec<i64> {
         let document = Document::load(path).expect("test PDF should load");
         document
@@ -1055,6 +1185,24 @@ mod tests {
                 media_box[2]
                     .as_i64()
                     .expect("media box marker should be an integer")
+            })
+            .collect()
+    }
+
+    fn page_rotations(path: &Path) -> Vec<i64> {
+        let document = Document::load(path).expect("test PDF should load");
+        document
+            .get_pages()
+            .into_values()
+            .map(|object_id| {
+                document
+                    .get_object(object_id)
+                    .expect("page object should exist")
+                    .as_dict()
+                    .expect("page should be a dictionary")
+                    .get(b"Rotate")
+                    .and_then(Object::as_i64)
+                    .unwrap_or(0)
             })
             .collect()
     }

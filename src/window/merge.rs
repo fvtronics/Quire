@@ -1,5 +1,6 @@
 use super::ui::{
-    file_subtitle, file_title, icon_button, list_preview_prefix, pdf_filters, preview_picture,
+    file_subtitle, file_title, icon_button, pdf_filters, rotated_list_preview_prefix,
+    rotated_preview_picture,
 };
 use super::FoliosWindow;
 use adw::prelude::*;
@@ -26,6 +27,7 @@ impl FoliosWindow {
         imp.clear_button.connect_clicked(move |_| {
             let imp = window.imp();
             imp.input_files.borrow_mut().clear();
+            imp.merge_rotations.borrow_mut().clear();
             imp.merge_previews.borrow_mut().clear();
             imp.last_output.borrow_mut().take();
             window.update_files_view();
@@ -125,7 +127,16 @@ impl FoliosWindow {
 
     fn merge_to(&self, output_file: PathBuf) {
         let imp = self.imp();
-        let input_files = imp.input_files.borrow().clone();
+        let rotations = imp.merge_rotations.borrow();
+        let input_files = imp
+            .input_files
+            .borrow()
+            .iter()
+            .map(|path| crate::pdf::PdfInput {
+                path: path.clone(),
+                rotation: *rotations.get(path).unwrap_or(&0),
+            })
+            .collect::<Vec<_>>();
 
         imp.is_running.set(true);
         imp.last_output.borrow_mut().take();
@@ -159,17 +170,25 @@ impl FoliosWindow {
         let has_files = !files.is_empty();
         let can_merge = files.len() > 1 && !imp.is_running.get();
         let previews = imp.merge_previews.borrow();
+        let rotations = imp.merge_rotations.borrow();
 
         imp.file_list.remove_all();
         imp.merge_file_grid.remove_all();
         for (index, path) in files.iter().enumerate() {
-            imp.file_list
-                .append(&self.file_row(index, path, files.len(), previews.get(path)));
+            let rotation = *rotations.get(path).unwrap_or(&0);
+            imp.file_list.append(&self.file_row(
+                index,
+                path,
+                files.len(),
+                previews.get(path),
+                rotation,
+            ));
             imp.merge_file_grid.append(&self.file_tile(
                 index,
                 path,
                 files.len(),
                 previews.get(path),
+                rotation,
             ));
         }
 
@@ -207,6 +226,7 @@ impl FoliosWindow {
         path: &Path,
         count: usize,
         preview: Option<&crate::preview::PagePreview>,
+        rotation: i64,
     ) -> adw::ActionRow {
         let row = adw::ActionRow::builder()
             .title(file_title(path))
@@ -214,7 +234,7 @@ impl FoliosWindow {
             .activatable(false)
             .build();
 
-        row.add_prefix(&list_preview_prefix(preview));
+        row.add_prefix(&rotated_list_preview_prefix(preview, rotation));
 
         let controls_sensitive = !self.imp().is_running.get();
         let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
@@ -232,6 +252,15 @@ impl FoliosWindow {
             window.move_file(index, index + 1);
         });
         row.add_suffix(&down_button);
+
+        let rotate_button =
+            icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
+        rotate_button.set_sensitive(controls_sensitive);
+        let window = self.clone();
+        rotate_button.connect_clicked(move |_| {
+            window.rotate_file(index);
+        });
+        row.add_suffix(&rotate_button);
 
         let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
         remove_button.set_sensitive(controls_sensitive);
@@ -252,6 +281,7 @@ impl FoliosWindow {
         path: &Path,
         count: usize,
         preview: Option<&crate::preview::PagePreview>,
+        rotation: i64,
     ) -> gtk::Box {
         let tile = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -260,7 +290,7 @@ impl FoliosWindow {
             .build();
 
         if let Some(preview) = preview {
-            let picture = preview_picture(preview);
+            let picture = rotated_preview_picture(preview, rotation);
             picture.set_size_request(160, 220);
             tile.append(&picture);
         } else {
@@ -284,6 +314,7 @@ impl FoliosWindow {
             .label(file_subtitle(path))
             .xalign(0.0)
             .hexpand(true)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
             .build();
         size.add_css_class("dim-label");
         controls.append(&size);
@@ -305,6 +336,15 @@ impl FoliosWindow {
         });
         controls.append(&down_button);
 
+        let rotate_button =
+            icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
+        rotate_button.set_sensitive(controls_sensitive);
+        let window = self.clone();
+        rotate_button.connect_clicked(move |_| {
+            window.rotate_file(index);
+        });
+        controls.append(&rotate_button);
+
         let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
         remove_button.set_sensitive(controls_sensitive);
         let window = self.clone();
@@ -325,6 +365,25 @@ impl FoliosWindow {
         files.swap(from, to);
         imp.last_output.borrow_mut().take();
         drop(files);
+        self.update_files_view();
+    }
+
+    fn rotate_file(&self, index: usize) {
+        let imp = self.imp();
+        let Some(path) = imp.input_files.borrow().get(index).cloned() else {
+            return;
+        };
+
+        let mut rotations = imp.merge_rotations.borrow_mut();
+        let rotation = (rotations.get(&path).copied().unwrap_or(0) + 90).rem_euclid(360);
+        if rotation == 0 {
+            rotations.remove(&path);
+        } else {
+            rotations.insert(path, rotation);
+        }
+        imp.last_output.borrow_mut().take();
+        drop(rotations);
+
         self.update_files_view();
     }
 
@@ -373,7 +432,10 @@ impl FoliosWindow {
 
     fn remove_file(&self, index: usize) {
         let imp = self.imp();
-        imp.input_files.borrow_mut().remove(index);
+        let path = imp.input_files.borrow_mut().remove(index);
+        if !imp.input_files.borrow().contains(&path) {
+            imp.merge_rotations.borrow_mut().remove(&path);
+        }
         imp.last_output.borrow_mut().take();
         self.update_files_view();
     }

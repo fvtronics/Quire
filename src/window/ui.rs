@@ -1,5 +1,6 @@
 use adw::prelude::*;
 use gettextrs::{gettext, ngettext};
+use gtk::gdk_pixbuf::PixbufRotation;
 use gtk::gio;
 use std::io::Cursor;
 use std::path::Path;
@@ -39,8 +40,24 @@ pub(super) fn file_subtitle(path: &Path) -> String {
 }
 
 pub(super) fn preview_picture(preview: &crate::preview::PagePreview) -> gtk::Picture {
+    rotated_preview_picture(preview, 0)
+}
+
+pub(super) fn rotated_preview_picture(
+    preview: &crate::preview::PagePreview,
+    rotation: i64,
+) -> gtk::Picture {
     let picture = match gtk::gdk_pixbuf::Pixbuf::from_read(Cursor::new(preview.png_data.clone())) {
-        Ok(pixbuf) => {
+        Ok(mut pixbuf) => {
+            if let Some(rotated) = match normalize_rotation(rotation) {
+                90 => pixbuf.rotate_simple(PixbufRotation::Clockwise),
+                180 => pixbuf.rotate_simple(PixbufRotation::Upsidedown),
+                270 => pixbuf.rotate_simple(PixbufRotation::Counterclockwise),
+                _ => None,
+            } {
+                pixbuf = rotated;
+            }
+
             let texture = gtk::gdk::Texture::for_pixbuf(&pixbuf);
             gtk::Picture::for_paintable(&texture)
         }
@@ -51,9 +68,12 @@ pub(super) fn preview_picture(preview: &crate::preview::PagePreview) -> gtk::Pic
     picture
 }
 
-pub(super) fn list_preview_prefix(preview: Option<&crate::preview::PagePreview>) -> gtk::Widget {
+pub(super) fn rotated_list_preview_prefix(
+    preview: Option<&crate::preview::PagePreview>,
+    rotation: i64,
+) -> gtk::Widget {
     if let Some(preview) = preview {
-        let picture = preview_picture(preview);
+        let picture = rotated_preview_picture(preview, rotation);
         picture.set_size_request(48, 68);
         picture.upcast()
     } else {
@@ -126,6 +146,10 @@ fn format_size(bytes: u64) -> String {
     } else {
         format!("{bytes:.0} B")
     }
+}
+
+fn normalize_rotation(rotation: i64) -> i64 {
+    rotation.rem_euclid(360)
 }
 
 fn format_page_range(start: u32, end: u32) -> String {
