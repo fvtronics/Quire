@@ -1,4 +1,6 @@
-use super::ui::{clear_box, compress_preview_widget, file_subtitle, page_count_label, pdf_filters};
+use super::ui::{
+    clear_box, file_subtitle, file_title, page_count_label, pdf_filters, single_file_preview_widget,
+};
 use super::FoliosWindow;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -208,7 +210,7 @@ impl FoliosWindow {
             imp.split_file_list
                 .append(&self.split_file_row(path, imp.split_page_count.get()));
             imp.split_preview_box
-                .append(&compress_preview_widget(preview.as_ref()));
+                .append(&single_file_preview_widget(preview.as_ref()));
         }
 
         imp.split_empty_status.set_visible(!has_file);
@@ -239,7 +241,7 @@ impl FoliosWindow {
             .set_sensitive(has_file && !imp.is_running.get());
 
         let detail = if imp.is_running.get() {
-            gettext("Working...")
+            gettext("Splitting PDF...")
         } else if has_file {
             page_count_label(imp.split_page_count.get())
         } else {
@@ -286,12 +288,8 @@ impl FoliosWindow {
     }
 
     fn split_file_row(&self, path: &Path, page_count: usize) -> adw::ActionRow {
-        let title = path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("PDF");
         let row = adw::ActionRow::builder()
-            .title(title)
+            .title(file_title(path))
             .subtitle(format!(
                 "{} - {}",
                 page_count_label(page_count),

@@ -25,6 +25,12 @@ pub(super) fn icon_button(icon_name: &str, tooltip: &str) -> gtk::Button {
     button
 }
 
+pub(super) fn file_title(path: &Path) -> &str {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("PDF")
+}
+
 pub(super) fn file_subtitle(path: &Path) -> String {
     match std::fs::metadata(path) {
         Ok(metadata) => format_size(metadata.len()),
@@ -45,7 +51,17 @@ pub(super) fn preview_picture(preview: &crate::preview::PagePreview) -> gtk::Pic
     picture
 }
 
-pub(super) fn compress_preview_widget(
+pub(super) fn list_preview_prefix(preview: Option<&crate::preview::PagePreview>) -> gtk::Widget {
+    if let Some(preview) = preview {
+        let picture = preview_picture(preview);
+        picture.set_size_request(48, 68);
+        picture.upcast()
+    } else {
+        gtk::Image::from_icon_name("view-paged-symbolic").upcast()
+    }
+}
+
+pub(super) fn single_file_preview_widget(
     preview: Option<&crate::preview::PagePreview>,
 ) -> gtk::Widget {
     if let Some(preview) = preview {

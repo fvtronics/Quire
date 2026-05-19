@@ -1,4 +1,4 @@
-use super::ui::{icon_button, page_count_label, pdf_filters, preview_picture};
+use super::ui::{icon_button, list_preview_prefix, page_count_label, pdf_filters, preview_picture};
 use super::FoliosWindow;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -104,16 +104,6 @@ impl FoliosWindow {
         });
     }
 
-    fn clear_organize_pdf(&self) {
-        let imp = self.imp();
-        imp.organize_file.borrow_mut().take();
-        imp.organize_page_count.set(0);
-        imp.organize_previews.borrow_mut().clear();
-        imp.organize_page_order.borrow_mut().clear();
-        imp.organize_last_output.borrow_mut().take();
-        self.update_organize_view();
-    }
-
     fn reset_organize_pdf(&self) {
         let imp = self.imp();
         let page_count = imp.organize_page_count.get();
@@ -162,6 +152,8 @@ impl FoliosWindow {
     }
 
     pub(super) fn update_organize_view(&self) {
+        self.update_view_mode();
+
         let imp = self.imp();
         let page_order = imp.organize_page_order.borrow();
         let has_file = imp.organize_file.borrow().is_some();
@@ -209,7 +201,7 @@ impl FoliosWindow {
             .set_sensitive(imp.organize_last_output.borrow().is_some() && !imp.is_running.get());
 
         let detail = if imp.is_running.get() {
-            gettext("Working...")
+            gettext("Organizing pages...")
         } else if has_file {
             page_count_label(page_order.len())
         } else {
@@ -236,14 +228,7 @@ impl FoliosWindow {
             .activatable(false)
             .build();
 
-        if let Some(preview) = preview {
-            let picture = preview_picture(preview);
-            picture.set_size_request(48, 68);
-            row.add_prefix(&picture);
-        } else {
-            let icon = gtk::Image::from_icon_name("view-paged-symbolic");
-            row.add_prefix(&icon);
-        }
+        row.add_prefix(&list_preview_prefix(preview));
 
         let controls_sensitive = !self.imp().is_running.get();
         let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
@@ -263,7 +248,7 @@ impl FoliosWindow {
         row.add_suffix(&down_button);
 
         let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
-        remove_button.set_sensitive(controls_sensitive);
+        remove_button.set_sensitive(controls_sensitive && count > 1);
         let window = self.clone();
         remove_button.connect_clicked(move |_| {
             window.remove_page(index);
@@ -328,7 +313,7 @@ impl FoliosWindow {
         controls.append(&down_button);
 
         let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
-        remove_button.set_sensitive(controls_sensitive);
+        remove_button.set_sensitive(controls_sensitive && count > 1);
         let window = self.clone();
         remove_button.connect_clicked(move |_| {
             window.remove_page(index);
@@ -399,13 +384,12 @@ impl FoliosWindow {
 
     fn remove_page(&self, index: usize) {
         let imp = self.imp();
-        imp.organize_page_order.borrow_mut().remove(index);
-        imp.organize_last_output.borrow_mut().take();
-
-        if imp.organize_page_order.borrow().is_empty() {
-            self.clear_organize_pdf();
+        if imp.organize_page_order.borrow().len() <= 1 {
             return;
         }
+
+        imp.organize_page_order.borrow_mut().remove(index);
+        imp.organize_last_output.borrow_mut().take();
 
         self.update_organize_view();
     }

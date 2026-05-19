@@ -348,22 +348,29 @@ impl FoliosWindow {
 
     fn update_view_mode(&self) {
         let imp = self.imp();
-        let supports_view_mode = matches!(
-            imp.active_tool.get(),
-            PdfTool::Merge | PdfTool::Organize | PdfTool::Extract
-        );
         let view_mode = imp.view_mode.get();
         let view_name = match view_mode {
             ViewMode::List => LIST_VIEW_NAME,
             ViewMode::Grid => GRID_VIEW_NAME,
         };
 
-        imp.view_mode_box.set_visible(supports_view_mode);
+        imp.view_mode_box
+            .set_visible(self.active_tool_has_view_mode_content());
         imp.list_view_button.set_active(view_mode == ViewMode::List);
         imp.grid_view_button.set_active(view_mode == ViewMode::Grid);
         imp.merge_view_stack.set_visible_child_name(view_name);
         imp.organize_view_stack.set_visible_child_name(view_name);
         imp.extract_view_stack.set_visible_child_name(view_name);
+    }
+
+    fn active_tool_has_view_mode_content(&self) -> bool {
+        let imp = self.imp();
+        match imp.active_tool.get() {
+            PdfTool::Merge => !imp.input_files.borrow().is_empty(),
+            PdfTool::Organize => imp.organize_file.borrow().is_some(),
+            PdfTool::Extract => imp.extract_file.borrow().is_some(),
+            PdfTool::Compress | PdfTool::Split => false,
+        }
     }
 
     fn update_all_views(&self) {

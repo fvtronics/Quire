@@ -1,5 +1,6 @@
 use super::ui::{
-    format_page_ranges, normalize_pages, page_count_label, pdf_filters, preview_picture,
+    file_title, format_page_ranges, list_preview_prefix, normalize_pages, page_count_label,
+    pdf_filters, preview_picture,
 };
 use super::FoliosWindow;
 use adw::prelude::*;
@@ -166,6 +167,8 @@ impl FoliosWindow {
     }
 
     pub(super) fn update_extract_view(&self) {
+        self.update_view_mode();
+
         let imp = self.imp();
         let has_file = imp.extract_file.borrow().is_some();
         let has_ranges = !imp.extract_ranges_entry.text().trim().is_empty();
@@ -220,7 +223,7 @@ impl FoliosWindow {
             .set_sensitive(has_file && !imp.is_running.get());
 
         let detail = if imp.is_running.get() {
-            gettext("Working...")
+            gettext("Extracting pages...")
         } else if has_file {
             page_count_label(imp.extract_page_count.get())
         } else {
@@ -238,12 +241,8 @@ impl FoliosWindow {
     }
 
     fn extract_file_row(&self, path: &Path, page_count: usize) -> adw::ActionRow {
-        let title = path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("PDF");
         let row = adw::ActionRow::builder()
-            .title(title)
+            .title(file_title(path))
             .subtitle(page_count_label(page_count))
             .activatable(false)
             .build();
@@ -270,14 +269,7 @@ impl FoliosWindow {
             .activatable_widget(&check_button)
             .build();
 
-        if let Some(preview) = preview {
-            let picture = preview_picture(preview);
-            picture.set_size_request(48, 68);
-            row.add_prefix(&picture);
-        } else {
-            let icon = gtk::Image::from_icon_name("view-paged-symbolic");
-            row.add_prefix(&icon);
-        }
+        row.add_prefix(&list_preview_prefix(preview));
         row.add_suffix(&check_button);
 
         let window = self.clone();

@@ -1,4 +1,6 @@
-use super::ui::{file_subtitle, icon_button, pdf_filters, preview_picture};
+use super::ui::{
+    file_subtitle, file_title, icon_button, list_preview_prefix, pdf_filters, preview_picture,
+};
 use super::FoliosWindow;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -150,6 +152,8 @@ impl FoliosWindow {
     }
 
     pub(super) fn update_files_view(&self) {
+        self.update_view_mode();
+
         let imp = self.imp();
         let files = imp.input_files.borrow();
         let has_files = !files.is_empty();
@@ -204,24 +208,13 @@ impl FoliosWindow {
         count: usize,
         preview: Option<&crate::preview::PagePreview>,
     ) -> adw::ActionRow {
-        let title = path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("PDF");
         let row = adw::ActionRow::builder()
-            .title(title)
+            .title(file_title(path))
             .subtitle(file_subtitle(path))
             .activatable(false)
             .build();
 
-        if let Some(preview) = preview {
-            let picture = preview_picture(preview);
-            picture.set_size_request(48, 68);
-            row.add_prefix(&picture);
-        } else {
-            let icon = gtk::Image::from_icon_name("view-paged-symbolic");
-            row.add_prefix(&icon);
-        }
+        row.add_prefix(&list_preview_prefix(preview));
 
         let controls_sensitive = !self.imp().is_running.get();
         let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
@@ -276,12 +269,8 @@ impl FoliosWindow {
             tile.append(&placeholder);
         }
 
-        let title = path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("PDF");
         let label = gtk::Label::builder()
-            .label(title)
+            .label(file_title(path))
             .xalign(0.0)
             .ellipsize(gtk::pango::EllipsizeMode::End)
             .build();

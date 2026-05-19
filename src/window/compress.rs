@@ -1,4 +1,4 @@
-use super::ui::{clear_box, compress_preview_widget, file_subtitle, pdf_filters};
+use super::ui::{clear_box, file_subtitle, file_title, pdf_filters, single_file_preview_widget};
 use super::FoliosWindow;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -143,7 +143,7 @@ impl FoliosWindow {
         if let Some(path) = file.as_ref() {
             imp.compress_file_list.append(&self.compress_file_row(path));
             imp.compress_preview_box
-                .append(&compress_preview_widget(preview.as_ref()));
+                .append(&single_file_preview_widget(preview.as_ref()));
         }
 
         imp.compress_empty_status.set_visible(!has_file);
@@ -167,7 +167,7 @@ impl FoliosWindow {
             .set_sensitive(has_file && !imp.is_running.get());
 
         let detail = if imp.is_running.get() {
-            gettext("Working...")
+            gettext("Compressing PDF...")
         } else if let Some(path) = file.as_ref() {
             file_subtitle(path)
         } else {
@@ -177,12 +177,8 @@ impl FoliosWindow {
     }
 
     fn compress_file_row(&self, path: &Path) -> adw::ActionRow {
-        let title = path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("PDF");
         let row = adw::ActionRow::builder()
-            .title(title)
+            .title(file_title(path))
             .subtitle(file_subtitle(path))
             .activatable(false)
             .build();
