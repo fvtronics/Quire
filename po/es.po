@@ -164,7 +164,7 @@ msgstr "Combinar los PDF seleccionados"
 
 #: src/window.blp:190
 msgid "Add PDFs to Begin"
-msgstr "Añadir archivos PDF para comenzar"
+msgstr "Abra archivos PDF para combinarlos"
 
 #: src/window.blp:191
 msgid "Choose two or more PDF files to combine into a new document."
@@ -187,7 +187,7 @@ msgstr "Abrir PDF"
 
 #: src/window.blp:307
 msgid "Open a PDF to Compress"
-msgstr "Abre un PDF para comprimirlo"
+msgstr "Abra un archivo PDF para comprimirlo"
 
 #: src/window.blp:308
 msgid "Choose a PDF, then save a smaller copy."
@@ -227,7 +227,7 @@ msgstr "Guardar"
 
 #: src/window.blp:444
 msgid "Open a PDF to Organize"
-msgstr "Abre un PDF para organizarlo"
+msgstr "Abra un archivo PDF para organizarlo"
 
 #: src/window.blp:445
 msgid "Reorder or remove pages, then save a new document."
@@ -251,7 +251,7 @@ msgstr "Extraer"
 
 #: src/window.blp:565
 msgid "Open a PDF to Extract Pages"
-msgstr "Abre un PDF para extraer páginas"
+msgstr "Abra un archivo PDF para extraer páginas"
 
 #: src/window.blp:566
 msgid "Choose page ranges, then save them as a new document."
@@ -275,7 +275,7 @@ msgstr "Abrir carpeta"
 
 #: src/window.blp:713
 msgid "Open a PDF to Split"
-msgstr "Abre un PDF para dividirlo"
+msgstr "Abra un archivo PDF para dividirlo"
 
 #: src/window.blp:714
 msgid "Choose where the PDF should be split by page."
