@@ -39,9 +39,9 @@
             ],
             "sources" : [
                 {
-                    "type" : "git",
-                    "url" : "https://gitlab.gnome.org/GNOME/blueprint-compiler.git",
-                    "commit" : "82c3b2c1e0b68f10803b4a9cbce977a273c39344"
+                    "type" : "archive",
+                    "url" : "https://download.gnome.org/sources/blueprint-compiler/0.20/blueprint-compiler-0.20.4.tar.xz",
+                    "sha256" : "1f1ecc84bcd698902d422f7de83d39229a209dd3016f6d2c3b0ed0ab123f6891"
                 }
             ]
         },
