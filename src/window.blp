@@ -409,16 +409,44 @@ template $FoliosWindow: Adw.ApplicationWindow {
               }
             }
 
-            Gtk.ScrolledWindow extract_page_scroller {
+            Adw.ViewSwitcher {
+              stack: extract_view_stack;
+              policy: wide;
+              halign: center;
+            }
+
+            Adw.ViewStack extract_view_stack {
               vexpand: true;
-              child: Gtk.FlowBox extract_page_grid {
-                column-spacing: 12;
-                row-spacing: 12;
-                homogeneous: true;
-                selection-mode: none;
-                min-children-per-line: 2;
-                max-children-per-line: 5;
-              };
+
+              Adw.ViewStackPage {
+                name: "list";
+                title: _("List");
+                icon-name: "view-list-symbolic";
+
+                child: Gtk.ScrolledWindow {
+                  child: Gtk.ListBox extract_page_list {
+                    selection-mode: none;
+                    styles ["boxed-list"]
+                  };
+                };
+              }
+
+              Adw.ViewStackPage {
+                name: "preview";
+                title: _("Preview");
+                icon-name: "view-grid-symbolic";
+
+                child: Gtk.ScrolledWindow {
+                  child: Gtk.FlowBox extract_page_grid {
+                    column-spacing: 12;
+                    row-spacing: 12;
+                    homogeneous: true;
+                    selection-mode: none;
+                    min-children-per-line: 2;
+                    max-children-per-line: 5;
+                  };
+                };
+              }
             }
           }
         }

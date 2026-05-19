@@ -34,6 +34,10 @@ pub(super) enum PdfTool {
     Extract,
 }
 
+const EXTRACT_LIST_VIEW_NAME: &str = "list";
+const EXTRACT_PREVIEW_VIEW_NAME: &str = "preview";
+const EXTRACT_PREVIEW_PAGE_LIMIT: usize = 15;
+
 mod imp {
     use super::*;
 
@@ -109,6 +113,10 @@ mod imp {
         pub extract_file_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub extract_ranges_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub extract_view_stack: TemplateChild<adw::ViewStack>,
+        #[template_child]
+        pub extract_page_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub extract_page_grid: TemplateChild<gtk::FlowBox>,
         #[template_child]
@@ -274,9 +282,19 @@ impl FoliosWindow {
 
         let window = self.clone();
         imp.extract_ranges_entry.connect_changed(move |entry| {
-            if !entry.text().trim().is_empty() {
-                window.imp().extract_selected_pages.borrow_mut().clear();
+            let imp = window.imp();
+            let text = entry.text();
+            let text = text.trim();
+
+            if text.is_empty() {
+                imp.extract_selected_pages.borrow_mut().clear();
+            } else if let Ok(pages) =
+                crate::pdf::parse_page_ranges(text, imp.extract_page_count.get())
+            {
+                *imp.extract_selected_pages.borrow_mut() = normalize_pages(pages);
             }
+
+            imp.extract_last_output.borrow_mut().take();
             window.update_extract_view();
         });
     }
@@ -504,6 +522,13 @@ impl FoliosWindow {
                     *imp.extract_previews.borrow_mut() = previews;
                     imp.extract_selected_pages.borrow_mut().clear();
                     imp.extract_ranges_entry.set_text("");
+                    imp.extract_view_stack.set_visible_child_name(
+                        if page_count <= EXTRACT_PREVIEW_PAGE_LIMIT {
+                            EXTRACT_PREVIEW_VIEW_NAME
+                        } else {
+                            EXTRACT_LIST_VIEW_NAME
+                        },
+                    );
                 }
                 Err(error) => {
                     window.show_toast(&error.to_string());
@@ -547,6 +572,8 @@ impl FoliosWindow {
         imp.extract_selected_pages.borrow_mut().clear();
         imp.extract_ranges_entry.set_text("");
         imp.extract_last_output.borrow_mut().take();
+        imp.extract_view_stack
+            .set_visible_child_name(EXTRACT_LIST_VIEW_NAME);
         self.update_extract_view();
     }
 
@@ -728,8 +755,13 @@ impl FoliosWindow {
                 .append(&self.extract_file_row(path, imp.extract_page_count.get()));
         }
 
+        imp.extract_page_list.remove_all();
         imp.extract_page_grid.remove_all();
         let selected_pages = imp.extract_selected_pages.borrow();
+        for page_number in 1..=imp.extract_page_count.get() as u32 {
+            imp.extract_page_list
+                .append(&self.extract_page_row(page_number, selected_pages.contains(&page_number)));
+        }
         for preview in imp.extract_previews.borrow().iter() {
             imp.extract_page_grid.append(
                 &self.extract_page_tile(preview, selected_pages.contains(&preview.page_number)),
@@ -868,11 +900,45 @@ impl FoliosWindow {
         row
     }
 
-    fn extract_page_tile(&self, preview: &crate::preview::PagePreview, selected: bool) -> gtk::Box {
+    fn extract_page_row(&self, page_number: u32, selected: bool) -> adw::ActionRow {
+        let check_button = gtk::CheckButton::builder()
+            .active(selected)
+            .tooltip_text(gettext("Select Page"))
+            .valign(gtk::Align::Center)
+            .build();
+        let row = adw::ActionRow::builder()
+            .title(format!("{} {page_number}", gettext("Page")))
+            .activatable(true)
+            .activatable_widget(&check_button)
+            .build();
+
+        let icon = gtk::Image::from_icon_name("view-paged-symbolic");
+        row.add_prefix(&icon);
+        row.add_suffix(&check_button);
+
+        let window = self.clone();
+        check_button.connect_toggled(move |button| {
+            window.toggle_extract_page(page_number, button.is_active());
+        });
+
+        row
+    }
+
+    fn extract_page_tile(
+        &self,
+        preview: &crate::preview::PagePreview,
+        selected: bool,
+    ) -> gtk::ToggleButton {
+        let button = gtk::ToggleButton::builder()
+            .active(selected)
+            .tooltip_text(gettext("Select Page"))
+            .width_request(180)
+            .build();
+        button.set_css_classes(&["flat"]);
+
         let tile = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(6)
-            .width_request(180)
             .build();
 
         let picture =
@@ -897,23 +963,22 @@ impl FoliosWindow {
             .xalign(0.0)
             .hexpand(true)
             .build();
-        let check_button = gtk::CheckButton::builder()
-            .active(selected)
-            .tooltip_text(gettext("Select Page"))
-            .valign(gtk::Align::Center)
-            .build();
+        let check_icon = gtk::Image::from_icon_name("object-select-symbolic");
+        check_icon.set_opacity(if selected { 1.0 } else { 0.0 });
+
+        footer.append(&label);
+        footer.append(&check_icon);
+        tile.append(&footer);
+
+        button.set_child(Some(&tile));
 
         let window = self.clone();
         let page_number = preview.page_number;
-        check_button.connect_toggled(move |button| {
+        button.connect_toggled(move |button| {
             window.toggle_extract_page(page_number, button.is_active());
         });
 
-        footer.append(&label);
-        footer.append(&check_button);
-        tile.append(&footer);
-
-        tile
+        button
     }
 
     fn move_file(&self, from: usize, to: usize) {
@@ -970,11 +1035,21 @@ impl FoliosWindow {
         imp.extract_last_output.borrow_mut().take();
         drop(pages);
 
-        if !imp.extract_ranges_entry.text().is_empty() {
-            imp.extract_ranges_entry.set_text("");
-        }
+        self.update_extract_ranges_entry();
 
         self.update_extract_view();
+    }
+
+    fn update_extract_ranges_entry(&self) {
+        let imp = self.imp();
+        let text = {
+            let pages = imp.extract_selected_pages.borrow();
+            format_page_ranges(&pages)
+        };
+
+        if imp.extract_ranges_entry.text().as_str() != text {
+            imp.extract_ranges_entry.set_text(&text);
+        }
     }
 
     fn open_last_output(&self) {
@@ -1042,6 +1117,43 @@ fn format_size(bytes: u64) -> String {
         format!("{:.1} KB", bytes / KB)
     } else {
         format!("{bytes:.0} B")
+    }
+}
+
+fn normalize_pages(mut pages: Vec<u32>) -> Vec<u32> {
+    pages.sort_unstable();
+    pages.dedup();
+    pages
+}
+
+fn format_page_ranges(pages: &[u32]) -> String {
+    let Some((&first, rest)) = pages.split_first() else {
+        return String::new();
+    };
+
+    let mut parts = Vec::new();
+    let mut start = first;
+    let mut end = first;
+
+    for page in rest {
+        if *page == end + 1 {
+            end = *page;
+        } else {
+            parts.push(format_page_range(start, end));
+            start = *page;
+            end = *page;
+        }
+    }
+
+    parts.push(format_page_range(start, end));
+    parts.join(",")
+}
+
+fn format_page_range(start: u32, end: u32) -> String {
+    if start == end {
+        start.to_string()
+    } else {
+        format!("{start}-{end}")
     }
 }
 
