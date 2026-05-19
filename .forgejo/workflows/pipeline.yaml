@@ -136,14 +136,6 @@ jobs:
           test "$VERSION" = "$MESON_VERSION"
           grep -q "<release version=\"$VERSION\"" data/com.fvtronics.folios.metainfo.xml.in
 
-      - name: Download Blueprint Compiler
-        run: meson subprojects download blueprint-compiler
-
-      - name: Build Release
-        run: |
-          meson setup builddir-release --buildtype=release --wrap-mode=forcefallback
-          meson compile -C builddir-release
-
       - name: Validate App Metadata
         run: |
           python3 -m json.tool com.fvtronics.folios.json >/dev/null

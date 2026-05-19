@@ -32,6 +32,20 @@
     ],
     "modules" : [
         {
+            "name" : "blueprint-compiler",
+            "buildsystem" : "meson",
+            "cleanup" : [
+                "*"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/blueprint-compiler.git",
+                    "commit" : "82c3b2c1e0b68f10803b4a9cbce977a273c39344"
+                }
+            ]
+        },
+        {
             "name" : "poppler",
             "buildsystem" : "cmake-ninja",
             "builddir" : true,
@@ -74,7 +88,6 @@
             ],
             "config-opts" : [
                 "--libdir=lib",
-                "--wrap-mode=forcefallback",
                 "-Dcargo-home=/run/build/folios/cargo"
             ]
         }
