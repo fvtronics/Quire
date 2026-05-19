@@ -192,6 +192,10 @@ mod imp {
         #[template_child]
         pub split_file_list: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub split_after_row: TemplateChild<adw::ComboRow>,
+        #[template_child]
+        pub split_specific_pages_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
         pub split_pages_entry: TemplateChild<adw::EntryRow>,
         #[template_child]
         pub split_prefix_entry: TemplateChild<adw::EntryRow>,

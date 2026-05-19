@@ -30,6 +30,15 @@ pub struct CompressOptions {
     pub prune_objects: bool,
 }
 
+#[derive(Clone, Debug)]
+pub enum SplitRule {
+    EveryPage,
+    EvenPages,
+    OddPages,
+    SpecificPages(Vec<u32>),
+    EveryNPages(u32),
+}
+
 impl fmt::Display for PdfBackendError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -87,13 +96,11 @@ pub async fn split_pdf(
     input_file: PathBuf,
     output_folder: PathBuf,
     prefix: String,
-    pages_per_file: u32,
+    rule: SplitRule,
 ) -> Result<PathBuf, PdfBackendError> {
-    gio::spawn_blocking(move || {
-        split_pdf_blocking(input_file, output_folder, prefix, pages_per_file)
-    })
-    .await
-    .unwrap_or(Err(PdfBackendError::WorkerStopped))
+    gio::spawn_blocking(move || split_pdf_blocking(input_file, output_folder, prefix, rule))
+        .await
+        .unwrap_or(Err(PdfBackendError::WorkerStopped))
 }
 
 pub async fn compress_pdf(
@@ -138,6 +145,29 @@ pub fn parse_page_ranges(input: &str, page_count: usize) -> Result<Vec<u32>, Pdf
     }
 
     Ok(pages)
+}
+
+pub fn parse_page_numbers(input: &str, page_count: usize) -> Result<Vec<u32>, PdfBackendError> {
+    let input = input.trim();
+    if input.is_empty() {
+        return Err(PdfBackendError::InvalidPageRange(
+            "Enter pages like 2,4,7.".to_string(),
+        ));
+    }
+
+    input
+        .split(',')
+        .map(str::trim)
+        .map(|part| {
+            if part.is_empty() {
+                Err(PdfBackendError::InvalidPageRange(
+                    "Enter pages like 2,4,7.".to_string(),
+                ))
+            } else {
+                parse_page_number(part, page_count)
+            }
+        })
+        .collect()
 }
 
 fn merge_pdfs_blocking(
@@ -323,14 +353,8 @@ fn split_pdf_blocking(
     input_file: PathBuf,
     output_folder: PathBuf,
     prefix: String,
-    pages_per_file: u32,
+    rule: SplitRule,
 ) -> Result<PathBuf, PdfBackendError> {
-    if pages_per_file == 0 {
-        return Err(PdfBackendError::InvalidPageRange(
-            "Enter a page count of 1 or more.".to_string(),
-        ));
-    }
-
     let document = Document::load(&input_file).map_err(|error| PdfBackendError::Load {
         path: input_file.clone(),
         message: error.to_string(),
@@ -341,17 +365,63 @@ fn split_pdf_blocking(
     }
 
     let prefix = split_output_prefix(&input_file, &prefix);
-    for (index, start) in (1..=page_count)
-        .step_by(pages_per_file as usize)
-        .enumerate()
-    {
-        let end = (start + pages_per_file - 1).min(page_count);
-        let output_file = output_folder.join(format!("{} {}.pdf", prefix, index + 1));
+    let mut start = 1;
+    let mut index = 1;
+    for end in split_breaks(rule, page_count)? {
+        if end < start {
+            continue;
+        }
+
+        let output_file = output_folder.join(format!("{} {}.pdf", prefix, index));
         let page_numbers = (start..=end).collect();
+        write_selected_pages_from_document(&input_file, &document, page_numbers, &output_file)?;
+        start = end + 1;
+        index += 1;
+    }
+
+    if start <= page_count {
+        let output_file = output_folder.join(format!("{} {}.pdf", prefix, index));
+        let page_numbers = (start..=page_count).collect();
         write_selected_pages_from_document(&input_file, &document, page_numbers, &output_file)?;
     }
 
     Ok(output_folder)
+}
+
+fn split_breaks(rule: SplitRule, page_count: u32) -> Result<Vec<u32>, PdfBackendError> {
+    let mut breaks: Vec<u32> = match rule {
+        SplitRule::EveryPage => (1..=page_count).collect(),
+        SplitRule::EvenPages => (2..=page_count).step_by(2).collect(),
+        SplitRule::OddPages => (1..=page_count).step_by(2).collect(),
+        SplitRule::SpecificPages(pages) => {
+            if pages.is_empty() {
+                return Err(PdfBackendError::InvalidPageRange(
+                    "Enter pages like 2,4,7.".to_string(),
+                ));
+            }
+            pages
+        }
+        SplitRule::EveryNPages(pages) => {
+            if pages == 0 {
+                return Err(PdfBackendError::InvalidPageRange(
+                    "Enter a page count of 1 or more.".to_string(),
+                ));
+            }
+            (pages..=page_count).step_by(pages as usize).collect()
+        }
+    };
+
+    for page in &breaks {
+        if *page == 0 || *page > page_count {
+            return Err(PdfBackendError::InvalidPageRange(format!(
+                "Page {page} is not in this PDF."
+            )));
+        }
+    }
+
+    breaks.sort_unstable();
+    breaks.dedup();
+    Ok(breaks)
 }
 
 fn compress_pdf_blocking(

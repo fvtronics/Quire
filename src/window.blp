@@ -88,7 +88,7 @@ template $FoliosWindow: Adw.ApplicationWindow {
 
             Adw.ActionRow split_tool_row {
               title: _("Split");
-              subtitle: _("Create smaller PDFs");
+              subtitle: _("Split by page");
               icon-name: "edit-cut-symbolic";
               activatable: true;
             }
@@ -711,7 +711,7 @@ template $FoliosWindow: Adw.ApplicationWindow {
           Adw.StatusPage split_empty_status {
             icon-name: "edit-cut-symbolic";
             title: _("Open a PDF to Split");
-            description: _("Choose how many pages to place in each output file.");
+            description: _("Choose where the PDF should be split by page.");
 
             child: Gtk.Button split_empty_choose_button {
               halign: center;
@@ -749,8 +749,16 @@ template $FoliosWindow: Adw.ApplicationWindow {
                 selection-mode: none;
                 styles ["boxed-list"]
 
+                Adw.ComboRow split_after_row {
+                  title: _("Split After");
+                }
+
+                Adw.EntryRow split_specific_pages_entry {
+                  title: _("Specific Pages");
+                }
+
                 Adw.EntryRow split_pages_entry {
-                  title: _("Pages per PDF");
+                  title: _("Page Interval");
                   text: "1";
                 }
 
