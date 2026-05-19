@@ -1,0 +1,72 @@
+name: Folios Pipeline
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: linux-amd64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          if command -v sudo >/dev/null; then
+            SUDO=sudo
+          else
+            SUDO=
+          fi
+
+          $SUDO apt-get update
+          $SUDO apt-get install -y --no-install-recommends \
+            blueprint-compiler \
+            libadwaita-1-dev \
+            libgtk-4-dev \
+            libpoppler-glib-dev \
+            pkg-config
+
+      - name: Install Rust
+        uses: https://github.com/dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Format Check
+        run: cargo fmt --all -- --check
+
+      - name: Blueprint Check
+        run: |
+          mkdir -p /tmp/folios-blueprint-check
+          blueprint-compiler batch-compile \
+            /tmp/folios-blueprint-check \
+            src \
+            src/window.blp \
+            src/shortcuts-dialog.blp
+
+      - name: Whitespace Check
+        run: git diff --check
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --locked
