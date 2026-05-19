@@ -176,7 +176,7 @@ msgstr "Comprimir PDF"
 
 #: src/window.blp:263 src/window.blp:388 src/window.blp:521 src/window.blp:669
 msgid "No PDF selected"
-msgstr "Ningún PDF seleccionado"
+msgstr "Ningún archivo PDF seleccionado"
 
 #: src/window.blp:272 src/window.blp:275 src/window.blp:312 src/window.blp:317
 #: src/window.blp:397 src/window.blp:400 src/window.blp:449 src/window.blp:454
