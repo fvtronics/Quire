@@ -45,15 +45,25 @@ run_command(
   check: true
 )
 
-cargo_bin  = find_program('cargo')
-cargo_opt  = [ '--manifest-path', meson.project_source_root() / 'Cargo.toml' ]
-cargo_opt += [ '--target-dir', meson.project_build_root()  / 'src' ]
-cargo_env  = [ 'CARGO_HOME=' + meson.project_build_root()  / 'cargo-home' ]
+cargo_bin = find_program('cargo')
+sh = find_program('sh')
+cargo_home = get_option('cargo-home')
+cargo_target_dir = meson.project_build_root() / 'src'
+
+cargo_env = environment()
+cargo_env.set('CARGO_TARGET_DIR', cargo_target_dir)
+
+if cargo_home != ''
+  cargo_env.set('CARGO_HOME', cargo_home)
+else
+  cargo_env.set('CARGO_HOME', meson.project_build_root() / 'cargo-home')
+endif
 
 if get_option('buildtype') == 'release'
-  cargo_opt += [ '--release' ]
+  cargo_build_type = '--release'
   rust_target = 'release'
 else
+  cargo_build_type = ''
   rust_target = 'debug'
 endif
 
@@ -66,8 +76,15 @@ cargo_build = custom_target(
   install: true,
   install_dir: get_option('bindir'),
   command: [
-    'env', cargo_env,
-    cargo_bin, 'build',
-    cargo_opt, '&&', 'cp', 'src' / rust_target / meson.project_name(), '@OUTPUT@',
-  ]
+    sh,
+    '-c',
+    'cargo build $1 --manifest-path "$2" && cp "$3/$4/folios" "$5"',
+    'sh',
+    cargo_build_type,
+    meson.project_source_root() / 'Cargo.toml',
+    cargo_target_dir,
+    rust_target,
+    '@OUTPUT@',
+  ],
+  env: cargo_env,
 )

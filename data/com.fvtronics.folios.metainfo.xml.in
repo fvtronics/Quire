@@ -5,7 +5,7 @@
   <project_license>GPL-3.0-or-later</project_license>
 
   <name>Folios</name>
-  <summary>Work with PDFs locally</summary>
+  <summary>Combine and edit PDF files</summary>
   <description>
     <p>Folios is a simple GNOME utility for working with local PDF files without a complex document suite.</p>
     <p>Merge multiple PDFs, organize pages, extract page ranges, split documents, and compress files without sending them to an online service.</p>
@@ -17,7 +17,36 @@
 
   <translation type="gettext">folios</translation>
   <launchable type="desktop-id">com.fvtronics.folios.desktop</launchable>
+  <url type="homepage">https://gitlab.com/fvtronics/folios</url>
+  <url type="bugtracker">https://gitlab.com/fvtronics/folios/-/issues</url>
+  <url type="vcs-browser">https://gitlab.com/fvtronics/folios</url>
+  <provides>
+    <binary>folios</binary>
+  </provides>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
   <content_rating type="oars-1.1" />
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://gitlab.com/fvtronics/folios/-/raw/master/data/screenshots/merge.png</image>
+      <caption>Merge multiple PDF files into a single document</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://gitlab.com/fvtronics/folios/-/raw/master/data/screenshots/organize.png</image>
+      <caption>Reorder and remove pages before saving a new PDF</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://gitlab.com/fvtronics/folios/-/raw/master/data/screenshots/extract.png</image>
+      <caption>Extract selected pages into a new document</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://gitlab.com/fvtronics/folios/-/raw/master/data/screenshots/split.png</image>
+      <caption>Split a PDF into multiple documents</caption>
+    </screenshot>
+  </screenshots>
 
   <branding>
     <color type="primary" scheme_preference="light">#3584e4</color>

@@ -1,10 +1,11 @@
 [Desktop Entry]
 Name=Folios
+Comment=Combine and edit PDF files
 Exec=folios
 Icon=com.fvtronics.folios
 Terminal=false
 Type=Application
-Categories=Utility;
-Keywords=PDF;Merge;Document;GTK;
+Categories=Office;GTK;
+Keywords=PDF;Merge;Split;Compress;Extract;Organize;Page;Document;GTK;
 StartupNotify=true
 DBusActivatable=true
