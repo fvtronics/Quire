@@ -3,6 +3,7 @@ name: Folios Pipeline
 on:
   push:
     branches: ["master"]
+    tags: ["v*"]
   pull_request:
 
 env:
@@ -69,3 +70,90 @@ jobs:
 
       - name: Test
         run: cargo test --locked
+
+  release:
+    name: Create Forgejo Release
+    needs: checks
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: linux-amd64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          if command -v sudo >/dev/null; then
+            SUDO=sudo
+          else
+            SUDO=
+          fi
+
+          $SUDO apt-get update
+          $SUDO apt-get install -y --no-install-recommends \
+            appstream \
+            blueprint-compiler \
+            desktop-file-utils \
+            gettext \
+            libglib2.0-bin \
+            libadwaita-1-dev \
+            libgtk-4-dev \
+            libpoppler-glib-dev \
+            flatpak \
+            flatpak-builder \
+            meson \
+            pkg-config
+
+      - name: Install Rust
+        uses: https://github.com/dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Validate Release Version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          CARGO_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
+          MESON_VERSION="$(sed -n "s/^ *version: '\(.*\)',/\1/p" meson.build | head -n 1)"
+
+          test "$VERSION" = "$CARGO_VERSION"
+          test "$VERSION" = "$MESON_VERSION"
+          grep -q "<release version=\"$VERSION\"" data/com.fvtronics.folios.metainfo.xml.in
+
+      - name: Build Release
+        run: |
+          meson setup builddir-release --buildtype=release
+          meson compile -C builddir-release
+
+      - name: Validate App Metadata
+        run: |
+          python3 -m json.tool com.fvtronics.folios.json >/dev/null
+          python3 -m json.tool cargo-sources.json >/dev/null
+          appstreamcli validate --no-net --explain data/com.fvtronics.folios.metainfo.xml.in
+          cp data/com.fvtronics.folios.desktop.in /tmp/com.fvtronics.folios.desktop
+          desktop-file-validate /tmp/com.fvtronics.folios.desktop
+
+      - name: Build Flatpak Bundle
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          mkdir -p dist
+          flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak-builder --force-clean --repo=repo --install-deps-from=flathub build-dir com.fvtronics.folios.json
+          flatpak build-bundle repo dist/folios-"$VERSION".flatpak com.fvtronics.folios
+
+      - name: Upload to Forgejo Releases
+        uses: https://github.com/softprops/action-gh-release@v2
+        with:
+          files: dist/*.flatpak
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
