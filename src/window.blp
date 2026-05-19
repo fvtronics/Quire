@@ -85,6 +85,13 @@ template $FoliosWindow: Adw.ApplicationWindow {
               icon-name: "edit-copy-symbolic";
               activatable: true;
             }
+
+            Adw.ActionRow compress_tool_row {
+              title: _("Compress");
+              subtitle: _("Reduce PDF size");
+              icon-name: "document-save-symbolic";
+              activatable: true;
+            }
           }
         }
 
@@ -216,6 +223,143 @@ template $FoliosWindow: Adw.ApplicationWindow {
                   max-children-per-line: 5;
                 };
               };
+            }
+          }
+        }
+
+        Gtk.Box compress_workspace {
+          orientation: vertical;
+          spacing: 18;
+          hexpand: true;
+          visible: false;
+          margin-start: 36;
+          margin-end: 36;
+          margin-top: 30;
+          margin-bottom: 30;
+
+          Gtk.Box {
+            orientation: horizontal;
+            spacing: 12;
+
+            Gtk.Box {
+              orientation: vertical;
+              spacing: 3;
+              hexpand: true;
+
+              Gtk.Label {
+                label: _("Compress PDF");
+                xalign: 0;
+                styles ["title-2"]
+              }
+
+              Gtk.Label compress_detail_label {
+                label: _("No PDF selected");
+                xalign: 0;
+                styles ["dim-label"]
+              }
+            }
+
+            Gtk.Button compress_choose_button {
+              visible: false;
+              valign: center;
+              tooltip-text: _("Open PDF");
+              child: Adw.ButtonContent {
+                icon-name: "document-open-symbolic";
+                label: _("Open PDF");
+              };
+            }
+
+            Gtk.Button compress_open_output_button {
+              visible: false;
+              sensitive: false;
+              valign: center;
+              tooltip-text: _("Open Output File");
+
+              child: Adw.ButtonContent {
+                icon-name: "document-open-symbolic";
+                label: _("Open Output");
+              };
+            }
+
+            Gtk.Button compress_clear_button {
+              visible: false;
+              sensitive: false;
+              valign: center;
+              tooltip-text: _("Clear PDF");
+
+              child: Adw.ButtonContent {
+                icon-name: "edit-clear-symbolic";
+                label: _("Clear");
+              };
+            }
+
+            Gtk.Button compress_save_button {
+              visible: false;
+              sensitive: false;
+              valign: center;
+              tooltip-text: _("Compress PDF");
+              styles ["suggested-action"]
+
+              child: Adw.ButtonContent {
+                icon-name: "document-save-symbolic";
+                label: _("Compress");
+              };
+            }
+          }
+
+          Adw.StatusPage compress_empty_status {
+            icon-name: "document-save-symbolic";
+            title: _("Open a PDF to Compress");
+            description: _("Choose a PDF, then save a smaller copy.");
+
+            child: Gtk.Button compress_empty_choose_button {
+              halign: center;
+              tooltip-text: _("Open PDF");
+              styles ["suggested-action"]
+
+              child: Adw.ButtonContent {
+                icon-name: "document-open-symbolic";
+                label: _("Open PDF");
+              };
+            };
+          }
+
+          Gtk.Box compress_content {
+            orientation: horizontal;
+            spacing: 18;
+            vexpand: true;
+            visible: false;
+
+            Gtk.Box compress_preview_box {
+              width-request: 180;
+            }
+
+            Gtk.Box {
+              orientation: vertical;
+              spacing: 18;
+              hexpand: true;
+
+              Gtk.ListBox compress_file_list {
+                selection-mode: none;
+                styles ["boxed-list"]
+              }
+
+              Gtk.ListBox {
+                selection-mode: none;
+                styles ["boxed-list"]
+
+                Adw.SwitchRow compress_prune_row {
+                  title: _("Remove Unused Data");
+                  subtitle: _("Discard unreferenced PDF objects");
+                  active: true;
+                }
+
+                Adw.SwitchRow compress_empty_streams_row {
+                  title: _("Remove Empty Streams");
+                  subtitle: _("Discard empty PDF data streams");
+                  active: true;
+                }
+              }
             }
           }
         }

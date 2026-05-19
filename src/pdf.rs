@@ -24,6 +24,12 @@ pub enum PdfBackendError {
     WorkerStopped,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct CompressOptions {
+    pub remove_empty_streams: bool,
+    pub prune_objects: bool,
+}
+
 impl fmt::Display for PdfBackendError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -73,6 +79,16 @@ pub async fn extract_pages(
     output_file: PathBuf,
 ) -> Result<PathBuf, PdfBackendError> {
     gio::spawn_blocking(move || write_selected_pages(input_file, pages, output_file))
+        .await
+        .unwrap_or(Err(PdfBackendError::WorkerStopped))
+}
+
+pub async fn compress_pdf(
+    input_file: PathBuf,
+    output_file: PathBuf,
+    options: CompressOptions,
+) -> Result<PathBuf, PdfBackendError> {
+    gio::spawn_blocking(move || compress_pdf_blocking(input_file, output_file, options))
         .await
         .unwrap_or(Err(PdfBackendError::WorkerStopped))
 }
@@ -278,6 +294,37 @@ fn write_selected_pages(
         .insert(catalog_id, Object::Dictionary(catalog_dictionary));
 
     save_document(output, catalog_id, &temp_file, &output_file)
+}
+
+fn compress_pdf_blocking(
+    input_file: PathBuf,
+    output_file: PathBuf,
+    options: CompressOptions,
+) -> Result<PathBuf, PdfBackendError> {
+    if input_file == output_file {
+        return Err(PdfBackendError::OutputMatchesInput);
+    }
+
+    let mut document = Document::load(&input_file).map_err(|error| PdfBackendError::Load {
+        path: input_file.clone(),
+        message: error.to_string(),
+    })?;
+    let catalog_id = document
+        .trailer
+        .get(b"Root")
+        .and_then(Object::as_reference)
+        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?;
+    let temp_file = temporary_output_path(&output_file);
+
+    if options.remove_empty_streams {
+        document.delete_zero_length_streams();
+    }
+    if options.prune_objects {
+        document.prune_objects();
+    }
+    document.compress();
+
+    save_document(document, catalog_id, &temp_file, &output_file)
 }
 
 fn collect_document_roots(
