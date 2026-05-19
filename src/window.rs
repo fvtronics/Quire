@@ -63,6 +63,8 @@ mod imp {
         #[template_child]
         pub sidebar_list: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub view_mode_box: TemplateChild<gtk::Box>,
+        #[template_child]
         pub list_view_button: TemplateChild<gtk::ToggleButton>,
         #[template_child]
         pub grid_view_button: TemplateChild<gtk::ToggleButton>,
@@ -346,12 +348,17 @@ impl FoliosWindow {
 
     fn update_view_mode(&self) {
         let imp = self.imp();
+        let supports_view_mode = matches!(
+            imp.active_tool.get(),
+            PdfTool::Merge | PdfTool::Organize | PdfTool::Extract
+        );
         let view_mode = imp.view_mode.get();
         let view_name = match view_mode {
             ViewMode::List => LIST_VIEW_NAME,
             ViewMode::Grid => GRID_VIEW_NAME,
         };
 
+        imp.view_mode_box.set_visible(supports_view_mode);
         imp.list_view_button.set_active(view_mode == ViewMode::List);
         imp.grid_view_button.set_active(view_mode == ViewMode::Grid);
         imp.merge_view_stack.set_visible_child_name(view_name);
