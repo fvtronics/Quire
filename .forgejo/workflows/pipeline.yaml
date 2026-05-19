@@ -62,6 +62,9 @@ jobs:
       - name: Generate Build Configuration
         run: meson setup builddir --wrap-mode=forcefallback
 
+      - name: Blueprint Check
+        run: meson compile -C builddir blueprints
+
       - name: Format Check
         run: cargo fmt --all -- --check
 
