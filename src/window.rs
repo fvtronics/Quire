@@ -29,6 +29,7 @@ mod compress;
 mod extract;
 mod merge;
 mod organize;
+mod split;
 mod ui;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -38,6 +39,7 @@ pub(super) enum PdfTool {
     Compress,
     Organize,
     Extract,
+    Split,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -73,6 +75,8 @@ mod imp {
         #[template_child]
         pub extract_tool_row: TemplateChild<adw::ActionRow>,
         #[template_child]
+        pub split_tool_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
         pub merge_workspace: TemplateChild<gtk::Box>,
         #[template_child]
         pub compress_workspace: TemplateChild<gtk::Box>,
@@ -80,6 +84,8 @@ mod imp {
         pub organize_workspace: TemplateChild<gtk::Box>,
         #[template_child]
         pub extract_workspace: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub split_workspace: TemplateChild<gtk::Box>,
 
         #[template_child]
         pub add_button: TemplateChild<gtk::Button>,
@@ -116,8 +122,6 @@ mod imp {
         pub compress_preview_box: TemplateChild<gtk::Box>,
         #[template_child]
         pub compress_file_list: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub compress_clear_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub compress_save_button: TemplateChild<gtk::Button>,
         #[template_child]
@@ -169,11 +173,32 @@ mod imp {
         #[template_child]
         pub extract_page_grid: TemplateChild<gtk::FlowBox>,
         #[template_child]
-        pub extract_clear_button: TemplateChild<gtk::Button>,
-        #[template_child]
         pub extract_save_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub extract_open_output_button: TemplateChild<gtk::Button>,
+
+        #[template_child]
+        pub split_choose_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub split_empty_choose_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub split_detail_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub split_empty_status: TemplateChild<adw::StatusPage>,
+        #[template_child]
+        pub split_content: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub split_preview_box: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub split_file_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub split_pages_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub split_prefix_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub split_save_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub split_open_output_button: TemplateChild<gtk::Button>,
 
         pub(super) active_tool: Cell<PdfTool>,
         pub(super) view_mode: Cell<ViewMode>,
@@ -193,6 +218,10 @@ mod imp {
         pub extract_previews: RefCell<Vec<crate::preview::PagePreview>>,
         pub extract_selected_pages: RefCell<Vec<u32>>,
         pub extract_last_output: RefCell<Option<PathBuf>>,
+        pub split_file: RefCell<Option<PathBuf>>,
+        pub split_page_count: Cell<usize>,
+        pub split_preview: RefCell<Option<crate::preview::PagePreview>>,
+        pub split_last_output: RefCell<Option<PathBuf>>,
         pub is_running: Cell<bool>,
     }
 
@@ -272,10 +301,16 @@ impl FoliosWindow {
             window.switch_tool(PdfTool::Extract);
         });
 
+        let window = self.clone();
+        imp.split_tool_row.connect_activated(move |_| {
+            window.switch_tool(PdfTool::Split);
+        });
+
         self.setup_merge_callbacks();
         self.setup_compress_callbacks();
         self.setup_organize_callbacks();
         self.setup_extract_callbacks();
+        self.setup_split_callbacks();
     }
 
     fn switch_tool(&self, tool: PdfTool) {
@@ -287,12 +322,14 @@ impl FoliosWindow {
         imp.organize_workspace
             .set_visible(tool == PdfTool::Organize);
         imp.extract_workspace.set_visible(tool == PdfTool::Extract);
+        imp.split_workspace.set_visible(tool == PdfTool::Split);
 
         let selected_row: &gtk::ListBoxRow = match tool {
             PdfTool::Merge => imp.merge_tool_row.upcast_ref(),
             PdfTool::Compress => imp.compress_tool_row.upcast_ref(),
             PdfTool::Organize => imp.organize_tool_row.upcast_ref(),
             PdfTool::Extract => imp.extract_tool_row.upcast_ref(),
+            PdfTool::Split => imp.split_tool_row.upcast_ref(),
         };
         imp.sidebar_list.select_row(Some(selected_row));
         self.update_view_mode();
@@ -324,6 +361,7 @@ impl FoliosWindow {
         self.update_compress_view();
         self.update_organize_view();
         self.update_extract_view();
+        self.update_split_view();
     }
 
     fn open_last_output(&self) {
@@ -333,6 +371,7 @@ impl FoliosWindow {
             PdfTool::Compress => imp.compress_last_output.borrow().clone(),
             PdfTool::Organize => imp.organize_last_output.borrow().clone(),
             PdfTool::Extract => imp.extract_last_output.borrow().clone(),
+            PdfTool::Split => imp.split_last_output.borrow().clone(),
         };
         let Some(path) = path else {
             return;

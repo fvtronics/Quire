@@ -83,6 +83,19 @@ pub async fn extract_pages(
         .unwrap_or(Err(PdfBackendError::WorkerStopped))
 }
 
+pub async fn split_pdf(
+    input_file: PathBuf,
+    output_folder: PathBuf,
+    prefix: String,
+    pages_per_file: u32,
+) -> Result<PathBuf, PdfBackendError> {
+    gio::spawn_blocking(move || {
+        split_pdf_blocking(input_file, output_folder, prefix, pages_per_file)
+    })
+    .await
+    .unwrap_or(Err(PdfBackendError::WorkerStopped))
+}
+
 pub async fn compress_pdf(
     input_file: PathBuf,
     output_file: PathBuf,
@@ -223,6 +236,20 @@ fn write_selected_pages(
     page_numbers: Vec<u32>,
     output_file: PathBuf,
 ) -> Result<PathBuf, PdfBackendError> {
+    let document = Document::load(&input_file).map_err(|error| PdfBackendError::Load {
+        path: input_file.clone(),
+        message: error.to_string(),
+    })?;
+
+    write_selected_pages_from_document(&input_file, &document, page_numbers, &output_file)
+}
+
+fn write_selected_pages_from_document(
+    input_file: &Path,
+    document: &Document,
+    page_numbers: Vec<u32>,
+    output_file: &Path,
+) -> Result<PathBuf, PdfBackendError> {
     if page_numbers.is_empty() {
         return Err(PdfBackendError::NoPagesSelected);
     }
@@ -231,10 +258,6 @@ fn write_selected_pages(
         return Err(PdfBackendError::OutputMatchesInput);
     }
 
-    let document = Document::load(&input_file).map_err(|error| PdfBackendError::Load {
-        path: input_file.clone(),
-        message: error.to_string(),
-    })?;
     let pages = document.get_pages();
     let mut selected_ids = Vec::with_capacity(page_numbers.len());
     let mut page_objects = BTreeMap::new();
@@ -251,10 +274,10 @@ fn write_selected_pages(
         selected_ids.push(*object_id);
     }
 
-    let temp_file = temporary_output_path(&output_file);
+    let temp_file = temporary_output_path(output_file);
     let mut output = Document::with_version("1.5");
     let (catalog_id, catalog_object, pages_id, pages_object) =
-        collect_document_roots(document.objects, &mut output)?;
+        collect_document_roots(document.objects.clone(), &mut output)?;
 
     for (object_id, object) in page_objects {
         let mut dictionary = object
@@ -293,7 +316,42 @@ fn write_selected_pages(
         .objects
         .insert(catalog_id, Object::Dictionary(catalog_dictionary));
 
-    save_document(output, catalog_id, &temp_file, &output_file)
+    save_document(output, catalog_id, &temp_file, output_file)
+}
+
+fn split_pdf_blocking(
+    input_file: PathBuf,
+    output_folder: PathBuf,
+    prefix: String,
+    pages_per_file: u32,
+) -> Result<PathBuf, PdfBackendError> {
+    if pages_per_file == 0 {
+        return Err(PdfBackendError::InvalidPageRange(
+            "Enter a page count of 1 or more.".to_string(),
+        ));
+    }
+
+    let document = Document::load(&input_file).map_err(|error| PdfBackendError::Load {
+        path: input_file.clone(),
+        message: error.to_string(),
+    })?;
+    let page_count = document.get_pages().len() as u32;
+    if page_count == 0 {
+        return Err(PdfBackendError::NoPagesSelected);
+    }
+
+    let prefix = split_output_prefix(&input_file, &prefix);
+    for (index, start) in (1..=page_count)
+        .step_by(pages_per_file as usize)
+        .enumerate()
+    {
+        let end = (start + pages_per_file - 1).min(page_count);
+        let output_file = output_folder.join(format!("{} {}.pdf", prefix, index + 1));
+        let page_numbers = (start..=end).collect();
+        write_selected_pages_from_document(&input_file, &document, page_numbers, &output_file)?;
+    }
+
+    Ok(output_folder)
 }
 
 fn compress_pdf_blocking(
@@ -426,4 +484,17 @@ fn temporary_output_path(output_file: &Path) -> PathBuf {
         .unwrap_or("folios");
 
     directory.join(format!(".{name}.folios-{}.pdf", std::process::id()))
+}
+
+fn split_output_prefix(input_file: &Path, prefix: &str) -> String {
+    let prefix = prefix.trim();
+    if prefix.is_empty() {
+        input_file
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or("Split")
+            .to_string()
+    } else {
+        prefix.to_string()
+    }
 }

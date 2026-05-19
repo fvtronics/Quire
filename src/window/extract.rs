@@ -23,11 +23,6 @@ impl FoliosWindow {
         });
 
         let window = self.clone();
-        imp.extract_clear_button.connect_clicked(move |_| {
-            window.clear_extract_pdf();
-        });
-
-        let window = self.clone();
         imp.extract_save_button.connect_clicked(move |_| {
             window.choose_extract_output_file();
         });
@@ -147,17 +142,6 @@ impl FoliosWindow {
         });
     }
 
-    fn clear_extract_pdf(&self) {
-        let imp = self.imp();
-        imp.extract_file.borrow_mut().take();
-        imp.extract_page_count.set(0);
-        imp.extract_previews.borrow_mut().clear();
-        imp.extract_selected_pages.borrow_mut().clear();
-        imp.extract_ranges_entry.set_text("");
-        imp.extract_last_output.borrow_mut().take();
-        self.update_extract_view();
-    }
-
     fn extract_to(&self, input_file: PathBuf, pages: Vec<u32>, output_file: PathBuf) {
         let imp = self.imp();
         imp.is_running.set(true);
@@ -219,7 +203,6 @@ impl FoliosWindow {
         imp.extract_empty_status.set_visible(!has_file);
         imp.extract_content.set_visible(has_file);
         imp.extract_choose_button.set_visible(has_file);
-        imp.extract_clear_button.set_visible(has_file);
         imp.extract_save_button.set_visible(has_file);
         imp.extract_open_output_button
             .set_visible(imp.extract_last_output.borrow().is_some());
@@ -228,8 +211,6 @@ impl FoliosWindow {
             .set_sensitive(!imp.is_running.get());
         imp.extract_empty_choose_button
             .set_sensitive(!imp.is_running.get());
-        imp.extract_clear_button
-            .set_sensitive(has_file && !imp.is_running.get());
         imp.extract_save_button
             .set_sensitive(has_file && (has_ranges || has_selected_pages) && !imp.is_running.get());
         imp.extract_open_output_button

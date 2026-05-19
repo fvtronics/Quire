@@ -21,11 +21,6 @@ impl FoliosWindow {
         });
 
         let window = self.clone();
-        imp.compress_clear_button.connect_clicked(move |_| {
-            window.clear_compress_pdf();
-        });
-
-        let window = self.clone();
         imp.compress_save_button.connect_clicked(move |_| {
             window.choose_compress_output_file();
         });
@@ -87,7 +82,7 @@ impl FoliosWindow {
 
         let window = self.clone();
         glib::spawn_future_local(async move {
-            let result = crate::preview::render_first_page_preview(path.clone()).await;
+            let result = crate::preview::render_single_file_preview(path.clone()).await;
             let imp = window.imp();
             imp.is_running.set(false);
 
@@ -104,14 +99,6 @@ impl FoliosWindow {
 
             window.update_compress_view();
         });
-    }
-
-    fn clear_compress_pdf(&self) {
-        let imp = self.imp();
-        imp.compress_file.borrow_mut().take();
-        imp.compress_preview.borrow_mut().take();
-        imp.compress_last_output.borrow_mut().take();
-        self.update_compress_view();
     }
 
     fn compress_to(&self, input_file: PathBuf, output_file: PathBuf) {
@@ -162,7 +149,6 @@ impl FoliosWindow {
         imp.compress_empty_status.set_visible(!has_file);
         imp.compress_content.set_visible(has_file);
         imp.compress_choose_button.set_visible(has_file);
-        imp.compress_clear_button.set_visible(has_file);
         imp.compress_save_button.set_visible(has_file);
         imp.compress_open_output_button
             .set_visible(imp.compress_last_output.borrow().is_some());
@@ -171,8 +157,6 @@ impl FoliosWindow {
             .set_sensitive(!imp.is_running.get());
         imp.compress_empty_choose_button
             .set_sensitive(!imp.is_running.get());
-        imp.compress_clear_button
-            .set_sensitive(has_file && !imp.is_running.get());
         imp.compress_save_button
             .set_sensitive(has_file && !imp.is_running.get());
         imp.compress_open_output_button

@@ -51,3 +51,6 @@ meson-info/
 
 # Logs
 *.log
+
+# Documentation
+docs
