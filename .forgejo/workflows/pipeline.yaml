@@ -99,8 +99,6 @@ jobs:
             libadwaita-1-dev \
             libgtk-4-dev \
             libpoppler-glib-dev \
-            flatpak \
-            flatpak-builder \
             meson \
             pkg-config
 
@@ -138,17 +136,7 @@ jobs:
           cp data/com.fvtronics.folios.desktop.in /tmp/com.fvtronics.folios.desktop
           desktop-file-validate /tmp/com.fvtronics.folios.desktop
 
-      - name: Build Flatpak Bundle
-        run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          mkdir -p dist
-          flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-          flatpak-builder --disable-rofiles-fuse --force-clean --repo=repo --install-deps-from=flathub build-dir com.fvtronics.folios.json
-          flatpak build-bundle repo dist/folios-"$VERSION".flatpak com.fvtronics.folios
-
-      - name: Upload to Forgejo Releases
+      - name: Create Forgejo Release
         uses: https://github.com/softprops/action-gh-release@v2
-        with:
-          files: dist/*.flatpak
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
