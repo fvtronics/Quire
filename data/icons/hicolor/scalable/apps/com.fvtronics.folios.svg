@@ -329,11 +329,11 @@
        gradientUnits="userSpaceOnUse"
        gradientTransform="matrix(1.2726266,0,0,0.87605142,-62.350809,104.1801)">
       <stop
-         stop-color="#F4F8FC"
+         stop-color="#FFF3E6"
          id="stop27" />
       <stop
          offset="1"
-         stop-color="#D8E3EF"
+         stop-color="#FFD3A6"
          id="stop28" />
     </linearGradient>
     <linearGradient
@@ -345,11 +345,11 @@
        gradientUnits="userSpaceOnUse"
        gradientTransform="matrix(1.2726266,0,0,0.87605142,-62.350809,104.1801)">
       <stop
-         stop-color="#FFFFFF"
+         stop-color="#FFF8EF"
          id="stop29" />
       <stop
          offset="1"
-         stop-color="#E5ECF4"
+         stop-color="#FFE1BF"
          id="stop30" />
     </linearGradient>
     <filter
@@ -538,21 +538,21 @@
     <path
        d="m 436.51882,578.99996 h 128.53529 c 23.89739,0 43.26931,13.33526 43.26931,29.78575 v 78.84463 c 0,16.45049 -19.37192,29.78575 -43.26931,29.78575 H 436.51882 c -23.89738,0 -43.2693,-13.33526 -43.2693,-29.78575 v -78.84463 c 0,-16.45049 19.37192,-29.78575 43.2693,-29.78575 z"
        fill="url(#toolboxBody)"
-       stroke="#b6c6d7"
+       stroke="#E8B06F"
        stroke-width="3.16765"
        id="path36"
        style="fill:url(#toolboxBody)" />
     <path
        d="m 393.24952,615.79412 h 215.0739 v 31.53785 h -215.0739 z"
        fill="url(#toolboxLid)"
-       stroke="#b6c6d7"
+       stroke="#E8B06F"
        stroke-width="3.16765"
        id="path37"
        style="fill:url(#toolboxLid)" />
     <path
        d="m 464.51661,578.99996 v -8.76051 c 0,-8.70883 10.2561,-15.76893 22.90728,-15.76893 h 26.72516 c 12.65118,0 22.90728,7.0601 22.90728,15.76893 v 8.76051"
        fill="none"
-       stroke="#b6c6d7"
+       stroke="#E8B06F"
        stroke-width="8.44705"
        stroke-linecap="round"
        stroke-linejoin="round"
@@ -563,8 +563,8 @@
        width="52.177692"
        height="17.521029"
        rx="12.726266"
-       fill="#cad6e3"
-       stroke="#afc0d1"
+       fill="#FFD9AD"
+       stroke="#D99B5D"
        stroke-width="3.16765"
        id="rect38" />
   </g>
