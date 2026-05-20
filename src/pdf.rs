@@ -10,6 +10,10 @@ use lopdf::{Document, Object, ObjectId};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+const PAGE_RANGE_HINT: &str = "Enter page ranges like 1,3-5,8.";
+const PAGE_LIST_HINT: &str = "Enter pages like 2,4,7.";
 
 #[derive(Clone, Debug)]
 pub struct PdfInput {
@@ -126,60 +130,16 @@ pub async fn compress_pdf(
 }
 
 pub fn parse_page_ranges(input: &str, page_count: usize) -> Result<Vec<u32>, PdfBackendError> {
-    let mut pages = Vec::new();
-    let input = input.trim();
-
-    if input.is_empty() {
-        return Err(PdfBackendError::NoPagesSelected);
-    }
-
-    for part in input.split(',').map(str::trim) {
-        if part.is_empty() {
-            return Err(PdfBackendError::InvalidPageRange(
-                "Enter page ranges like 1,3-5,8.".to_string(),
-            ));
-        }
-
-        if let Some((start, end)) = part.split_once('-') {
-            let start = parse_page_number(start, page_count)?;
-            let end = parse_page_number(end, page_count)?;
-
-            if start > end {
-                return Err(PdfBackendError::InvalidPageRange(format!(
-                    "Page range {start}-{end} is backwards."
-                )));
-            }
-
-            pages.extend(start..=end);
-        } else {
-            pages.push(parse_page_number(part, page_count)?);
-        }
-    }
-
-    Ok(pages)
+    parse_page_list(input, page_count, true, PdfBackendError::NoPagesSelected)
 }
 
 pub fn parse_page_numbers(input: &str, page_count: usize) -> Result<Vec<u32>, PdfBackendError> {
-    let input = input.trim();
-    if input.is_empty() {
-        return Err(PdfBackendError::InvalidPageRange(
-            "Enter pages like 2,4,7.".to_string(),
-        ));
-    }
-
-    input
-        .split(',')
-        .map(str::trim)
-        .map(|part| {
-            if part.is_empty() {
-                Err(PdfBackendError::InvalidPageRange(
-                    "Enter pages like 2,4,7.".to_string(),
-                ))
-            } else {
-                parse_page_number(part, page_count)
-            }
-        })
-        .collect()
+    parse_page_list(
+        input,
+        page_count,
+        false,
+        PdfBackendError::InvalidPageRange(PAGE_LIST_HINT.to_string()),
+    )
 }
 
 fn merge_pdfs_blocking(
@@ -194,11 +154,9 @@ fn merge_pdfs_blocking(
         return Err(PdfBackendError::OutputMatchesInput);
     }
 
-    let temp_file = temporary_output_path(&output_file);
     let mut max_id = 1;
-    let mut page_objects = BTreeMap::new();
+    let mut output_pages = OutputPages::new();
     let mut document_objects = BTreeMap::new();
-    let mut merged = Document::with_version("1.5");
 
     for input in input_files {
         let mut document = Document::load(&input.path).map_err(|error| PdfBackendError::Load {
@@ -210,74 +168,16 @@ fn merge_pdfs_blocking(
         max_id = document.max_id + 1;
 
         for object_id in document.get_pages().into_values() {
-            let page_rotation = inherited_page_rotation(&document, object_id);
-            let object = document
-                .get_object(object_id)
-                .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
-                .to_owned();
-            let mut dictionary = object
-                .as_dict()
-                .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
-                .clone();
-            set_page_rotation(&mut dictionary, page_rotation, input.rotation);
-            page_objects.insert(object_id, Object::Dictionary(dictionary));
+            output_pages.push(
+                object_id,
+                rotated_page_object(&document, object_id, input.rotation)?,
+            );
         }
 
         document_objects.extend(document.objects);
     }
 
-    let (catalog_id, catalog_object, pages_id, pages_object) =
-        collect_document_roots(document_objects, &mut merged)?;
-
-    for (object_id, object) in page_objects.iter() {
-        let mut dictionary = object
-            .as_dict()
-            .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
-            .clone();
-        dictionary.set("Parent", pages_id);
-        merged
-            .objects
-            .insert(*object_id, Object::Dictionary(dictionary));
-    }
-
-    let mut pages_dictionary = pages_object
-        .as_dict()
-        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
-        .clone();
-    pages_dictionary.set("Count", page_objects.len() as u32);
-    pages_dictionary.remove(b"Rotate");
-    pages_dictionary.set(
-        "Kids",
-        page_objects
-            .into_keys()
-            .map(Object::Reference)
-            .collect::<Vec<_>>(),
-    );
-    merged
-        .objects
-        .insert(pages_id, Object::Dictionary(pages_dictionary));
-
-    let mut catalog_dictionary = catalog_object
-        .as_dict()
-        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
-        .clone();
-    catalog_dictionary.set("Pages", pages_id);
-    catalog_dictionary.remove(b"Outlines");
-    merged
-        .objects
-        .insert(catalog_id, Object::Dictionary(catalog_dictionary));
-
-    merged.trailer.set("Root", catalog_id);
-    merged.max_id = merged.objects.len() as u32;
-    merged.renumber_objects();
-    merged.adjust_zero_pages();
-
-    merged
-        .save(&temp_file)
-        .map_err(|error| PdfBackendError::Write(error.to_string()))?;
-
-    std::fs::rename(&temp_file, &output_file).map_err(PdfBackendError::Save)?;
-    Ok(output_file)
+    build_and_save_document(document_objects, output_pages, &output_file)
 }
 
 fn write_selected_pages(
@@ -308,8 +208,7 @@ fn write_selected_pages_from_document(
     }
 
     let pages = document.get_pages();
-    let mut selected_ids = Vec::with_capacity(page_numbers.len());
-    let mut page_objects = BTreeMap::new();
+    let mut output_pages = OutputPages::with_capacity(page_numbers.len());
 
     for selection in page_numbers {
         let object_id = pages.get(&selection.page_number).ok_or_else(|| {
@@ -318,64 +217,13 @@ fn write_selected_pages_from_document(
                 selection.page_number
             ))
         })?;
-        let page_rotation = inherited_page_rotation(document, *object_id);
-        let object = document
-            .get_object(*object_id)
-            .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
-            .to_owned();
-        let mut dictionary = object
-            .as_dict()
-            .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
-            .clone();
-        set_page_rotation(&mut dictionary, page_rotation, selection.rotation);
-        page_objects.insert(*object_id, Object::Dictionary(dictionary));
-        selected_ids.push(*object_id);
+        output_pages.push(
+            *object_id,
+            rotated_page_object(document, *object_id, selection.rotation)?,
+        );
     }
 
-    let temp_file = temporary_output_path(output_file);
-    let mut output = Document::with_version("1.5");
-    let (catalog_id, catalog_object, pages_id, pages_object) =
-        collect_document_roots(document.objects.clone(), &mut output)?;
-
-    for (object_id, object) in page_objects {
-        let mut dictionary = object
-            .as_dict()
-            .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
-            .clone();
-        dictionary.set("Parent", pages_id);
-        output
-            .objects
-            .insert(object_id, Object::Dictionary(dictionary));
-    }
-
-    let mut pages_dictionary = pages_object
-        .as_dict()
-        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
-        .clone();
-    pages_dictionary.set("Count", selected_ids.len() as u32);
-    pages_dictionary.remove(b"Rotate");
-    pages_dictionary.set(
-        "Kids",
-        selected_ids
-            .into_iter()
-            .map(Object::Reference)
-            .collect::<Vec<_>>(),
-    );
-    output
-        .objects
-        .insert(pages_id, Object::Dictionary(pages_dictionary));
-
-    let mut catalog_dictionary = catalog_object
-        .as_dict()
-        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
-        .clone();
-    catalog_dictionary.set("Pages", pages_id);
-    catalog_dictionary.remove(b"Outlines");
-    output
-        .objects
-        .insert(catalog_id, Object::Dictionary(catalog_dictionary));
-
-    save_document(output, catalog_id, &temp_file, output_file)
+    build_and_save_document(document.objects.clone(), output_pages, output_file)
 }
 
 fn split_pdf_blocking(
@@ -459,6 +307,7 @@ fn normalize_rotation(rotation: i64) -> i64 {
 }
 
 fn split_breaks(rule: SplitRule, page_count: u32) -> Result<Vec<u32>, PdfBackendError> {
+    let validate_page_numbers = matches!(rule, SplitRule::SpecificPages(_));
     let mut breaks: Vec<u32> = match rule {
         SplitRule::EveryPage => (1..=page_count).collect(),
         SplitRule::EvenPages => (2..=page_count).step_by(2).collect(),
@@ -466,7 +315,7 @@ fn split_breaks(rule: SplitRule, page_count: u32) -> Result<Vec<u32>, PdfBackend
         SplitRule::SpecificPages(pages) => {
             if pages.is_empty() {
                 return Err(PdfBackendError::InvalidPageRange(
-                    "Enter pages like 2,4,7.".to_string(),
+                    PAGE_LIST_HINT.to_string(),
                 ));
             }
             pages
@@ -481,17 +330,74 @@ fn split_breaks(rule: SplitRule, page_count: u32) -> Result<Vec<u32>, PdfBackend
         }
     };
 
-    for page in &breaks {
-        if *page == 0 || *page > page_count {
-            return Err(PdfBackendError::InvalidPageRange(format!(
-                "Page {page} is not in this PDF."
-            )));
+    if validate_page_numbers {
+        for page in &breaks {
+            if *page == 0 || *page > page_count {
+                return Err(PdfBackendError::InvalidPageRange(format!(
+                    "Page {page} is not in this PDF."
+                )));
+            }
         }
     }
 
     breaks.sort_unstable();
     breaks.dedup();
     Ok(breaks)
+}
+
+fn parse_page_list(
+    input: &str,
+    page_count: usize,
+    allow_ranges: bool,
+    empty_error: PdfBackendError,
+) -> Result<Vec<u32>, PdfBackendError> {
+    let mut pages = Vec::new();
+    let input = input.trim();
+
+    if input.is_empty() {
+        return Err(empty_error);
+    }
+
+    for part in input.split(',').map(str::trim) {
+        if part.is_empty() {
+            return Err(PdfBackendError::InvalidPageRange(
+                page_input_hint(allow_ranges).to_string(),
+            ));
+        }
+
+        if allow_ranges {
+            pages.extend(parse_page_range_part(part, page_count)?);
+        } else {
+            pages.push(parse_page_number(part, page_count)?);
+        }
+    }
+
+    Ok(pages)
+}
+
+fn parse_page_range_part(input: &str, page_count: usize) -> Result<Vec<u32>, PdfBackendError> {
+    if let Some((start, end)) = input.split_once('-') {
+        let start = parse_page_number(start, page_count)?;
+        let end = parse_page_number(end, page_count)?;
+
+        if start > end {
+            return Err(PdfBackendError::InvalidPageRange(format!(
+                "Page range {start}-{end} is backwards."
+            )));
+        }
+
+        Ok((start..=end).collect())
+    } else {
+        parse_page_number(input, page_count).map(|page| vec![page])
+    }
+}
+
+fn page_input_hint(allow_ranges: bool) -> &'static str {
+    if allow_ranges {
+        PAGE_RANGE_HINT
+    } else {
+        PAGE_LIST_HINT
+    }
 }
 
 fn compress_pdf_blocking(
@@ -512,7 +418,6 @@ fn compress_pdf_blocking(
         .get(b"Root")
         .and_then(Object::as_reference)
         .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?;
-    let temp_file = temporary_output_path(&output_file);
 
     if options.remove_empty_streams {
         document.delete_zero_length_streams();
@@ -522,7 +427,138 @@ fn compress_pdf_blocking(
     }
     document.compress();
 
-    save_document(document, catalog_id, &temp_file, &output_file)
+    save_document(document, catalog_id, &output_file)
+}
+
+struct OutputPages {
+    objects: BTreeMap<ObjectId, Object>,
+    ordered_ids: Vec<ObjectId>,
+}
+
+impl OutputPages {
+    fn new() -> Self {
+        Self {
+            objects: BTreeMap::new(),
+            ordered_ids: Vec::new(),
+        }
+    }
+
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            objects: BTreeMap::new(),
+            ordered_ids: Vec::with_capacity(capacity),
+        }
+    }
+
+    fn push(&mut self, object_id: ObjectId, object: Object) {
+        self.objects.insert(object_id, object);
+        self.ordered_ids.push(object_id);
+    }
+}
+
+fn build_and_save_document(
+    document_objects: BTreeMap<ObjectId, Object>,
+    output_pages: OutputPages,
+    output_file: &Path,
+) -> Result<PathBuf, PdfBackendError> {
+    let mut output = Document::with_version("1.5");
+    let (catalog_id, catalog_object, pages_id, pages_object) =
+        collect_document_roots(document_objects, &mut output)?;
+
+    insert_output_pages(&mut output, pages_id, output_pages.objects)?;
+    insert_pages_root(
+        &mut output,
+        pages_id,
+        pages_object,
+        &output_pages.ordered_ids,
+    )?;
+    insert_catalog_root(&mut output, catalog_id, catalog_object, pages_id)?;
+
+    save_document(output, catalog_id, output_file)
+}
+
+fn insert_output_pages(
+    document: &mut Document,
+    pages_id: ObjectId,
+    page_objects: BTreeMap<ObjectId, Object>,
+) -> Result<(), PdfBackendError> {
+    for (object_id, object) in page_objects {
+        let mut dictionary = object
+            .as_dict()
+            .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
+            .clone();
+        dictionary.set("Parent", pages_id);
+        document
+            .objects
+            .insert(object_id, Object::Dictionary(dictionary));
+    }
+
+    Ok(())
+}
+
+fn insert_pages_root(
+    document: &mut Document,
+    pages_id: ObjectId,
+    pages_object: Object,
+    ordered_page_ids: &[ObjectId],
+) -> Result<(), PdfBackendError> {
+    let mut dictionary = pages_object
+        .as_dict()
+        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
+        .clone();
+    dictionary.set("Count", ordered_page_ids.len() as u32);
+    dictionary.remove(b"Rotate");
+    dictionary.set(
+        "Kids",
+        ordered_page_ids
+            .iter()
+            .copied()
+            .map(Object::Reference)
+            .collect::<Vec<_>>(),
+    );
+    document
+        .objects
+        .insert(pages_id, Object::Dictionary(dictionary));
+
+    Ok(())
+}
+
+fn insert_catalog_root(
+    document: &mut Document,
+    catalog_id: ObjectId,
+    catalog_object: Object,
+    pages_id: ObjectId,
+) -> Result<(), PdfBackendError> {
+    let mut dictionary = catalog_object
+        .as_dict()
+        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
+        .clone();
+    dictionary.set("Pages", pages_id);
+    dictionary.remove(b"Outlines");
+    document
+        .objects
+        .insert(catalog_id, Object::Dictionary(dictionary));
+
+    Ok(())
+}
+
+fn rotated_page_object(
+    document: &Document,
+    object_id: ObjectId,
+    rotation: i64,
+) -> Result<Object, PdfBackendError> {
+    let page_rotation = inherited_page_rotation(document, object_id);
+    let object = document
+        .get_object(object_id)
+        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
+        .to_owned();
+    let mut dictionary = object
+        .as_dict()
+        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
+        .clone();
+    set_page_rotation(&mut dictionary, page_rotation, rotation);
+
+    Ok(Object::Dictionary(dictionary))
 }
 
 fn collect_document_roots(
@@ -580,7 +616,6 @@ fn collect_document_roots(
 fn save_document(
     mut document: Document,
     catalog_id: ObjectId,
-    temp_file: &Path,
     output_file: &Path,
 ) -> Result<PathBuf, PdfBackendError> {
     document.trailer.set("Root", catalog_id);
@@ -593,12 +628,33 @@ fn save_document(
     document.renumber_objects();
     document.adjust_zero_pages();
 
-    document
-        .save(temp_file)
-        .map_err(|error| PdfBackendError::Write(error.to_string()))?;
+    let temp_file = temporary_output_path(output_file);
 
-    std::fs::rename(temp_file, output_file).map_err(PdfBackendError::Save)?;
-    Ok(output_file.to_path_buf())
+    if let Err(error) = document.save(&temp_file) {
+        let _ = std::fs::remove_file(&temp_file);
+        return Err(PdfBackendError::Write(error.to_string()));
+    }
+
+    let result = std::fs::copy(&temp_file, output_file).map(|_| output_file.to_path_buf());
+    let _ = std::fs::remove_file(&temp_file);
+
+    result.map_err(PdfBackendError::Save)
+}
+
+fn temporary_output_path(output_file: &Path) -> PathBuf {
+    let name = output_file
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or("folios");
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_nanos())
+        .unwrap_or_default();
+
+    std::env::temp_dir().join(format!(
+        ".{name}.folios-{}-{unique}.pdf",
+        std::process::id()
+    ))
 }
 
 fn parse_page_number(input: &str, page_count: usize) -> Result<u32, PdfBackendError> {
@@ -614,16 +670,6 @@ fn parse_page_number(input: &str, page_count: usize) -> Result<u32, PdfBackendEr
     }
 
     Ok(page)
-}
-
-fn temporary_output_path(output_file: &Path) -> PathBuf {
-    let directory = output_file.parent().unwrap_or_else(|| Path::new("."));
-    let name = output_file
-        .file_stem()
-        .and_then(|stem| stem.to_str())
-        .unwrap_or("folios");
-
-    directory.join(format!(".{name}.folios-{}.pdf", std::process::id()))
 }
 
 fn split_output_prefix(input_file: &Path, prefix: &str) -> String {
@@ -1032,7 +1078,7 @@ mod tests {
             SplitRule::EveryPage,
         );
 
-        assert!(matches!(result, Err(PdfBackendError::Write(_))));
+        assert!(matches!(result, Err(PdfBackendError::Save(_))));
         assert!(!requested_output.exists());
     }
 
