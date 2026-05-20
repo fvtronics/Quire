@@ -1,8 +1,11 @@
 use super::ui::{
-    dim_tile_label, file_subtitle, file_title, icon_button, open_pdf_files, preview_tile,
+    dim_tile_label, file_subtitle, file_title, open_pdf_files, preview_tile,
     rotated_list_preview_prefix, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
-use super::workspace::{open_output, parent_window, show_toast, update_shell_view_mode};
+use super::workspace::{
+    open_output, ordered_item_controls, parent_window, run_output_job, show_preview_error,
+    update_shell_view_mode, OrderedItemControlOptions,
+};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
@@ -173,7 +176,7 @@ impl MergeWorkspace {
                         }
                     }
                     Err(error) => {
-                        show_toast(&workspace, &error.to_string());
+                        show_preview_error(&workspace, &error);
                     }
                 }
             }
@@ -191,31 +194,17 @@ impl MergeWorkspace {
     }
 
     fn merge_to(&self, output_file: PathBuf) {
-        let imp = self.imp();
-        let input_files = imp.merge.pdf_inputs();
+        let input_files = self.imp().merge.pdf_inputs();
 
-        imp.is_running.set(true);
-        imp.merge.clear_last_output();
-        self.update_view();
-
-        let workspace = self.clone();
-        glib::spawn_future_local(async move {
-            let result = crate::pdf::merge_pdfs(input_files, output_file).await;
-            let imp = workspace.imp();
-            imp.is_running.set(false);
-
-            match result {
-                Ok(path) => {
-                    imp.merge.set_last_output(path);
-                    show_toast(&workspace, &gettext("Merged PDF saved"));
-                }
-                Err(error) => {
-                    show_toast(&workspace, &error.to_string());
-                }
-            }
-
-            workspace.update_view();
-        });
+        run_output_job(
+            self.clone(),
+            crate::pdf::merge_pdfs(input_files, output_file),
+            gettext("Merged PDF saved"),
+            |workspace, running| workspace.imp().is_running.set(running),
+            |workspace| workspace.imp().merge.clear_last_output(),
+            |workspace, path| workspace.imp().merge.set_last_output(path),
+            Self::update_view,
+        );
     }
 
     pub(super) fn supports_view_mode(&self) -> bool {
@@ -309,38 +298,27 @@ impl MergeWorkspace {
 
         let imp = self.imp();
         let controls_sensitive = !imp.merge.is_busy(imp.is_running.get());
-        let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
-        up_button.set_sensitive(controls_sensitive && index > 0);
-        let window = self.clone();
-        up_button.connect_clicked(move |_| {
-            window.move_file(index, index - 1);
-        });
-        row.add_suffix(&up_button);
-
-        let down_button = icon_button("go-down-symbolic", &gettext("Move Down"));
-        down_button.set_sensitive(controls_sensitive && index + 1 < count);
-        let window = self.clone();
-        down_button.connect_clicked(move |_| {
-            window.move_file(index, index + 1);
-        });
-        row.add_suffix(&down_button);
-
-        let rotate_button =
-            icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
-        rotate_button.set_sensitive(controls_sensitive);
-        let window = self.clone();
-        rotate_button.connect_clicked(move |_| {
-            window.rotate_file(index);
-        });
-        row.add_suffix(&rotate_button);
-
-        let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
-        remove_button.set_sensitive(controls_sensitive);
-        let window = self.clone();
-        remove_button.connect_clicked(move |_| {
-            window.remove_file(index);
-        });
-        row.add_suffix(&remove_button);
+        let workspace = self.clone();
+        let move_up = move || workspace.move_file(index, index - 1);
+        let workspace = self.clone();
+        let move_down = move || workspace.move_file(index, index + 1);
+        let workspace = self.clone();
+        let rotate = move || workspace.rotate_file(index);
+        let workspace = self.clone();
+        let remove = move || workspace.remove_file(index);
+        ordered_item_controls(
+            OrderedItemControlOptions {
+                controls_sensitive,
+                can_move_up: index > 0,
+                can_move_down: index + 1 < count,
+                can_remove: true,
+            },
+            move_up,
+            move_down,
+            rotate,
+            remove,
+        )
+        .append_to_row(&row);
 
         self.add_file_drag_and_drop(&row, index);
 
@@ -365,38 +343,27 @@ impl MergeWorkspace {
 
         let imp = self.imp();
         let controls_sensitive = !imp.merge.is_busy(imp.is_running.get());
-        let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
-        up_button.set_sensitive(controls_sensitive && index > 0);
-        let window = self.clone();
-        up_button.connect_clicked(move |_| {
-            window.move_file(index, index - 1);
-        });
-        controls.append(&up_button);
-
-        let down_button = icon_button("go-down-symbolic", &gettext("Move Down"));
-        down_button.set_sensitive(controls_sensitive && index + 1 < count);
-        let window = self.clone();
-        down_button.connect_clicked(move |_| {
-            window.move_file(index, index + 1);
-        });
-        controls.append(&down_button);
-
-        let rotate_button =
-            icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
-        rotate_button.set_sensitive(controls_sensitive);
-        let window = self.clone();
-        rotate_button.connect_clicked(move |_| {
-            window.rotate_file(index);
-        });
-        controls.append(&rotate_button);
-
-        let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
-        remove_button.set_sensitive(controls_sensitive);
-        let window = self.clone();
-        remove_button.connect_clicked(move |_| {
-            window.remove_file(index);
-        });
-        controls.append(&remove_button);
+        let workspace = self.clone();
+        let move_up = move || workspace.move_file(index, index - 1);
+        let workspace = self.clone();
+        let move_down = move || workspace.move_file(index, index + 1);
+        let workspace = self.clone();
+        let rotate = move || workspace.rotate_file(index);
+        let workspace = self.clone();
+        let remove = move || workspace.remove_file(index);
+        ordered_item_controls(
+            OrderedItemControlOptions {
+                controls_sensitive,
+                can_move_up: index > 0,
+                can_move_down: index + 1 < count,
+                can_remove: true,
+            },
+            move_up,
+            move_down,
+            rotate,
+            remove,
+        )
+        .append_to_box(&controls);
 
         tile.append(&controls);
         self.add_file_drag_and_drop(&tile, index);

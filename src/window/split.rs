@@ -2,7 +2,10 @@ use super::ui::{
     clear_box, file_subtitle, open_pdf_file, page_count_label, pdf_file_row, select_folder,
     single_file_preview_widget,
 };
-use super::workspace::{open_output, parent_window, show_toast, update_shell_view_mode};
+use super::workspace::{
+    open_output, parent_window, run_output_job, show_backend_error, show_preview_error,
+    update_shell_view_mode,
+};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
@@ -199,7 +202,7 @@ impl SplitWorkspace {
         let rule = match self.split_rule() {
             Ok(rule) => rule,
             Err(error) => {
-                show_toast(self, &error.to_string());
+                show_backend_error(self, &error);
                 return;
             }
         };
@@ -236,7 +239,7 @@ impl SplitWorkspace {
                 }
                 Err(error) => {
                     imp.split.finish_loading_failed();
-                    show_toast(&workspace, &error.to_string());
+                    show_preview_error(&workspace, &error);
                 }
             }
 
@@ -251,29 +254,15 @@ impl SplitWorkspace {
         prefix: String,
         rule: crate::pdf::SplitRule,
     ) {
-        let imp = self.imp();
-        imp.is_running.set(true);
-        imp.split.clear_last_output();
-        self.update_view();
-
-        let workspace = self.clone();
-        glib::spawn_future_local(async move {
-            let result = crate::pdf::split_pdf(input_file, output_folder, prefix, rule).await;
-            let imp = workspace.imp();
-            imp.is_running.set(false);
-
-            match result {
-                Ok(path) => {
-                    imp.split.set_last_output(path);
-                    show_toast(&workspace, &gettext("Split PDFs saved"));
-                }
-                Err(error) => {
-                    show_toast(&workspace, &error.to_string());
-                }
-            }
-
-            workspace.update_view();
-        });
+        run_output_job(
+            self.clone(),
+            crate::pdf::split_pdf(input_file, output_folder, prefix, rule),
+            gettext("Split PDFs saved"),
+            |workspace, running| workspace.imp().is_running.set(running),
+            |workspace| workspace.imp().split.clear_last_output(),
+            |workspace, path| workspace.imp().split.set_last_output(path),
+            Self::update_view,
+        );
     }
 
     pub(super) fn supports_view_mode(&self) -> bool {

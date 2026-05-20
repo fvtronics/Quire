@@ -2,7 +2,9 @@ use super::ui::{
     clear_box, file_subtitle, open_pdf_file, pdf_file_row, save_pdf_file,
     single_file_preview_widget,
 };
-use super::workspace::{open_output, parent_window, show_toast, update_shell_view_mode};
+use super::workspace::{
+    open_output, parent_window, run_output_job, show_preview_error, update_shell_view_mode,
+};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
@@ -154,7 +156,7 @@ impl CompressWorkspace {
                 }
                 Err(error) => {
                     imp.compress.finish_loading_failed();
-                    show_toast(&workspace, &error.to_string());
+                    show_preview_error(&workspace, &error);
                 }
             }
 
@@ -169,28 +171,15 @@ impl CompressWorkspace {
             prune_objects: imp.compress_prune_row.is_active(),
         };
 
-        imp.is_running.set(true);
-        imp.compress.clear_last_output();
-        self.update_view();
-
-        let workspace = self.clone();
-        glib::spawn_future_local(async move {
-            let result = crate::pdf::compress_pdf(input_file, output_file, options).await;
-            let imp = workspace.imp();
-            imp.is_running.set(false);
-
-            match result {
-                Ok(path) => {
-                    imp.compress.set_last_output(path);
-                    show_toast(&workspace, &gettext("Compressed PDF saved"));
-                }
-                Err(error) => {
-                    show_toast(&workspace, &error.to_string());
-                }
-            }
-
-            workspace.update_view();
-        });
+        run_output_job(
+            self.clone(),
+            crate::pdf::compress_pdf(input_file, output_file, options),
+            gettext("Compressed PDF saved"),
+            |workspace, running| workspace.imp().is_running.set(running),
+            |workspace| workspace.imp().compress.clear_last_output(),
+            |workspace, path| workspace.imp().compress.set_last_output(path),
+            Self::update_view,
+        );
     }
 
     pub(super) fn supports_view_mode(&self) -> bool {

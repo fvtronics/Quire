@@ -1,8 +1,11 @@
 use super::ui::{
-    dim_tile_label, icon_button, open_pdf_file, page_count_label, preview_tile,
-    rotated_list_preview_prefix, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
+    dim_tile_label, open_pdf_file, page_count_label, preview_tile, rotated_list_preview_prefix,
+    save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
-use super::workspace::{open_output, parent_window, show_toast, update_shell_view_mode};
+use super::workspace::{
+    open_output, ordered_item_controls, parent_window, run_output_job, show_preview_error,
+    update_shell_view_mode, OrderedItemControlOptions,
+};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
@@ -153,7 +156,7 @@ impl OrganizeWorkspace {
                 }
                 Err(error) => {
                     imp.organize.finish_loading_failed();
-                    show_toast(&workspace, &error.to_string());
+                    show_preview_error(&workspace, &error);
                 }
             }
 
@@ -173,28 +176,15 @@ impl OrganizeWorkspace {
             return;
         };
 
-        imp.is_running.set(true);
-        imp.organize.clear_last_output();
-        self.update_view();
-
-        let workspace = self.clone();
-        glib::spawn_future_local(async move {
-            let result = crate::pdf::organize_pdf(input_file, page_order, output_file).await;
-            let imp = workspace.imp();
-            imp.is_running.set(false);
-
-            match result {
-                Ok(path) => {
-                    imp.organize.set_last_output(path);
-                    show_toast(&workspace, &gettext("Organized PDF saved"));
-                }
-                Err(error) => {
-                    show_toast(&workspace, &error.to_string());
-                }
-            }
-
-            workspace.update_view();
-        });
+        run_output_job(
+            self.clone(),
+            crate::pdf::organize_pdf(input_file, page_order, output_file),
+            gettext("Organized PDF saved"),
+            |workspace, running| workspace.imp().is_running.set(running),
+            |workspace| workspace.imp().organize.clear_last_output(),
+            |workspace, path| workspace.imp().organize.set_last_output(path),
+            Self::update_view,
+        );
     }
 
     pub(super) fn supports_view_mode(&self) -> bool {
@@ -293,38 +283,27 @@ impl OrganizeWorkspace {
         row.add_prefix(&rotated_list_preview_prefix(preview, rotation));
 
         let controls_sensitive = !self.imp().is_running.get();
-        let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
-        up_button.set_sensitive(controls_sensitive && index > 0);
-        let window = self.clone();
-        up_button.connect_clicked(move |_| {
-            window.move_page(index, index - 1);
-        });
-        row.add_suffix(&up_button);
-
-        let down_button = icon_button("go-down-symbolic", &gettext("Move Down"));
-        down_button.set_sensitive(controls_sensitive && index + 1 < count);
-        let window = self.clone();
-        down_button.connect_clicked(move |_| {
-            window.move_page(index, index + 1);
-        });
-        row.add_suffix(&down_button);
-
-        let rotate_button =
-            icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
-        rotate_button.set_sensitive(controls_sensitive);
-        let window = self.clone();
-        rotate_button.connect_clicked(move |_| {
-            window.rotate_page(page_number);
-        });
-        row.add_suffix(&rotate_button);
-
-        let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
-        remove_button.set_sensitive(controls_sensitive && count > 1);
-        let window = self.clone();
-        remove_button.connect_clicked(move |_| {
-            window.remove_page(index);
-        });
-        row.add_suffix(&remove_button);
+        let workspace = self.clone();
+        let move_up = move || workspace.move_page(index, index - 1);
+        let workspace = self.clone();
+        let move_down = move || workspace.move_page(index, index + 1);
+        let workspace = self.clone();
+        let rotate = move || workspace.rotate_page(page_number);
+        let workspace = self.clone();
+        let remove = move || workspace.remove_page(index);
+        ordered_item_controls(
+            OrderedItemControlOptions {
+                controls_sensitive,
+                can_move_up: index > 0,
+                can_move_down: index + 1 < count,
+                can_remove: count > 1,
+            },
+            move_up,
+            move_down,
+            rotate,
+            remove,
+        )
+        .append_to_row(&row);
 
         self.add_page_drag_and_drop(&row, page_number);
 
@@ -348,38 +327,27 @@ impl OrganizeWorkspace {
         controls.append(&position);
 
         let controls_sensitive = !self.imp().is_running.get();
-        let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
-        up_button.set_sensitive(controls_sensitive && index > 0);
-        let window = self.clone();
-        up_button.connect_clicked(move |_| {
-            window.move_page(index, index - 1);
-        });
-        controls.append(&up_button);
-
-        let down_button = icon_button("go-down-symbolic", &gettext("Move Down"));
-        down_button.set_sensitive(controls_sensitive && index + 1 < count);
-        let window = self.clone();
-        down_button.connect_clicked(move |_| {
-            window.move_page(index, index + 1);
-        });
-        controls.append(&down_button);
-
-        let rotate_button =
-            icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
-        rotate_button.set_sensitive(controls_sensitive);
-        let window = self.clone();
-        rotate_button.connect_clicked(move |_| {
-            window.rotate_page(page_number);
-        });
-        controls.append(&rotate_button);
-
-        let remove_button = icon_button("edit-delete-symbolic", &gettext("Remove"));
-        remove_button.set_sensitive(controls_sensitive && count > 1);
-        let window = self.clone();
-        remove_button.connect_clicked(move |_| {
-            window.remove_page(index);
-        });
-        controls.append(&remove_button);
+        let workspace = self.clone();
+        let move_up = move || workspace.move_page(index, index - 1);
+        let workspace = self.clone();
+        let move_down = move || workspace.move_page(index, index + 1);
+        let workspace = self.clone();
+        let rotate = move || workspace.rotate_page(page_number);
+        let workspace = self.clone();
+        let remove = move || workspace.remove_page(index);
+        ordered_item_controls(
+            OrderedItemControlOptions {
+                controls_sensitive,
+                can_move_up: index > 0,
+                can_move_down: index + 1 < count,
+                can_remove: count > 1,
+            },
+            move_up,
+            move_down,
+            rotate,
+            remove,
+        )
+        .append_to_box(&controls);
 
         tile.append(&controls);
 

@@ -3,7 +3,10 @@ use super::ui::{
     pdf_file_row, preview_tile, rotated_list_preview_prefix, save_pdf_file, tile_controls,
     tile_label, tile_preview_widget,
 };
-use super::workspace::{open_output, parent_window, show_toast, update_shell_view_mode};
+use super::workspace::{
+    open_output, parent_window, run_output_job, show_backend_error, show_preview_error, show_toast,
+    update_shell_view_mode,
+};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
@@ -148,7 +151,7 @@ impl ExtractWorkspace {
                 .copied()
                 .collect::<Vec<_>>();
             if pages.is_empty() {
-                show_toast(self, &gettext("Choose at least one page to extract."));
+                show_toast(self, &gettext("Choose at least one page"));
                 return;
             }
             pages
@@ -156,7 +159,7 @@ impl ExtractWorkspace {
             match self.extract_pages_from_ranges() {
                 Ok(pages) => pages,
                 Err(error) => {
-                    show_toast(self, &error.to_string());
+                    show_backend_error(self, &error);
                     return;
                 }
             }
@@ -200,7 +203,7 @@ impl ExtractWorkspace {
                 }
                 Err(error) => {
                     imp.extract.finish_loading_failed();
-                    show_toast(&workspace, &error.to_string());
+                    show_preview_error(&workspace, &error);
                 }
             }
 
@@ -214,29 +217,15 @@ impl ExtractWorkspace {
         pages: Vec<crate::pdf::PageSelection>,
         output_file: PathBuf,
     ) {
-        let imp = self.imp();
-        imp.is_running.set(true);
-        imp.extract.clear_last_output();
-        self.update_view();
-
-        let workspace = self.clone();
-        glib::spawn_future_local(async move {
-            let result = crate::pdf::extract_pages(input_file, pages, output_file).await;
-            let imp = workspace.imp();
-            imp.is_running.set(false);
-
-            match result {
-                Ok(path) => {
-                    imp.extract.set_last_output(path);
-                    show_toast(&workspace, &gettext("Extracted pages saved"));
-                }
-                Err(error) => {
-                    show_toast(&workspace, &error.to_string());
-                }
-            }
-
-            workspace.update_view();
-        });
+        run_output_job(
+            self.clone(),
+            crate::pdf::extract_pages(input_file, pages, output_file),
+            gettext("Extracted pages saved"),
+            |workspace, running| workspace.imp().is_running.set(running),
+            |workspace| workspace.imp().extract.clear_last_output(),
+            |workspace, path| workspace.imp().extract.set_last_output(path),
+            Self::update_view,
+        );
     }
 
     pub(super) fn supports_view_mode(&self) -> bool {
