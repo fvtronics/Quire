@@ -25,11 +25,7 @@ impl FoliosWindow {
 
         let window = self.clone();
         imp.clear_button.connect_clicked(move |_| {
-            let imp = window.imp();
-            imp.merge.files.borrow_mut().clear();
-            imp.merge.rotations.borrow_mut().clear();
-            imp.merge.previews.borrow_mut().clear();
-            imp.merge.last_output.borrow_mut().take();
+            window.imp().merge.clear();
             window.update_files_view();
         });
 
@@ -76,23 +72,16 @@ impl FoliosWindow {
         }
 
         let imp = self.imp();
-        let paths_to_preview = {
-            let previews = imp.merge.previews.borrow();
-            paths
-                .iter()
-                .filter(|path| !previews.contains_key(*path))
-                .cloned()
-                .collect::<Vec<_>>()
-        };
-        imp.merge.last_output.borrow_mut().take();
+        let paths_to_preview = imp.merge.paths_needing_previews(&paths);
+        imp.merge.clear_last_output();
 
         if paths_to_preview.is_empty() {
-            imp.merge.files.borrow_mut().extend(paths);
+            imp.merge.add_files(paths);
             self.update_files_view();
             return;
         }
 
-        imp.merge.is_loading.set(true);
+        imp.merge.begin_loading();
         self.update_files_view();
         self.load_merge_previews(paths, paths_to_preview);
     }
@@ -121,36 +110,20 @@ impl FoliosWindow {
                 .into_iter()
                 .filter(|path| !paths_to_preview.contains(path) || loaded_paths.contains(path))
                 .collect::<Vec<_>>();
-            let imp = window.imp();
-            imp.merge.is_loading.set(false);
-
-            if !loaded_previews.is_empty() {
-                imp.merge.previews.borrow_mut().extend(loaded_previews);
-            }
-            if !files_to_add.is_empty() {
-                imp.merge.files.borrow_mut().extend(files_to_add);
-            }
-
+            window
+                .imp()
+                .merge
+                .finish_loading(files_to_add, loaded_previews);
             window.update_files_view();
         });
     }
 
     fn merge_to(&self, output_file: PathBuf) {
         let imp = self.imp();
-        let rotations = imp.merge.rotations.borrow();
-        let input_files = imp
-            .merge
-            .files
-            .borrow()
-            .iter()
-            .map(|path| crate::pdf::PdfInput {
-                path: path.clone(),
-                rotation: *rotations.get(path).unwrap_or(&0),
-            })
-            .collect::<Vec<_>>();
+        let input_files = imp.merge.pdf_inputs();
 
         imp.is_running.set(true);
-        imp.merge.last_output.borrow_mut().take();
+        imp.merge.clear_last_output();
         self.update_all_views();
 
         let window = self.clone();
@@ -161,7 +134,7 @@ impl FoliosWindow {
 
             match result {
                 Ok(path) => {
-                    imp.merge.last_output.borrow_mut().replace(path);
+                    imp.merge.set_last_output(path);
                     window.show_toast(&gettext("Merged PDF saved"));
                 }
                 Err(error) => {
@@ -179,7 +152,7 @@ impl FoliosWindow {
         let imp = self.imp();
         let files = imp.merge.files.borrow();
         let has_files = !files.is_empty();
-        let is_busy = imp.is_running.get() || imp.merge.is_loading.get();
+        let is_busy = imp.merge.is_busy(imp.is_running.get());
         let can_merge = files.len() > 1 && !is_busy;
         let previews = imp.merge.previews.borrow();
         let rotations = imp.merge.rotations.borrow();
@@ -250,7 +223,7 @@ impl FoliosWindow {
         row.add_prefix(&rotated_list_preview_prefix(preview, rotation));
 
         let imp = self.imp();
-        let controls_sensitive = !imp.is_running.get() && !imp.merge.is_loading.get();
+        let controls_sensitive = !imp.merge.is_busy(imp.is_running.get());
         let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
         up_button.set_sensitive(controls_sensitive && index > 0);
         let window = self.clone();
@@ -306,7 +279,7 @@ impl FoliosWindow {
         controls.append(&size);
 
         let imp = self.imp();
-        let controls_sensitive = !imp.is_running.get() && !imp.merge.is_loading.get();
+        let controls_sensitive = !imp.merge.is_busy(imp.is_running.get());
         let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
         up_button.set_sensitive(controls_sensitive && index > 0);
         let window = self.clone();
@@ -347,50 +320,20 @@ impl FoliosWindow {
     }
 
     fn move_file(&self, from: usize, to: usize) {
-        let imp = self.imp();
-        let mut files = imp.merge.files.borrow_mut();
-        files.swap(from, to);
-        imp.merge.last_output.borrow_mut().take();
-        drop(files);
+        self.imp().merge.move_file(from, to);
         self.update_files_view();
     }
 
     fn rotate_file(&self, index: usize) {
-        let imp = self.imp();
-        let Some(path) = imp.merge.files.borrow().get(index).cloned() else {
-            return;
-        };
-
-        let mut rotations = imp.merge.rotations.borrow_mut();
-        let rotation = (rotations.get(&path).copied().unwrap_or(0) + 90).rem_euclid(360);
-        if rotation == 0 {
-            rotations.remove(&path);
-        } else {
-            rotations.insert(path, rotation);
+        if self.imp().merge.rotate_file(index) {
+            self.update_files_view();
         }
-        imp.merge.last_output.borrow_mut().take();
-        drop(rotations);
-
-        self.update_files_view();
     }
 
     fn reorder_file(&self, from: usize, to: usize) {
-        if from == to {
-            return;
+        if self.imp().merge.reorder_file(from, to) {
+            self.update_files_view();
         }
-
-        let imp = self.imp();
-        let mut files = imp.merge.files.borrow_mut();
-        if from >= files.len() || to >= files.len() {
-            return;
-        }
-
-        let file = files.remove(from);
-        files.insert(to, file);
-        imp.merge.last_output.borrow_mut().take();
-        drop(files);
-
-        self.update_files_view();
     }
 
     fn add_file_drag_and_drop(&self, widget: &impl IsA<gtk::Widget>, index: usize) {
@@ -418,12 +361,7 @@ impl FoliosWindow {
     }
 
     fn remove_file(&self, index: usize) {
-        let imp = self.imp();
-        let path = imp.merge.files.borrow_mut().remove(index);
-        if !imp.merge.files.borrow().contains(&path) {
-            imp.merge.rotations.borrow_mut().remove(&path);
-        }
-        imp.merge.last_output.borrow_mut().take();
+        self.imp().merge.remove_file(index);
         self.update_files_view();
     }
 }

@@ -68,7 +68,7 @@ impl FoliosWindow {
     fn load_organize_pdf(&self, path: PathBuf) {
         let imp = self.imp();
         imp.is_running.set(true);
-        imp.organize.last_output.borrow_mut().take();
+        imp.organize.clear_last_output();
         self.update_organize_view();
 
         let window = self.clone();
@@ -79,14 +79,7 @@ impl FoliosWindow {
 
             match result {
                 Ok(previews) => {
-                    let page_count = previews.len();
-                    imp.organize.file.borrow_mut().replace(path);
-                    imp.organize.page_count.set(page_count);
-                    *imp.organize.previews.borrow_mut() = previews;
-                    let mut page_order = imp.organize.page_order.borrow_mut();
-                    page_order.clear();
-                    page_order.extend(1..=page_count as u32);
-                    imp.organize.rotations.borrow_mut().clear();
+                    imp.organize.load_document(path, previews);
                 }
                 Err(error) => {
                     window.show_toast(&error.to_string());
@@ -98,41 +91,19 @@ impl FoliosWindow {
     }
 
     fn reset_organize_pdf(&self) {
-        let imp = self.imp();
-        let page_count = imp.organize.page_count.get();
-
-        if imp.organize.file.borrow().is_none() || page_count == 0 {
-            return;
+        if self.imp().organize.reset() {
+            self.update_organize_view();
         }
-
-        let mut page_order = imp.organize.page_order.borrow_mut();
-        page_order.clear();
-        page_order.extend(1..=page_count as u32);
-        imp.organize.rotations.borrow_mut().clear();
-        imp.organize.last_output.borrow_mut().take();
-        drop(page_order);
-        self.update_organize_view();
     }
 
     fn organize_to(&self, output_file: PathBuf) {
         let imp = self.imp();
-        let Some(input_file) = imp.organize.file.borrow().clone() else {
+        let Some((input_file, page_order)) = imp.organize.selections() else {
             return;
         };
-        let rotations = imp.organize.rotations.borrow();
-        let page_order = imp
-            .organize
-            .page_order
-            .borrow()
-            .iter()
-            .map(|page_number| crate::pdf::PageSelection {
-                page_number: *page_number,
-                rotation: *rotations.get(page_number).unwrap_or(&0),
-            })
-            .collect::<Vec<_>>();
 
         imp.is_running.set(true);
-        imp.organize.last_output.borrow_mut().take();
+        imp.organize.clear_last_output();
         self.update_all_views();
 
         let window = self.clone();
@@ -143,7 +114,7 @@ impl FoliosWindow {
 
             match result {
                 Ok(path) => {
-                    imp.organize.last_output.borrow_mut().replace(path);
+                    imp.organize.set_last_output(path);
                     window.show_toast(&gettext("Organized PDF saved"));
                 }
                 Err(error) => {
@@ -340,49 +311,19 @@ impl FoliosWindow {
     }
 
     fn move_page(&self, from: usize, to: usize) {
-        let imp = self.imp();
-        let mut pages = imp.organize.page_order.borrow_mut();
-        pages.swap(from, to);
-        imp.organize.last_output.borrow_mut().take();
-        drop(pages);
+        self.imp().organize.move_page(from, to);
         self.update_organize_view();
     }
 
     fn rotate_page(&self, page_number: u32) {
-        let imp = self.imp();
-        let mut rotations = imp.organize.rotations.borrow_mut();
-        let rotation = (rotations.get(&page_number).copied().unwrap_or(0) + 90).rem_euclid(360);
-        if rotation == 0 {
-            rotations.remove(&page_number);
-        } else {
-            rotations.insert(page_number, rotation);
-        }
-        imp.organize.last_output.borrow_mut().take();
-        drop(rotations);
-
+        self.imp().organize.rotate_page(page_number);
         self.update_organize_view();
     }
 
     fn reorder_page(&self, dragged_page: u32, target_page: u32) {
-        if dragged_page == target_page {
-            return;
+        if self.imp().organize.reorder_page(dragged_page, target_page) {
+            self.update_organize_view();
         }
-
-        let imp = self.imp();
-        let mut pages = imp.organize.page_order.borrow_mut();
-        let Some(from) = pages.iter().position(|page| *page == dragged_page) else {
-            return;
-        };
-        let Some(to) = pages.iter().position(|page| *page == target_page) else {
-            return;
-        };
-
-        let page = pages.remove(from);
-        pages.insert(to, page);
-        imp.organize.last_output.borrow_mut().take();
-        drop(pages);
-
-        self.update_organize_view();
     }
 
     fn add_page_drag_and_drop(&self, widget: &impl IsA<gtk::Widget>, page_number: u32) {
@@ -410,15 +351,8 @@ impl FoliosWindow {
     }
 
     fn remove_page(&self, index: usize) {
-        let imp = self.imp();
-        if imp.organize.page_order.borrow().len() <= 1 {
-            return;
+        if self.imp().organize.remove_page(index) {
+            self.update_organize_view();
         }
-
-        let page_number = imp.organize.page_order.borrow_mut().remove(index);
-        imp.organize.rotations.borrow_mut().remove(&page_number);
-        imp.organize.last_output.borrow_mut().take();
-
-        self.update_organize_view();
     }
 }

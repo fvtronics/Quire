@@ -21,15 +21,14 @@
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gio, glib};
-use std::cell::{Cell, RefCell};
-use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::cell::Cell;
 
 mod compress;
 mod extract;
 mod merge;
 mod organize;
 mod split;
+mod state;
 mod ui;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -53,53 +52,8 @@ const LIST_VIEW_NAME: &str = "list";
 const GRID_VIEW_NAME: &str = "grid";
 
 mod imp {
+    use super::state::{CompressState, ExtractState, MergeState, OrganizeState, SplitState};
     use super::*;
-
-    #[derive(Debug, Default)]
-    pub struct MergeState {
-        pub files: RefCell<Vec<PathBuf>>,
-        pub rotations: RefCell<BTreeMap<PathBuf, i64>>,
-        pub previews: RefCell<BTreeMap<PathBuf, crate::preview::PagePreview>>,
-        pub last_output: RefCell<Option<PathBuf>>,
-        pub is_loading: Cell<bool>,
-    }
-
-    #[derive(Debug, Default)]
-    pub struct CompressState {
-        pub file: RefCell<Option<PathBuf>>,
-        pub preview: RefCell<Option<crate::preview::PagePreview>>,
-        pub last_output: RefCell<Option<PathBuf>>,
-        pub is_loading: Cell<bool>,
-    }
-
-    #[derive(Debug, Default)]
-    pub struct OrganizeState {
-        pub file: RefCell<Option<PathBuf>>,
-        pub page_count: Cell<usize>,
-        pub previews: RefCell<Vec<crate::preview::PagePreview>>,
-        pub page_order: RefCell<Vec<u32>>,
-        pub rotations: RefCell<BTreeMap<u32, i64>>,
-        pub last_output: RefCell<Option<PathBuf>>,
-    }
-
-    #[derive(Debug, Default)]
-    pub struct ExtractState {
-        pub file: RefCell<Option<PathBuf>>,
-        pub page_count: Cell<usize>,
-        pub previews: RefCell<Vec<crate::preview::PagePreview>>,
-        pub selected_pages: RefCell<Vec<u32>>,
-        pub rotations: RefCell<BTreeMap<u32, i64>>,
-        pub last_output: RefCell<Option<PathBuf>>,
-    }
-
-    #[derive(Debug, Default)]
-    pub struct SplitState {
-        pub file: RefCell<Option<PathBuf>>,
-        pub page_count: Cell<usize>,
-        pub preview: RefCell<Option<crate::preview::PagePreview>>,
-        pub last_output: RefCell<Option<PathBuf>>,
-        pub is_loading: Cell<bool>,
-    }
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/fvtronics/folios/window.ui")]

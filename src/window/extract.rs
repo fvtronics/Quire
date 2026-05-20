@@ -41,20 +41,15 @@ impl FoliosWindow {
             let text = text.trim();
 
             if text.is_empty() {
-                imp.extract.selected_pages.borrow_mut().clear();
-                imp.extract.rotations.borrow_mut().clear();
+                imp.extract.clear_range_selection();
             } else if let Ok(pages) =
                 crate::pdf::parse_page_ranges(text, imp.extract.page_count.get())
             {
                 let pages = normalize_pages(pages);
-                imp.extract
-                    .rotations
-                    .borrow_mut()
-                    .retain(|page_number, _| pages.contains(page_number));
-                *imp.extract.selected_pages.borrow_mut() = pages;
+                imp.extract.apply_range_selection(pages);
             }
 
-            imp.extract.last_output.borrow_mut().take();
+            imp.extract.clear_last_output();
             window.update_extract_view();
         });
     }
@@ -71,9 +66,6 @@ impl FoliosWindow {
 
     fn choose_extract_output_file(&self) {
         let imp = self.imp();
-        let Some(input_file) = imp.extract.file.borrow().clone() else {
-            return;
-        };
         let page_numbers = if imp.extract_ranges_entry.text().trim().is_empty() {
             let pages = imp.extract.selected_pages.borrow().clone();
             if pages.is_empty() {
@@ -90,14 +82,9 @@ impl FoliosWindow {
                 }
             }
         };
-        let rotations = imp.extract.rotations.borrow();
-        let pages = page_numbers
-            .into_iter()
-            .map(|page_number| crate::pdf::PageSelection {
-                page_number,
-                rotation: *rotations.get(&page_number).unwrap_or(&0),
-            })
-            .collect::<Vec<_>>();
+        let Some((input_file, pages)) = imp.extract.selections_from_pages(page_numbers) else {
+            return;
+        };
 
         let window = self.clone();
         glib::spawn_future_local(async move {
@@ -117,7 +104,7 @@ impl FoliosWindow {
     fn load_extract_pdf(&self, path: PathBuf) {
         let imp = self.imp();
         imp.is_running.set(true);
-        imp.extract.last_output.borrow_mut().take();
+        imp.extract.clear_last_output();
         self.update_extract_view();
 
         let window = self.clone();
@@ -128,12 +115,7 @@ impl FoliosWindow {
 
             match result {
                 Ok(previews) => {
-                    let page_count = previews.len();
-                    imp.extract.file.borrow_mut().replace(path);
-                    imp.extract.page_count.set(page_count);
-                    *imp.extract.previews.borrow_mut() = previews;
-                    imp.extract.selected_pages.borrow_mut().clear();
-                    imp.extract.rotations.borrow_mut().clear();
+                    imp.extract.load_document(path, previews);
                     imp.extract_ranges_entry.set_text("");
                 }
                 Err(error) => {
@@ -153,7 +135,7 @@ impl FoliosWindow {
     ) {
         let imp = self.imp();
         imp.is_running.set(true);
-        imp.extract.last_output.borrow_mut().take();
+        imp.extract.clear_last_output();
         self.update_all_views();
 
         let window = self.clone();
@@ -164,7 +146,7 @@ impl FoliosWindow {
 
             match result {
                 Ok(path) => {
-                    imp.extract.last_output.borrow_mut().replace(path);
+                    imp.extract.set_last_output(path);
                     window.show_toast(&gettext("Extracted pages saved"));
                 }
                 Err(error) => {
@@ -339,44 +321,15 @@ impl FoliosWindow {
     }
 
     fn toggle_extract_page(&self, page_number: u32, selected: bool) {
-        let imp = self.imp();
-        let mut pages = imp.extract.selected_pages.borrow_mut();
-
-        if selected {
-            if !pages.contains(&page_number) {
-                pages.push(page_number);
-                pages.sort_unstable();
-            }
-        } else {
-            pages.retain(|page| *page != page_number);
-            imp.extract.rotations.borrow_mut().remove(&page_number);
-        }
-
-        imp.extract.last_output.borrow_mut().take();
-        drop(pages);
-
+        self.imp().extract.toggle_page(page_number, selected);
         self.update_extract_ranges_entry();
-
         self.update_extract_view();
     }
 
     fn rotate_extract_page(&self, page_number: u32) {
-        let imp = self.imp();
-        if !imp.extract.selected_pages.borrow().contains(&page_number) {
-            return;
+        if self.imp().extract.rotate_page(page_number) {
+            self.update_extract_view();
         }
-
-        let mut rotations = imp.extract.rotations.borrow_mut();
-        let rotation = (rotations.get(&page_number).copied().unwrap_or(0) + 90).rem_euclid(360);
-        if rotation == 0 {
-            rotations.remove(&page_number);
-        } else {
-            rotations.insert(page_number, rotation);
-        }
-        imp.extract.last_output.borrow_mut().take();
-        drop(rotations);
-
-        self.update_extract_view();
     }
 
     fn update_extract_ranges_entry(&self) {

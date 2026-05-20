@@ -61,25 +61,25 @@ impl FoliosWindow {
 
         let window = self.clone();
         imp.split_after_row.connect_selected_notify(move |_| {
-            window.imp().split.last_output.borrow_mut().take();
+            window.imp().split.clear_last_output();
             window.update_split_view();
         });
 
         let window = self.clone();
         imp.split_specific_pages_entry.connect_changed(move |_| {
-            window.imp().split.last_output.borrow_mut().take();
+            window.imp().split.clear_last_output();
             window.update_split_view();
         });
 
         let window = self.clone();
         imp.split_pages_entry.connect_changed(move |_| {
-            window.imp().split.last_output.borrow_mut().take();
+            window.imp().split.clear_last_output();
             window.update_split_view();
         });
 
         let window = self.clone();
         imp.split_prefix_entry.connect_changed(move |_| {
-            window.imp().split.last_output.borrow_mut().take();
+            window.imp().split.clear_last_output();
             window.update_split_view();
         });
     }
@@ -96,7 +96,7 @@ impl FoliosWindow {
 
     fn choose_split_output_folder(&self) {
         let imp = self.imp();
-        let Some(input_file) = imp.split.file.borrow().clone() else {
+        let Some(input_file) = imp.split.input_file() else {
             return;
         };
         let rule = match self.split_rule() {
@@ -120,25 +120,22 @@ impl FoliosWindow {
 
     fn load_split_pdf(&self, path: PathBuf) {
         let imp = self.imp();
-        imp.split.is_loading.set(true);
-        imp.split.last_output.borrow_mut().take();
+        imp.split.begin_loading();
         self.update_split_view();
 
         let window = self.clone();
         glib::spawn_future_local(async move {
             let result = crate::preview::render_first_page_preview_with_count(path.clone()).await;
             let imp = window.imp();
-            imp.split.is_loading.set(false);
 
             match result {
                 Ok((preview, page_count)) => {
-                    imp.split.file.borrow_mut().replace(path.clone());
-                    imp.split.page_count.set(page_count);
-                    *imp.split.preview.borrow_mut() = preview;
+                    imp.split.finish_loading(path.clone(), preview, page_count);
                     imp.split_prefix_entry
                         .set_text(&split_default_prefix(&path));
                 }
                 Err(error) => {
+                    imp.split.finish_loading_failed();
                     window.show_toast(&error.to_string());
                 }
             }
@@ -156,7 +153,7 @@ impl FoliosWindow {
     ) {
         let imp = self.imp();
         imp.is_running.set(true);
-        imp.split.last_output.borrow_mut().take();
+        imp.split.clear_last_output();
         self.update_all_views();
 
         let window = self.clone();
@@ -167,7 +164,7 @@ impl FoliosWindow {
 
             match result {
                 Ok(path) => {
-                    imp.split.last_output.borrow_mut().replace(path);
+                    imp.split.set_last_output(path);
                     window.show_toast(&gettext("Split PDFs saved"));
                 }
                 Err(error) => {
@@ -184,7 +181,7 @@ impl FoliosWindow {
         let file = imp.split.file.borrow();
         let has_file = file.is_some();
         let has_split_rule = self.split_rule().is_ok();
-        let is_busy = imp.is_running.get() || imp.split.is_loading.get();
+        let is_busy = imp.split.is_busy(imp.is_running.get());
         let split_mode = imp.split_after_row.selected();
         let preview = imp.split.preview.borrow();
 

@@ -45,7 +45,7 @@ impl FoliosWindow {
     }
 
     fn choose_compress_output_file(&self) {
-        let Some(input_file) = self.imp().compress.file.borrow().clone() else {
+        let Some(input_file) = self.imp().compress.input_file() else {
             return;
         };
 
@@ -66,22 +66,20 @@ impl FoliosWindow {
 
     fn load_compress_pdf(&self, path: PathBuf) {
         let imp = self.imp();
-        imp.compress.is_loading.set(true);
-        imp.compress.last_output.borrow_mut().take();
+        imp.compress.begin_loading();
         self.update_compress_view();
 
         let window = self.clone();
         glib::spawn_future_local(async move {
             let result = crate::preview::render_single_file_preview(path.clone()).await;
             let imp = window.imp();
-            imp.compress.is_loading.set(false);
 
             match result {
                 Ok(preview) => {
-                    imp.compress.file.borrow_mut().replace(path);
-                    *imp.compress.preview.borrow_mut() = preview;
+                    imp.compress.finish_loading(path, preview);
                 }
                 Err(error) => {
+                    imp.compress.finish_loading_failed();
                     window.show_toast(&error.to_string());
                 }
             }
@@ -98,7 +96,7 @@ impl FoliosWindow {
         };
 
         imp.is_running.set(true);
-        imp.compress.last_output.borrow_mut().take();
+        imp.compress.clear_last_output();
         self.update_all_views();
 
         let window = self.clone();
@@ -109,7 +107,7 @@ impl FoliosWindow {
 
             match result {
                 Ok(path) => {
-                    imp.compress.last_output.borrow_mut().replace(path);
+                    imp.compress.set_last_output(path);
                     window.show_toast(&gettext("Compressed PDF saved"));
                 }
                 Err(error) => {
@@ -125,7 +123,7 @@ impl FoliosWindow {
         let imp = self.imp();
         let file = imp.compress.file.borrow();
         let has_file = file.is_some();
-        let is_busy = imp.is_running.get() || imp.compress.is_loading.get();
+        let is_busy = imp.compress.is_busy(imp.is_running.get());
         let preview = imp.compress.preview.borrow();
 
         imp.compress_file_list.remove_all();
