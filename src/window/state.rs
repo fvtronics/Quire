@@ -3,20 +3,63 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 #[derive(Debug, Default)]
+pub struct JobState {
+    last_output: RefCell<Option<PathBuf>>,
+    is_loading: Cell<bool>,
+}
+
+impl JobState {
+    pub fn begin_loading(&self) {
+        self.is_loading.set(true);
+        self.clear_last_output();
+    }
+
+    pub fn finish_loading(&self) {
+        self.is_loading.set(false);
+    }
+
+    pub fn finish_loading_failed(&self) {
+        self.is_loading.set(false);
+    }
+
+    pub fn clear_last_output(&self) {
+        self.last_output.borrow_mut().take();
+    }
+
+    pub fn set_last_output(&self, path: PathBuf) {
+        self.last_output.borrow_mut().replace(path);
+    }
+
+    pub fn last_output(&self) -> Option<PathBuf> {
+        self.last_output.borrow().clone()
+    }
+
+    pub fn has_last_output(&self) -> bool {
+        self.last_output.borrow().is_some()
+    }
+
+    pub fn is_loading(&self) -> bool {
+        self.is_loading.get()
+    }
+
+    pub fn is_busy(&self, is_running: bool) -> bool {
+        is_running || self.is_loading()
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct MergeState {
     pub files: RefCell<Vec<PathBuf>>,
     pub rotations: RefCell<BTreeMap<PathBuf, i64>>,
     pub previews: RefCell<BTreeMap<PathBuf, crate::preview::PagePreview>>,
-    pub last_output: RefCell<Option<PathBuf>>,
-    pub is_loading: Cell<bool>,
+    pub job: JobState,
 }
 
 #[derive(Debug, Default)]
 pub struct CompressState {
     pub file: RefCell<Option<PathBuf>>,
     pub preview: RefCell<Option<crate::preview::PagePreview>>,
-    pub last_output: RefCell<Option<PathBuf>>,
-    pub is_loading: Cell<bool>,
+    pub job: JobState,
 }
 
 #[derive(Debug, Default)]
@@ -26,8 +69,7 @@ pub struct OrganizeState {
     pub previews: RefCell<BTreeMap<u32, crate::preview::PagePreview>>,
     pub page_order: RefCell<Vec<u32>>,
     pub rotations: RefCell<BTreeMap<u32, i64>>,
-    pub last_output: RefCell<Option<PathBuf>>,
-    pub is_loading: Cell<bool>,
+    pub job: JobState,
 }
 
 #[derive(Debug, Default)]
@@ -37,8 +79,7 @@ pub struct ExtractState {
     pub previews: RefCell<BTreeMap<u32, crate::preview::PagePreview>>,
     pub selected_pages: RefCell<BTreeSet<u32>>,
     pub rotations: RefCell<BTreeMap<u32, i64>>,
-    pub last_output: RefCell<Option<PathBuf>>,
-    pub is_loading: Cell<bool>,
+    pub job: JobState,
 }
 
 #[derive(Debug, Default)]
@@ -46,8 +87,7 @@ pub struct SplitState {
     pub file: RefCell<Option<PathBuf>>,
     pub page_count: Cell<usize>,
     pub preview: RefCell<Option<crate::preview::PagePreview>>,
-    pub last_output: RefCell<Option<PathBuf>>,
-    pub is_loading: Cell<bool>,
+    pub job: JobState,
 }
 
 impl MergeState {
@@ -55,7 +95,7 @@ impl MergeState {
         self.files.borrow_mut().clear();
         self.rotations.borrow_mut().clear();
         self.previews.borrow_mut().clear();
-        self.last_output.borrow_mut().take();
+        self.job.clear_last_output();
     }
 
     pub fn paths_needing_previews(&self, paths: &[PathBuf]) -> Vec<PathBuf> {
@@ -69,12 +109,7 @@ impl MergeState {
 
     pub fn add_files(&self, paths: Vec<PathBuf>) {
         self.files.borrow_mut().extend(paths);
-        self.last_output.borrow_mut().take();
-    }
-
-    pub fn begin_loading(&self) {
-        self.is_loading.set(true);
-        self.last_output.borrow_mut().take();
+        self.job.clear_last_output();
     }
 
     pub fn finish_loading(
@@ -82,7 +117,7 @@ impl MergeState {
         paths: Vec<PathBuf>,
         previews: Vec<(PathBuf, crate::preview::PagePreview)>,
     ) {
-        self.is_loading.set(false);
+        self.job.finish_loading();
         self.previews.borrow_mut().extend(previews);
         self.files.borrow_mut().extend(paths);
     }
@@ -99,21 +134,9 @@ impl MergeState {
             .collect()
     }
 
-    pub fn clear_last_output(&self) {
-        self.last_output.borrow_mut().take();
-    }
-
-    pub fn set_last_output(&self, path: PathBuf) {
-        self.last_output.borrow_mut().replace(path);
-    }
-
-    pub fn is_busy(&self, is_running: bool) -> bool {
-        is_running || self.is_loading.get()
-    }
-
     pub fn move_file(&self, from: usize, to: usize) {
         self.files.borrow_mut().swap(from, to);
-        self.clear_last_output();
+        self.job.clear_last_output();
     }
 
     pub fn rotate_file(&self, index: usize) -> bool {
@@ -121,7 +144,7 @@ impl MergeState {
             return false;
         };
         rotate_entry(&self.rotations, path);
-        self.clear_last_output();
+        self.job.clear_last_output();
         true
     }
 
@@ -138,7 +161,7 @@ impl MergeState {
         let file = files.remove(from);
         files.insert(to, file);
         drop(files);
-        self.clear_last_output();
+        self.job.clear_last_output();
         true
     }
 
@@ -147,7 +170,7 @@ impl MergeState {
         if !self.files.borrow().contains(&path) {
             self.rotations.borrow_mut().remove(&path);
         }
-        self.clear_last_output();
+        self.job.clear_last_output();
     }
 }
 
@@ -156,43 +179,17 @@ impl CompressState {
         self.file.borrow().clone()
     }
 
-    pub fn begin_loading(&self) {
-        self.is_loading.set(true);
-        self.clear_last_output();
-    }
-
     pub fn finish_loading(&self, path: PathBuf, preview: Option<crate::preview::PagePreview>) {
-        self.is_loading.set(false);
+        self.job.finish_loading();
         self.file.borrow_mut().replace(path);
         *self.preview.borrow_mut() = preview;
-    }
-
-    pub fn finish_loading_failed(&self) {
-        self.is_loading.set(false);
-    }
-
-    pub fn clear_last_output(&self) {
-        self.last_output.borrow_mut().take();
-    }
-
-    pub fn set_last_output(&self, path: PathBuf) {
-        self.last_output.borrow_mut().replace(path);
-    }
-
-    pub fn is_busy(&self, is_running: bool) -> bool {
-        is_running || self.is_loading.get()
     }
 }
 
 impl OrganizeState {
-    pub fn begin_loading(&self) {
-        self.is_loading.set(true);
-        self.clear_last_output();
-    }
-
     pub fn load_document(&self, path: PathBuf, previews: crate::preview::DocumentPreviews) {
         let page_count = previews.page_count;
-        self.is_loading.set(false);
+        self.job.finish_loading();
         self.file.borrow_mut().replace(path);
         self.page_count.set(page_count);
         *self.previews.borrow_mut() = previews.previews;
@@ -202,11 +199,7 @@ impl OrganizeState {
         page_order.extend(1..=page_count as u32);
 
         self.rotations.borrow_mut().clear();
-        self.clear_last_output();
-    }
-
-    pub fn finish_loading_failed(&self) {
-        self.is_loading.set(false);
+        self.job.clear_last_output();
     }
 
     pub fn reset(&self) -> bool {
@@ -219,7 +212,7 @@ impl OrganizeState {
         page_order.clear();
         page_order.extend(1..=page_count as u32);
         self.rotations.borrow_mut().clear();
-        self.clear_last_output();
+        self.job.clear_last_output();
         true
     }
 
@@ -239,26 +232,14 @@ impl OrganizeState {
         Some((input_file, pages))
     }
 
-    pub fn clear_last_output(&self) {
-        self.last_output.borrow_mut().take();
-    }
-
-    pub fn set_last_output(&self, path: PathBuf) {
-        self.last_output.borrow_mut().replace(path);
-    }
-
-    pub fn is_busy(&self, is_running: bool) -> bool {
-        is_running || self.is_loading.get()
-    }
-
     pub fn move_page(&self, from: usize, to: usize) {
         self.page_order.borrow_mut().swap(from, to);
-        self.clear_last_output();
+        self.job.clear_last_output();
     }
 
     pub fn rotate_page(&self, page_number: u32) {
         rotate_entry(&self.rotations, page_number);
-        self.clear_last_output();
+        self.job.clear_last_output();
     }
 
     pub fn reorder_page(&self, dragged_page: u32, target_page: u32) -> bool {
@@ -277,7 +258,7 @@ impl OrganizeState {
         let page = pages.remove(from);
         pages.insert(to, page);
         drop(pages);
-        self.clear_last_output();
+        self.job.clear_last_output();
         true
     }
 
@@ -288,7 +269,7 @@ impl OrganizeState {
 
         let page_number = self.page_order.borrow_mut().remove(index);
         self.rotations.borrow_mut().remove(&page_number);
-        self.clear_last_output();
+        self.job.clear_last_output();
         true
     }
 }
@@ -306,23 +287,14 @@ impl ExtractState {
         *self.selected_pages.borrow_mut() = pages.into_iter().collect();
     }
 
-    pub fn begin_loading(&self) {
-        self.is_loading.set(true);
-        self.clear_last_output();
-    }
-
     pub fn load_document(&self, path: PathBuf, previews: crate::preview::DocumentPreviews) {
         let page_count = previews.page_count;
-        self.is_loading.set(false);
+        self.job.finish_loading();
         self.file.borrow_mut().replace(path);
         self.page_count.set(page_count);
         *self.previews.borrow_mut() = previews.previews;
         self.clear_range_selection();
-        self.clear_last_output();
-    }
-
-    pub fn finish_loading_failed(&self) {
-        self.is_loading.set(false);
+        self.job.clear_last_output();
     }
 
     pub fn selections_from_pages(
@@ -342,18 +314,6 @@ impl ExtractState {
         Some((input_file, pages))
     }
 
-    pub fn clear_last_output(&self) {
-        self.last_output.borrow_mut().take();
-    }
-
-    pub fn set_last_output(&self, path: PathBuf) {
-        self.last_output.borrow_mut().replace(path);
-    }
-
-    pub fn is_busy(&self, is_running: bool) -> bool {
-        is_running || self.is_loading.get()
-    }
-
     pub fn toggle_page(&self, page_number: u32, selected: bool) {
         let mut pages = self.selected_pages.borrow_mut();
 
@@ -365,7 +325,7 @@ impl ExtractState {
         }
 
         drop(pages);
-        self.clear_last_output();
+        self.job.clear_last_output();
     }
 
     pub fn rotate_page(&self, page_number: u32) -> bool {
@@ -374,7 +334,7 @@ impl ExtractState {
         }
 
         rotate_entry(&self.rotations, page_number);
-        self.clear_last_output();
+        self.job.clear_last_output();
         true
     }
 }
@@ -384,37 +344,16 @@ impl SplitState {
         self.file.borrow().clone()
     }
 
-    pub fn begin_loading(&self) {
-        self.is_loading.set(true);
-        self.clear_last_output();
-    }
-
     pub fn finish_loading(
         &self,
         path: PathBuf,
         preview: Option<crate::preview::PagePreview>,
         page_count: usize,
     ) {
-        self.is_loading.set(false);
+        self.job.finish_loading();
         self.file.borrow_mut().replace(path);
         self.page_count.set(page_count);
         *self.preview.borrow_mut() = preview;
-    }
-
-    pub fn finish_loading_failed(&self) {
-        self.is_loading.set(false);
-    }
-
-    pub fn clear_last_output(&self) {
-        self.last_output.borrow_mut().take();
-    }
-
-    pub fn set_last_output(&self, path: PathBuf) {
-        self.last_output.borrow_mut().replace(path);
-    }
-
-    pub fn is_busy(&self, is_running: bool) -> bool {
-        is_running || self.is_loading.get()
     }
 }
 
@@ -454,6 +393,37 @@ mod tests {
                 })
                 .collect(),
         }
+    }
+
+    #[test]
+    fn job_state_tracks_loading_and_output() {
+        let state = JobState::default();
+
+        state.set_last_output(PathBuf::from("output.pdf"));
+        assert!(state.has_last_output());
+        assert!(!state.is_loading());
+        assert!(!state.is_busy(false));
+
+        state.begin_loading();
+        assert!(state.is_loading());
+        assert!(state.is_busy(false));
+        assert!(!state.has_last_output());
+
+        state.finish_loading();
+        assert!(!state.is_loading());
+        assert!(state.is_busy(true));
+    }
+
+    #[test]
+    fn job_state_failed_loading_keeps_existing_output_policy() {
+        let state = JobState::default();
+
+        state.set_last_output(PathBuf::from("old-output.pdf"));
+        state.begin_loading();
+        state.finish_loading_failed();
+
+        assert!(!state.is_loading());
+        assert_eq!(state.last_output(), None);
     }
 
     #[test]

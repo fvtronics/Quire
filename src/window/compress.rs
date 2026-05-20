@@ -142,7 +142,7 @@ impl CompressWorkspace {
 
     fn load_pdf(&self, path: PathBuf) {
         let imp = self.imp();
-        imp.compress.begin_loading();
+        imp.compress.job.begin_loading();
         self.update_view();
 
         let workspace = self.clone();
@@ -155,7 +155,7 @@ impl CompressWorkspace {
                     imp.compress.finish_loading(path, preview);
                 }
                 Err(error) => {
-                    imp.compress.finish_loading_failed();
+                    imp.compress.job.finish_loading_failed();
                     show_preview_error(&workspace, &error);
                 }
             }
@@ -176,27 +176,17 @@ impl CompressWorkspace {
             crate::pdf::compress_pdf(input_file, output_file, options),
             gettext("Compressed PDF saved"),
             |workspace, running| workspace.imp().is_running.set(running),
-            |workspace| workspace.imp().compress.clear_last_output(),
-            |workspace, path| workspace.imp().compress.set_last_output(path),
+            |workspace| workspace.imp().compress.job.clear_last_output(),
+            |workspace, path| workspace.imp().compress.job.set_last_output(path),
             Self::update_view,
         );
     }
-
-    pub(super) fn supports_view_mode(&self) -> bool {
-        false
-    }
-
-    pub(super) fn has_view_mode_content(&self) -> bool {
-        false
-    }
-
-    pub(super) fn set_view_mode(&self, _view_mode: super::ViewMode) {}
 
     pub(super) fn update_view(&self) {
         let imp = self.imp();
         let file = imp.compress.file.borrow();
         let has_file = file.is_some();
-        let is_busy = imp.compress.is_busy(imp.is_running.get());
+        let is_busy = imp.compress.job.is_busy(imp.is_running.get());
         let preview = imp.compress.preview.borrow();
 
         imp.compress_file_list.remove_all();
@@ -213,20 +203,20 @@ impl CompressWorkspace {
         imp.compress_choose_button.set_visible(has_file);
         imp.compress_save_button.set_visible(has_file);
         imp.compress_open_output_button
-            .set_visible(imp.compress.last_output.borrow().is_some());
+            .set_visible(imp.compress.job.has_last_output());
 
         imp.compress_choose_button.set_sensitive(!is_busy);
         imp.compress_empty_choose_button.set_sensitive(!is_busy);
         imp.compress_save_button.set_sensitive(has_file && !is_busy);
         imp.compress_open_output_button
-            .set_sensitive(imp.compress.last_output.borrow().is_some() && !is_busy);
+            .set_sensitive(imp.compress.job.has_last_output() && !is_busy);
         imp.compress_prune_row.set_sensitive(has_file && !is_busy);
         imp.compress_empty_streams_row
             .set_sensitive(has_file && !is_busy);
 
         let detail = if imp.is_running.get() {
             gettext("Compressing PDF...")
-        } else if imp.compress.is_loading.get() {
+        } else if imp.compress.job.is_loading() {
             gettext("Loading PDF...")
         } else if let Some(path) = file.as_ref() {
             file_subtitle(path)
@@ -238,8 +228,8 @@ impl CompressWorkspace {
     }
 
     fn open_last_output(&self) {
-        if let Some(path) = self.imp().compress.last_output.borrow().as_ref() {
-            open_output(self, path);
+        if let Some(path) = self.imp().compress.job.last_output() {
+            open_output(self, &path);
         }
     }
 }

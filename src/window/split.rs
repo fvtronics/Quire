@@ -158,25 +158,25 @@ impl SplitWorkspace {
 
         let workspace = self.clone();
         imp.split_after_row.connect_selected_notify(move |_| {
-            workspace.imp().split.clear_last_output();
+            workspace.imp().split.job.clear_last_output();
             workspace.update_view();
         });
 
         let workspace = self.clone();
         imp.split_specific_pages_entry.connect_changed(move |_| {
-            workspace.imp().split.clear_last_output();
+            workspace.imp().split.job.clear_last_output();
             workspace.update_view();
         });
 
         let workspace = self.clone();
         imp.split_pages_entry.connect_changed(move |_| {
-            workspace.imp().split.clear_last_output();
+            workspace.imp().split.job.clear_last_output();
             workspace.update_view();
         });
 
         let workspace = self.clone();
         imp.split_prefix_entry.connect_changed(move |_| {
-            workspace.imp().split.clear_last_output();
+            workspace.imp().split.job.clear_last_output();
             workspace.update_view();
         });
     }
@@ -223,7 +223,7 @@ impl SplitWorkspace {
 
     fn load_pdf(&self, path: PathBuf) {
         let imp = self.imp();
-        imp.split.begin_loading();
+        imp.split.job.begin_loading();
         self.update_view();
 
         let workspace = self.clone();
@@ -238,7 +238,7 @@ impl SplitWorkspace {
                         .set_text(&split_default_prefix(&path));
                 }
                 Err(error) => {
-                    imp.split.finish_loading_failed();
+                    imp.split.job.finish_loading_failed();
                     show_preview_error(&workspace, &error);
                 }
             }
@@ -259,28 +259,18 @@ impl SplitWorkspace {
             crate::pdf::split_pdf(input_file, output_folder, prefix, rule),
             gettext("Split PDFs saved"),
             |workspace, running| workspace.imp().is_running.set(running),
-            |workspace| workspace.imp().split.clear_last_output(),
-            |workspace, path| workspace.imp().split.set_last_output(path),
+            |workspace| workspace.imp().split.job.clear_last_output(),
+            |workspace, path| workspace.imp().split.job.set_last_output(path),
             Self::update_view,
         );
     }
-
-    pub(super) fn supports_view_mode(&self) -> bool {
-        false
-    }
-
-    pub(super) fn has_view_mode_content(&self) -> bool {
-        false
-    }
-
-    pub(super) fn set_view_mode(&self, _view_mode: super::ViewMode) {}
 
     pub(super) fn update_view(&self) {
         let imp = self.imp();
         let file = imp.split.file.borrow();
         let has_file = file.is_some();
         let has_split_rule = self.split_rule().is_ok();
-        let is_busy = imp.split.is_busy(imp.is_running.get());
+        let is_busy = imp.split.job.is_busy(imp.is_running.get());
         let split_mode = SplitMode::from_index(imp.split_after_row.selected());
         let preview = imp.split.preview.borrow();
 
@@ -298,14 +288,14 @@ impl SplitWorkspace {
         imp.split_choose_button.set_visible(has_file);
         imp.split_save_button.set_visible(has_file);
         imp.split_open_output_button
-            .set_visible(imp.split.last_output.borrow().is_some());
+            .set_visible(imp.split.job.has_last_output());
 
         imp.split_choose_button.set_sensitive(!is_busy);
         imp.split_empty_choose_button.set_sensitive(!is_busy);
         imp.split_save_button
             .set_sensitive(has_file && has_split_rule && !is_busy);
         imp.split_open_output_button
-            .set_sensitive(imp.split.last_output.borrow().is_some() && !is_busy);
+            .set_sensitive(imp.split.job.has_last_output() && !is_busy);
         imp.split_after_row.set_sensitive(has_file && !is_busy);
         imp.split_specific_pages_entry
             .set_visible(split_mode == Some(SplitMode::SpecificPages));
@@ -319,7 +309,7 @@ impl SplitWorkspace {
 
         let detail = if imp.is_running.get() {
             gettext("Splitting PDF...")
-        } else if imp.split.is_loading.get() {
+        } else if imp.split.job.is_loading() {
             gettext("Loading PDF...")
         } else if has_file {
             page_count_label(imp.split.page_count.get())
@@ -377,8 +367,8 @@ impl SplitWorkspace {
     }
 
     fn open_last_output(&self) {
-        if let Some(path) = self.imp().split.last_output.borrow().as_ref() {
-            open_output(self, path);
+        if let Some(path) = self.imp().split.job.last_output() {
+            open_output(self, &path);
         }
     }
 }

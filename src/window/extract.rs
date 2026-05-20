@@ -122,7 +122,7 @@ impl ExtractWorkspace {
                 imp.extract.apply_range_selection(pages);
             }
 
-            imp.extract.clear_last_output();
+            imp.extract.job.clear_last_output();
             workspace.update_view();
         });
     }
@@ -188,7 +188,7 @@ impl ExtractWorkspace {
 
     fn load_pdf(&self, path: PathBuf) {
         let imp = self.imp();
-        imp.extract.begin_loading();
+        imp.extract.job.begin_loading();
         self.update_view();
 
         let workspace = self.clone();
@@ -202,7 +202,7 @@ impl ExtractWorkspace {
                     imp.extract_ranges_entry.set_text("");
                 }
                 Err(error) => {
-                    imp.extract.finish_loading_failed();
+                    imp.extract.job.finish_loading_failed();
                     show_preview_error(&workspace, &error);
                 }
             }
@@ -222,14 +222,10 @@ impl ExtractWorkspace {
             crate::pdf::extract_pages(input_file, pages, output_file),
             gettext("Extracted pages saved"),
             |workspace, running| workspace.imp().is_running.set(running),
-            |workspace| workspace.imp().extract.clear_last_output(),
-            |workspace, path| workspace.imp().extract.set_last_output(path),
+            |workspace| workspace.imp().extract.job.clear_last_output(),
+            |workspace, path| workspace.imp().extract.job.set_last_output(path),
             Self::update_view,
         );
-    }
-
-    pub(super) fn supports_view_mode(&self) -> bool {
-        true
     }
 
     pub(super) fn has_view_mode_content(&self) -> bool {
@@ -248,7 +244,7 @@ impl ExtractWorkspace {
         let has_ranges = !imp.extract_ranges_entry.text().trim().is_empty();
         let has_valid_ranges = has_ranges && self.extract_pages_from_ranges().is_ok();
         let has_selected_pages = !imp.extract.selected_pages.borrow().is_empty();
-        let is_busy = imp.extract.is_busy(imp.is_running.get());
+        let is_busy = imp.extract.job.is_busy(imp.is_running.get());
 
         imp.extract_file_list.remove_all();
         if let Some(path) = imp.extract.file.borrow().as_ref() {
@@ -284,7 +280,7 @@ impl ExtractWorkspace {
         imp.extract_choose_button.set_visible(has_file);
         imp.extract_save_button.set_visible(has_file);
         imp.extract_open_output_button
-            .set_visible(imp.extract.last_output.borrow().is_some());
+            .set_visible(imp.extract.job.has_last_output());
 
         imp.extract_choose_button.set_sensitive(!is_busy);
         imp.extract_empty_choose_button.set_sensitive(!is_busy);
@@ -292,12 +288,12 @@ impl ExtractWorkspace {
             has_file && (has_valid_ranges || (!has_ranges && has_selected_pages)) && !is_busy,
         );
         imp.extract_open_output_button
-            .set_sensitive(imp.extract.last_output.borrow().is_some() && !is_busy);
+            .set_sensitive(imp.extract.job.has_last_output() && !is_busy);
         imp.extract_ranges_entry.set_sensitive(has_file && !is_busy);
 
         let detail = if imp.is_running.get() {
             gettext("Extracting pages...")
-        } else if imp.extract.is_loading.get() {
+        } else if imp.extract.job.is_loading() {
             gettext("Loading PDF...")
         } else if has_file {
             page_count_label(imp.extract.page_count.get())
@@ -431,8 +427,8 @@ impl ExtractWorkspace {
     }
 
     fn open_last_output(&self) {
-        if let Some(path) = self.imp().extract.last_output.borrow().as_ref() {
-            open_output(self, path);
+        if let Some(path) = self.imp().extract.job.last_output() {
+            open_output(self, &path);
         }
     }
 }

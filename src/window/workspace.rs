@@ -28,6 +28,7 @@ pub(super) fn show_backend_error(
     widget: &impl IsA<gtk::Widget>,
     error: &crate::pdf::PdfBackendError,
 ) {
+    eprintln!("PDF backend error: {error}");
     show_toast(widget, &backend_error_message(error));
 }
 
@@ -35,6 +36,7 @@ pub(super) fn show_preview_error(
     widget: &impl IsA<gtk::Widget>,
     error: &crate::preview::PreviewError,
 ) {
+    eprintln!("PDF preview error: {error}");
     show_toast(widget, &preview_error_message(error));
 }
 

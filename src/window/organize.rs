@@ -142,7 +142,7 @@ impl OrganizeWorkspace {
 
     fn load_pdf(&self, path: PathBuf) {
         let imp = self.imp();
-        imp.organize.begin_loading();
+        imp.organize.job.begin_loading();
         self.update_view();
 
         let workspace = self.clone();
@@ -155,7 +155,7 @@ impl OrganizeWorkspace {
                     imp.organize.load_document(path, previews);
                 }
                 Err(error) => {
-                    imp.organize.finish_loading_failed();
+                    imp.organize.job.finish_loading_failed();
                     show_preview_error(&workspace, &error);
                 }
             }
@@ -181,14 +181,10 @@ impl OrganizeWorkspace {
             crate::pdf::organize_pdf(input_file, page_order, output_file),
             gettext("Organized PDF saved"),
             |workspace, running| workspace.imp().is_running.set(running),
-            |workspace| workspace.imp().organize.clear_last_output(),
-            |workspace, path| workspace.imp().organize.set_last_output(path),
+            |workspace| workspace.imp().organize.job.clear_last_output(),
+            |workspace, path| workspace.imp().organize.job.set_last_output(path),
             Self::update_view,
         );
-    }
-
-    pub(super) fn supports_view_mode(&self) -> bool {
-        true
     }
 
     pub(super) fn has_view_mode_content(&self) -> bool {
@@ -206,7 +202,7 @@ impl OrganizeWorkspace {
         let page_order = imp.organize.page_order.borrow();
         let has_file = imp.organize.file.borrow().is_some();
         let has_pages = !page_order.is_empty();
-        let is_busy = imp.organize.is_busy(imp.is_running.get());
+        let is_busy = imp.organize.job.is_busy(imp.is_running.get());
         let previews = imp.organize.previews.borrow();
         let rotations = imp.organize.rotations.borrow();
 
@@ -237,7 +233,7 @@ impl OrganizeWorkspace {
         imp.organize_reset_button.set_visible(has_file);
         imp.organize_save_button.set_visible(has_file);
         imp.organize_open_output_button
-            .set_visible(imp.organize.last_output.borrow().is_some());
+            .set_visible(imp.organize.job.has_last_output());
 
         imp.organize_choose_button.set_sensitive(!is_busy);
         imp.organize_empty_choose_button.set_sensitive(!is_busy);
@@ -246,11 +242,11 @@ impl OrganizeWorkspace {
         imp.organize_save_button
             .set_sensitive(has_pages && !is_busy);
         imp.organize_open_output_button
-            .set_sensitive(imp.organize.last_output.borrow().is_some() && !is_busy);
+            .set_sensitive(imp.organize.job.has_last_output() && !is_busy);
 
         let detail = if imp.is_running.get() {
             gettext("Organizing pages...")
-        } else if imp.organize.is_loading.get() {
+        } else if imp.organize.job.is_loading() {
             gettext("Loading PDF...")
         } else if has_file {
             page_count_label(page_order.len())
@@ -403,8 +399,8 @@ impl OrganizeWorkspace {
     }
 
     fn open_last_output(&self) {
-        if let Some(path) = self.imp().organize.last_output.borrow().as_ref() {
-            open_output(self, path);
+        if let Some(path) = self.imp().organize.job.last_output() {
+            open_output(self, &path);
         }
     }
 }

@@ -228,35 +228,17 @@ impl FoliosWindow {
         imp.list_view_button.set_active(view_mode == ViewMode::List);
         imp.grid_view_button.set_active(view_mode == ViewMode::Grid);
         imp.merge_workspace.set_view_mode(view_mode);
-        imp.compress_workspace.set_view_mode(view_mode);
         imp.organize_workspace.set_view_mode(view_mode);
         imp.extract_workspace.set_view_mode(view_mode);
-        imp.split_workspace.set_view_mode(view_mode);
     }
 
     fn active_tool_has_view_mode_content(&self) -> bool {
         let imp = self.imp();
         match imp.active_tool.get() {
-            PdfTool::Merge => {
-                imp.merge_workspace.supports_view_mode()
-                    && imp.merge_workspace.has_view_mode_content()
-            }
-            PdfTool::Compress => {
-                imp.compress_workspace.supports_view_mode()
-                    && imp.compress_workspace.has_view_mode_content()
-            }
-            PdfTool::Organize => {
-                imp.organize_workspace.supports_view_mode()
-                    && imp.organize_workspace.has_view_mode_content()
-            }
-            PdfTool::Extract => {
-                imp.extract_workspace.supports_view_mode()
-                    && imp.extract_workspace.has_view_mode_content()
-            }
-            PdfTool::Split => {
-                imp.split_workspace.supports_view_mode()
-                    && imp.split_workspace.has_view_mode_content()
-            }
+            PdfTool::Merge => imp.merge_workspace.has_view_mode_content(),
+            PdfTool::Compress | PdfTool::Split => false,
+            PdfTool::Organize => imp.organize_workspace.has_view_mode_content(),
+            PdfTool::Extract => imp.extract_workspace.has_view_mode_content(),
         }
     }
 

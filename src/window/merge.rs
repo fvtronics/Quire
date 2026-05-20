@@ -148,7 +148,7 @@ impl MergeWorkspace {
 
         let imp = self.imp();
         let paths_to_preview = imp.merge.paths_needing_previews(&paths);
-        imp.merge.clear_last_output();
+        imp.merge.job.clear_last_output();
 
         if paths_to_preview.is_empty() {
             imp.merge.add_files(paths);
@@ -156,7 +156,7 @@ impl MergeWorkspace {
             return;
         }
 
-        imp.merge.begin_loading();
+        imp.merge.job.begin_loading();
         self.update_view();
         self.load_merge_previews(paths, paths_to_preview);
     }
@@ -201,14 +201,10 @@ impl MergeWorkspace {
             crate::pdf::merge_pdfs(input_files, output_file),
             gettext("Merged PDF saved"),
             |workspace, running| workspace.imp().is_running.set(running),
-            |workspace| workspace.imp().merge.clear_last_output(),
-            |workspace, path| workspace.imp().merge.set_last_output(path),
+            |workspace| workspace.imp().merge.job.clear_last_output(),
+            |workspace, path| workspace.imp().merge.job.set_last_output(path),
             Self::update_view,
         );
-    }
-
-    pub(super) fn supports_view_mode(&self) -> bool {
-        true
     }
 
     pub(super) fn has_view_mode_content(&self) -> bool {
@@ -225,7 +221,7 @@ impl MergeWorkspace {
         let imp = self.imp();
         let files = imp.merge.files.borrow();
         let has_files = !files.is_empty();
-        let is_busy = imp.merge.is_busy(imp.is_running.get());
+        let is_busy = imp.merge.job.is_busy(imp.is_running.get());
         let can_merge = files.len() > 1 && !is_busy;
         let previews = imp.merge.previews.borrow();
         let rotations = imp.merge.rotations.borrow();
@@ -256,18 +252,18 @@ impl MergeWorkspace {
         imp.clear_button.set_visible(has_files);
         imp.merge_button.set_visible(has_files);
         imp.open_output_button
-            .set_visible(imp.merge.last_output.borrow().is_some());
+            .set_visible(imp.merge.job.has_last_output());
 
         imp.add_button.set_sensitive(has_files && !is_busy);
         imp.empty_add_button.set_sensitive(!is_busy);
         imp.clear_button.set_sensitive(has_files && !is_busy);
         imp.merge_button.set_sensitive(can_merge);
         imp.open_output_button
-            .set_sensitive(imp.merge.last_output.borrow().is_some() && !is_busy);
+            .set_sensitive(imp.merge.job.has_last_output() && !is_busy);
 
         let count_text = if imp.is_running.get() {
             gettext("Merging PDFs...")
-        } else if imp.merge.is_loading.get() {
+        } else if imp.merge.job.is_loading() {
             gettext("Loading PDFs...")
         } else {
             match files.len() {
@@ -297,7 +293,7 @@ impl MergeWorkspace {
         row.add_prefix(&rotated_list_preview_prefix(preview, rotation));
 
         let imp = self.imp();
-        let controls_sensitive = !imp.merge.is_busy(imp.is_running.get());
+        let controls_sensitive = !imp.merge.job.is_busy(imp.is_running.get());
         let workspace = self.clone();
         let move_up = move || workspace.move_file(index, index - 1);
         let workspace = self.clone();
@@ -342,7 +338,7 @@ impl MergeWorkspace {
         controls.append(&size);
 
         let imp = self.imp();
-        let controls_sensitive = !imp.merge.is_busy(imp.is_running.get());
+        let controls_sensitive = !imp.merge.job.is_busy(imp.is_running.get());
         let workspace = self.clone();
         let move_up = move || workspace.move_file(index, index - 1);
         let workspace = self.clone();
@@ -418,8 +414,8 @@ impl MergeWorkspace {
     }
 
     fn open_last_output(&self) {
-        if let Some(path) = self.imp().merge.last_output.borrow().as_ref() {
-            open_output(self, path);
+        if let Some(path) = self.imp().merge.job.last_output() {
+            open_output(self, &path);
         }
     }
 }
