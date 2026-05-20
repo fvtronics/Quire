@@ -287,7 +287,15 @@ impl FoliosWindow {
         rotation: i64,
     ) -> gtk::Box {
         let tile = preview_tile();
-        tile.append(&tile_preview_widget(Some(preview), rotation));
+        let preview_widget = tile_preview_widget(Some(preview), rotation);
+        let page_number = preview.page_number;
+        let window = self.clone();
+        let click = gtk::GestureClick::new();
+        click.connect_released(move |_, _, _, _| {
+            window.toggle_extract_page(page_number, !selected);
+        });
+        preview_widget.add_controller(click);
+        tile.append(&preview_widget);
 
         let footer = tile_controls();
         let label = tile_label(format!("{} {}", gettext("Page"), preview.page_number));
