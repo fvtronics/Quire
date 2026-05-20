@@ -1,5 +1,6 @@
 use super::ui::{
-    clear_box, file_subtitle, file_title, page_count_label, pdf_filters, single_file_preview_widget,
+    clear_box, file_subtitle, open_pdf_file, page_count_label, pdf_file_row, select_folder,
+    single_file_preview_widget,
 };
 use super::FoliosWindow;
 use adw::prelude::*;
@@ -60,25 +61,25 @@ impl FoliosWindow {
 
         let window = self.clone();
         imp.split_after_row.connect_selected_notify(move |_| {
-            window.imp().split_last_output.borrow_mut().take();
+            window.imp().split.last_output.borrow_mut().take();
             window.update_split_view();
         });
 
         let window = self.clone();
         imp.split_specific_pages_entry.connect_changed(move |_| {
-            window.imp().split_last_output.borrow_mut().take();
+            window.imp().split.last_output.borrow_mut().take();
             window.update_split_view();
         });
 
         let window = self.clone();
         imp.split_pages_entry.connect_changed(move |_| {
-            window.imp().split_last_output.borrow_mut().take();
+            window.imp().split.last_output.borrow_mut().take();
             window.update_split_view();
         });
 
         let window = self.clone();
         imp.split_prefix_entry.connect_changed(move |_| {
-            window.imp().split_last_output.borrow_mut().take();
+            window.imp().split.last_output.borrow_mut().take();
             window.update_split_view();
         });
     }
@@ -86,24 +87,16 @@ impl FoliosWindow {
     fn choose_split_file(&self) {
         let window = self.clone();
         glib::spawn_future_local(async move {
-            let dialog = gtk::FileDialog::builder()
-                .title(gettext("Open PDF"))
-                .accept_label(gettext("Open"))
-                .modal(true)
-                .filters(&pdf_filters())
-                .build();
-
-            if let Ok(file) = dialog.open_future(Some(&window)).await {
-                if let Some(path) = file.path() {
-                    window.load_split_pdf(path);
-                }
+            if let Some(path) = open_pdf_file(&window, &gettext("Open PDF"), &gettext("Open")).await
+            {
+                window.load_split_pdf(path);
             }
         });
     }
 
     fn choose_split_output_folder(&self) {
         let imp = self.imp();
-        let Some(input_file) = imp.split_file.borrow().clone() else {
+        let Some(input_file) = imp.split.file.borrow().clone() else {
             return;
         };
         let rule = match self.split_rule() {
@@ -117,16 +110,10 @@ impl FoliosWindow {
 
         let window = self.clone();
         glib::spawn_future_local(async move {
-            let dialog = gtk::FileDialog::builder()
-                .title(gettext("Choose Output Folder"))
-                .accept_label(gettext("Split"))
-                .modal(true)
-                .build();
-
-            if let Ok(folder) = dialog.select_folder_future(Some(&window)).await {
-                if let Some(path) = folder.path() {
-                    window.split_to(input_file, path, prefix, rule);
-                }
+            if let Some(path) =
+                select_folder(&window, &gettext("Choose Output Folder"), &gettext("Split")).await
+            {
+                window.split_to(input_file, path, prefix, rule);
             }
         });
     }
@@ -134,10 +121,10 @@ impl FoliosWindow {
     fn load_split_pdf(&self, path: PathBuf) {
         let imp = self.imp();
         imp.is_running.set(true);
-        imp.split_file.borrow_mut().replace(path.clone());
-        imp.split_page_count.set(0);
-        imp.split_preview.borrow_mut().take();
-        imp.split_last_output.borrow_mut().take();
+        imp.split.file.borrow_mut().replace(path.clone());
+        imp.split.page_count.set(0);
+        imp.split.preview.borrow_mut().take();
+        imp.split.last_output.borrow_mut().take();
         imp.split_prefix_entry
             .set_text(&split_default_prefix(&path));
         self.update_split_view();
@@ -150,9 +137,9 @@ impl FoliosWindow {
 
             match result {
                 Ok((preview, page_count)) => {
-                    if imp.split_file.borrow().as_ref() == Some(&path) {
-                        imp.split_page_count.set(page_count);
-                        *imp.split_preview.borrow_mut() = preview;
+                    if imp.split.file.borrow().as_ref() == Some(&path) {
+                        imp.split.page_count.set(page_count);
+                        *imp.split.preview.borrow_mut() = preview;
                     }
                 }
                 Err(error) => {
@@ -173,7 +160,7 @@ impl FoliosWindow {
     ) {
         let imp = self.imp();
         imp.is_running.set(true);
-        imp.split_last_output.borrow_mut().take();
+        imp.split.last_output.borrow_mut().take();
         self.update_all_views();
 
         let window = self.clone();
@@ -184,7 +171,7 @@ impl FoliosWindow {
 
             match result {
                 Ok(path) => {
-                    imp.split_last_output.borrow_mut().replace(path);
+                    imp.split.last_output.borrow_mut().replace(path);
                     window.show_toast(&gettext("Split PDFs saved"));
                 }
                 Err(error) => {
@@ -198,17 +185,17 @@ impl FoliosWindow {
 
     pub(super) fn update_split_view(&self) {
         let imp = self.imp();
-        let file = imp.split_file.borrow();
+        let file = imp.split.file.borrow();
         let has_file = file.is_some();
         let has_split_rule = self.split_rule().is_ok();
         let split_mode = imp.split_after_row.selected();
-        let preview = imp.split_preview.borrow();
+        let preview = imp.split.preview.borrow();
 
         imp.split_file_list.remove_all();
         clear_box(&imp.split_preview_box);
         if let Some(path) = file.as_ref() {
             imp.split_file_list
-                .append(&self.split_file_row(path, imp.split_page_count.get()));
+                .append(&self.split_file_row(path, imp.split.page_count.get()));
             imp.split_preview_box
                 .append(&single_file_preview_widget(preview.as_ref()));
         }
@@ -218,7 +205,7 @@ impl FoliosWindow {
         imp.split_choose_button.set_visible(has_file);
         imp.split_save_button.set_visible(has_file);
         imp.split_open_output_button
-            .set_visible(imp.split_last_output.borrow().is_some());
+            .set_visible(imp.split.last_output.borrow().is_some());
 
         imp.split_choose_button.set_sensitive(!imp.is_running.get());
         imp.split_empty_choose_button
@@ -226,7 +213,7 @@ impl FoliosWindow {
         imp.split_save_button
             .set_sensitive(has_file && has_split_rule && !imp.is_running.get());
         imp.split_open_output_button
-            .set_sensitive(imp.split_last_output.borrow().is_some() && !imp.is_running.get());
+            .set_sensitive(imp.split.last_output.borrow().is_some() && !imp.is_running.get());
         imp.split_after_row
             .set_sensitive(has_file && !imp.is_running.get());
         imp.split_specific_pages_entry
@@ -243,7 +230,7 @@ impl FoliosWindow {
         let detail = if imp.is_running.get() {
             gettext("Splitting PDF...")
         } else if has_file {
-            page_count_label(imp.split_page_count.get())
+            page_count_label(imp.split.page_count.get())
         } else {
             gettext("No PDF selected")
         };
@@ -259,7 +246,7 @@ impl FoliosWindow {
             SPLIT_SPECIFIC_PAGES => {
                 let pages = crate::pdf::parse_page_numbers(
                     imp.split_specific_pages_entry.text().as_str(),
-                    imp.split_page_count.get(),
+                    imp.split.page_count.get(),
                 )?;
                 Ok(crate::pdf::SplitRule::SpecificPages(pages))
             }
@@ -288,20 +275,10 @@ impl FoliosWindow {
     }
 
     fn split_file_row(&self, path: &Path, page_count: usize) -> adw::ActionRow {
-        let row = adw::ActionRow::builder()
-            .title(file_title(path))
-            .subtitle(format!(
-                "{} - {}",
-                page_count_label(page_count),
-                file_subtitle(path)
-            ))
-            .activatable(false)
-            .build();
-
-        let icon = gtk::Image::from_icon_name("view-paged-symbolic");
-        row.add_prefix(&icon);
-
-        row
+        pdf_file_row(
+            path,
+            format!("{} - {}", page_count_label(page_count), file_subtitle(path)),
+        )
     }
 }
 

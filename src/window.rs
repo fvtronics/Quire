@@ -55,6 +55,49 @@ const GRID_VIEW_NAME: &str = "grid";
 mod imp {
     use super::*;
 
+    #[derive(Debug, Default)]
+    pub struct MergeState {
+        pub files: RefCell<Vec<PathBuf>>,
+        pub rotations: RefCell<BTreeMap<PathBuf, i64>>,
+        pub previews: RefCell<BTreeMap<PathBuf, crate::preview::PagePreview>>,
+        pub last_output: RefCell<Option<PathBuf>>,
+    }
+
+    #[derive(Debug, Default)]
+    pub struct CompressState {
+        pub file: RefCell<Option<PathBuf>>,
+        pub preview: RefCell<Option<crate::preview::PagePreview>>,
+        pub last_output: RefCell<Option<PathBuf>>,
+    }
+
+    #[derive(Debug, Default)]
+    pub struct OrganizeState {
+        pub file: RefCell<Option<PathBuf>>,
+        pub page_count: Cell<usize>,
+        pub previews: RefCell<Vec<crate::preview::PagePreview>>,
+        pub page_order: RefCell<Vec<u32>>,
+        pub rotations: RefCell<BTreeMap<u32, i64>>,
+        pub last_output: RefCell<Option<PathBuf>>,
+    }
+
+    #[derive(Debug, Default)]
+    pub struct ExtractState {
+        pub file: RefCell<Option<PathBuf>>,
+        pub page_count: Cell<usize>,
+        pub previews: RefCell<Vec<crate::preview::PagePreview>>,
+        pub selected_pages: RefCell<Vec<u32>>,
+        pub rotations: RefCell<BTreeMap<u32, i64>>,
+        pub last_output: RefCell<Option<PathBuf>>,
+    }
+
+    #[derive(Debug, Default)]
+    pub struct SplitState {
+        pub file: RefCell<Option<PathBuf>>,
+        pub page_count: Cell<usize>,
+        pub preview: RefCell<Option<crate::preview::PagePreview>>,
+        pub last_output: RefCell<Option<PathBuf>>,
+    }
+
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/fvtronics/folios/window.ui")]
     pub struct FoliosWindow {
@@ -208,29 +251,11 @@ mod imp {
 
         pub(super) active_tool: Cell<PdfTool>,
         pub(super) view_mode: Cell<ViewMode>,
-        pub input_files: RefCell<Vec<PathBuf>>,
-        pub merge_rotations: RefCell<BTreeMap<PathBuf, i64>>,
-        pub merge_previews: RefCell<BTreeMap<PathBuf, crate::preview::PagePreview>>,
-        pub last_output: RefCell<Option<PathBuf>>,
-        pub compress_file: RefCell<Option<PathBuf>>,
-        pub compress_preview: RefCell<Option<crate::preview::PagePreview>>,
-        pub compress_last_output: RefCell<Option<PathBuf>>,
-        pub organize_file: RefCell<Option<PathBuf>>,
-        pub organize_page_count: Cell<usize>,
-        pub organize_previews: RefCell<Vec<crate::preview::PagePreview>>,
-        pub organize_page_order: RefCell<Vec<u32>>,
-        pub organize_rotations: RefCell<BTreeMap<u32, i64>>,
-        pub organize_last_output: RefCell<Option<PathBuf>>,
-        pub extract_file: RefCell<Option<PathBuf>>,
-        pub extract_page_count: Cell<usize>,
-        pub extract_previews: RefCell<Vec<crate::preview::PagePreview>>,
-        pub extract_selected_pages: RefCell<Vec<u32>>,
-        pub extract_rotations: RefCell<BTreeMap<u32, i64>>,
-        pub extract_last_output: RefCell<Option<PathBuf>>,
-        pub split_file: RefCell<Option<PathBuf>>,
-        pub split_page_count: Cell<usize>,
-        pub split_preview: RefCell<Option<crate::preview::PagePreview>>,
-        pub split_last_output: RefCell<Option<PathBuf>>,
+        pub merge: MergeState,
+        pub compress: CompressState,
+        pub organize: OrganizeState,
+        pub extract: ExtractState,
+        pub split: SplitState,
         pub is_running: Cell<bool>,
     }
 
@@ -369,9 +394,9 @@ impl FoliosWindow {
     fn active_tool_has_view_mode_content(&self) -> bool {
         let imp = self.imp();
         match imp.active_tool.get() {
-            PdfTool::Merge => !imp.input_files.borrow().is_empty(),
-            PdfTool::Organize => imp.organize_file.borrow().is_some(),
-            PdfTool::Extract => imp.extract_file.borrow().is_some(),
+            PdfTool::Merge => !imp.merge.files.borrow().is_empty(),
+            PdfTool::Organize => imp.organize.file.borrow().is_some(),
+            PdfTool::Extract => imp.extract.file.borrow().is_some(),
             PdfTool::Compress | PdfTool::Split => false,
         }
     }
@@ -388,11 +413,11 @@ impl FoliosWindow {
     fn open_last_output(&self) {
         let imp = self.imp();
         let path = match imp.active_tool.get() {
-            PdfTool::Merge => imp.last_output.borrow().clone(),
-            PdfTool::Compress => imp.compress_last_output.borrow().clone(),
-            PdfTool::Organize => imp.organize_last_output.borrow().clone(),
-            PdfTool::Extract => imp.extract_last_output.borrow().clone(),
-            PdfTool::Split => imp.split_last_output.borrow().clone(),
+            PdfTool::Merge => imp.merge.last_output.borrow().clone(),
+            PdfTool::Compress => imp.compress.last_output.borrow().clone(),
+            PdfTool::Organize => imp.organize.last_output.borrow().clone(),
+            PdfTool::Extract => imp.extract.last_output.borrow().clone(),
+            PdfTool::Split => imp.split.last_output.borrow().clone(),
         };
         let Some(path) = path else {
             return;

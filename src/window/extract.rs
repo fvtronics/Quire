@@ -1,13 +1,14 @@
 use super::ui::{
-    file_title, format_page_ranges, icon_button, normalize_pages, page_count_label, pdf_filters,
-    rotated_list_preview_prefix, rotated_preview_picture,
+    format_page_ranges, icon_button, normalize_pages, open_pdf_file, page_count_label,
+    pdf_file_row, preview_tile, rotated_list_preview_prefix, save_pdf_file, tile_controls,
+    tile_label, tile_preview_widget,
 };
 use super::FoliosWindow;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 impl FoliosWindow {
     pub(super) fn setup_extract_callbacks(&self) {
@@ -40,19 +41,20 @@ impl FoliosWindow {
             let text = text.trim();
 
             if text.is_empty() {
-                imp.extract_selected_pages.borrow_mut().clear();
-                imp.extract_rotations.borrow_mut().clear();
+                imp.extract.selected_pages.borrow_mut().clear();
+                imp.extract.rotations.borrow_mut().clear();
             } else if let Ok(pages) =
-                crate::pdf::parse_page_ranges(text, imp.extract_page_count.get())
+                crate::pdf::parse_page_ranges(text, imp.extract.page_count.get())
             {
                 let pages = normalize_pages(pages);
-                imp.extract_rotations
+                imp.extract
+                    .rotations
                     .borrow_mut()
                     .retain(|page_number, _| pages.contains(page_number));
-                *imp.extract_selected_pages.borrow_mut() = pages;
+                *imp.extract.selected_pages.borrow_mut() = pages;
             }
 
-            imp.extract_last_output.borrow_mut().take();
+            imp.extract.last_output.borrow_mut().take();
             window.update_extract_view();
         });
     }
@@ -60,28 +62,20 @@ impl FoliosWindow {
     fn choose_extract_file(&self) {
         let window = self.clone();
         glib::spawn_future_local(async move {
-            let dialog = gtk::FileDialog::builder()
-                .title(gettext("Open PDF"))
-                .accept_label(gettext("Open"))
-                .modal(true)
-                .filters(&pdf_filters())
-                .build();
-
-            if let Ok(file) = dialog.open_future(Some(&window)).await {
-                if let Some(path) = file.path() {
-                    window.load_extract_pdf(path);
-                }
+            if let Some(path) = open_pdf_file(&window, &gettext("Open PDF"), &gettext("Open")).await
+            {
+                window.load_extract_pdf(path);
             }
         });
     }
 
     fn choose_extract_output_file(&self) {
         let imp = self.imp();
-        let Some(input_file) = imp.extract_file.borrow().clone() else {
+        let Some(input_file) = imp.extract.file.borrow().clone() else {
             return;
         };
         let page_numbers = if imp.extract_ranges_entry.text().trim().is_empty() {
-            let pages = imp.extract_selected_pages.borrow().clone();
+            let pages = imp.extract.selected_pages.borrow().clone();
             if pages.is_empty() {
                 self.show_toast(&gettext("Choose at least one page to extract."));
                 return;
@@ -96,7 +90,7 @@ impl FoliosWindow {
                 }
             }
         };
-        let rotations = imp.extract_rotations.borrow();
+        let rotations = imp.extract.rotations.borrow();
         let pages = page_numbers
             .into_iter()
             .map(|page_number| crate::pdf::PageSelection {
@@ -107,18 +101,15 @@ impl FoliosWindow {
 
         let window = self.clone();
         glib::spawn_future_local(async move {
-            let dialog = gtk::FileDialog::builder()
-                .title(gettext("Save Extracted Pages"))
-                .accept_label(gettext("Extract"))
-                .initial_name("Extracted.pdf")
-                .modal(true)
-                .filters(&pdf_filters())
-                .build();
-
-            if let Ok(file) = dialog.save_future(Some(&window)).await {
-                if let Some(path) = file.path() {
-                    window.extract_to(input_file, pages, path);
-                }
+            if let Some(path) = save_pdf_file(
+                &window,
+                &gettext("Save Extracted Pages"),
+                &gettext("Extract"),
+                "Extracted.pdf",
+            )
+            .await
+            {
+                window.extract_to(input_file, pages, path);
             }
         });
     }
@@ -126,7 +117,7 @@ impl FoliosWindow {
     fn load_extract_pdf(&self, path: PathBuf) {
         let imp = self.imp();
         imp.is_running.set(true);
-        imp.extract_last_output.borrow_mut().take();
+        imp.extract.last_output.borrow_mut().take();
         self.update_extract_view();
 
         let window = self.clone();
@@ -138,11 +129,11 @@ impl FoliosWindow {
             match result {
                 Ok(previews) => {
                     let page_count = previews.len();
-                    imp.extract_file.borrow_mut().replace(path);
-                    imp.extract_page_count.set(page_count);
-                    *imp.extract_previews.borrow_mut() = previews;
-                    imp.extract_selected_pages.borrow_mut().clear();
-                    imp.extract_rotations.borrow_mut().clear();
+                    imp.extract.file.borrow_mut().replace(path);
+                    imp.extract.page_count.set(page_count);
+                    *imp.extract.previews.borrow_mut() = previews;
+                    imp.extract.selected_pages.borrow_mut().clear();
+                    imp.extract.rotations.borrow_mut().clear();
                     imp.extract_ranges_entry.set_text("");
                 }
                 Err(error) => {
@@ -162,7 +153,7 @@ impl FoliosWindow {
     ) {
         let imp = self.imp();
         imp.is_running.set(true);
-        imp.extract_last_output.borrow_mut().take();
+        imp.extract.last_output.borrow_mut().take();
         self.update_all_views();
 
         let window = self.clone();
@@ -173,7 +164,7 @@ impl FoliosWindow {
 
             match result {
                 Ok(path) => {
-                    imp.extract_last_output.borrow_mut().replace(path);
+                    imp.extract.last_output.borrow_mut().replace(path);
                     window.show_toast(&gettext("Extracted pages saved"));
                 }
                 Err(error) => {
@@ -189,23 +180,23 @@ impl FoliosWindow {
         self.update_view_mode();
 
         let imp = self.imp();
-        let has_file = imp.extract_file.borrow().is_some();
+        let has_file = imp.extract.file.borrow().is_some();
         let has_ranges = !imp.extract_ranges_entry.text().trim().is_empty();
         let has_valid_ranges = has_ranges && self.extract_pages_from_ranges().is_ok();
-        let has_selected_pages = !imp.extract_selected_pages.borrow().is_empty();
+        let has_selected_pages = !imp.extract.selected_pages.borrow().is_empty();
 
         imp.extract_file_list.remove_all();
-        if let Some(path) = imp.extract_file.borrow().as_ref() {
+        if let Some(path) = imp.extract.file.borrow().as_ref() {
             imp.extract_file_list
-                .append(&self.extract_file_row(path, imp.extract_page_count.get()));
+                .append(&self.extract_file_row(path, imp.extract.page_count.get()));
         }
 
         imp.extract_page_list.remove_all();
         imp.extract_page_grid.remove_all();
-        let selected_pages = imp.extract_selected_pages.borrow();
-        let rotations = imp.extract_rotations.borrow();
-        let previews = imp.extract_previews.borrow();
-        for page_number in 1..=imp.extract_page_count.get() as u32 {
+        let selected_pages = imp.extract.selected_pages.borrow();
+        let rotations = imp.extract.rotations.borrow();
+        let previews = imp.extract.previews.borrow();
+        for page_number in 1..=imp.extract.page_count.get() as u32 {
             let preview = previews
                 .iter()
                 .find(|preview| preview.page_number == page_number);
@@ -230,7 +221,7 @@ impl FoliosWindow {
         imp.extract_choose_button.set_visible(has_file);
         imp.extract_save_button.set_visible(has_file);
         imp.extract_open_output_button
-            .set_visible(imp.extract_last_output.borrow().is_some());
+            .set_visible(imp.extract.last_output.borrow().is_some());
 
         imp.extract_choose_button
             .set_sensitive(!imp.is_running.get());
@@ -242,14 +233,14 @@ impl FoliosWindow {
                 && !imp.is_running.get(),
         );
         imp.extract_open_output_button
-            .set_sensitive(imp.extract_last_output.borrow().is_some() && !imp.is_running.get());
+            .set_sensitive(imp.extract.last_output.borrow().is_some() && !imp.is_running.get());
         imp.extract_ranges_entry
             .set_sensitive(has_file && !imp.is_running.get());
 
         let detail = if imp.is_running.get() {
             gettext("Extracting pages...")
         } else if has_file {
-            page_count_label(imp.extract_page_count.get())
+            page_count_label(imp.extract.page_count.get())
         } else {
             gettext("No PDF selected")
         };
@@ -260,20 +251,12 @@ impl FoliosWindow {
         let imp = self.imp();
         crate::pdf::parse_page_ranges(
             imp.extract_ranges_entry.text().as_str(),
-            imp.extract_page_count.get(),
+            imp.extract.page_count.get(),
         )
     }
 
-    fn extract_file_row(&self, path: &Path, page_count: usize) -> adw::ActionRow {
-        let row = adw::ActionRow::builder()
-            .title(file_title(path))
-            .subtitle(page_count_label(page_count))
-            .activatable(false)
-            .build();
-
-        let icon = gtk::Image::from_icon_name("view-paged-symbolic");
-        row.add_prefix(&icon);
-        row
+    fn extract_file_row(&self, path: &std::path::Path, page_count: usize) -> adw::ActionRow {
+        pdf_file_row(path, page_count_label(page_count))
     }
 
     fn extract_page_row(
@@ -321,26 +304,12 @@ impl FoliosWindow {
         selected: bool,
         rotation: i64,
     ) -> gtk::Box {
-        let tile = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(6)
-            .width_request(180)
-            .build();
+        let tile = preview_tile();
+        tile.append(&tile_preview_widget(Some(preview), rotation));
 
-        let picture = rotated_preview_picture(preview, rotation);
-        picture.set_size_request(160, 220);
-        tile.append(&picture);
-
-        let footer = gtk::Box::builder()
-            .orientation(gtk::Orientation::Horizontal)
-            .spacing(6)
-            .build();
-        let label = gtk::Label::builder()
-            .label(format!("{} {}", gettext("Page"), preview.page_number))
-            .xalign(0.0)
-            .hexpand(true)
-            .ellipsize(gtk::pango::EllipsizeMode::End)
-            .build();
+        let footer = tile_controls();
+        let label = tile_label(format!("{} {}", gettext("Page"), preview.page_number));
+        label.set_hexpand(true);
         let rotate_button =
             icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
         rotate_button.set_sensitive(selected && !self.imp().is_running.get());
@@ -371,7 +340,7 @@ impl FoliosWindow {
 
     fn toggle_extract_page(&self, page_number: u32, selected: bool) {
         let imp = self.imp();
-        let mut pages = imp.extract_selected_pages.borrow_mut();
+        let mut pages = imp.extract.selected_pages.borrow_mut();
 
         if selected {
             if !pages.contains(&page_number) {
@@ -380,10 +349,10 @@ impl FoliosWindow {
             }
         } else {
             pages.retain(|page| *page != page_number);
-            imp.extract_rotations.borrow_mut().remove(&page_number);
+            imp.extract.rotations.borrow_mut().remove(&page_number);
         }
 
-        imp.extract_last_output.borrow_mut().take();
+        imp.extract.last_output.borrow_mut().take();
         drop(pages);
 
         self.update_extract_ranges_entry();
@@ -393,18 +362,18 @@ impl FoliosWindow {
 
     fn rotate_extract_page(&self, page_number: u32) {
         let imp = self.imp();
-        if !imp.extract_selected_pages.borrow().contains(&page_number) {
+        if !imp.extract.selected_pages.borrow().contains(&page_number) {
             return;
         }
 
-        let mut rotations = imp.extract_rotations.borrow_mut();
+        let mut rotations = imp.extract.rotations.borrow_mut();
         let rotation = (rotations.get(&page_number).copied().unwrap_or(0) + 90).rem_euclid(360);
         if rotation == 0 {
             rotations.remove(&page_number);
         } else {
             rotations.insert(page_number, rotation);
         }
-        imp.extract_last_output.borrow_mut().take();
+        imp.extract.last_output.borrow_mut().take();
         drop(rotations);
 
         self.update_extract_view();
@@ -413,7 +382,7 @@ impl FoliosWindow {
     fn update_extract_ranges_entry(&self) {
         let imp = self.imp();
         let text = {
-            let pages = imp.extract_selected_pages.borrow();
+            let pages = imp.extract.selected_pages.borrow();
             format_page_ranges(&pages)
         };
 

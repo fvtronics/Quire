@@ -1,12 +1,12 @@
 use super::ui::{
-    file_subtitle, file_title, icon_button, pdf_filters, rotated_list_preview_prefix,
-    rotated_preview_picture,
+    dim_tile_label, file_subtitle, file_title, icon_button, open_pdf_files, preview_tile,
+    rotated_list_preview_prefix, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::FoliosWindow;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
-use gtk::{gio, glib};
+use gtk::glib;
 use std::path::{Path, PathBuf};
 
 impl FoliosWindow {
@@ -26,10 +26,10 @@ impl FoliosWindow {
         let window = self.clone();
         imp.clear_button.connect_clicked(move |_| {
             let imp = window.imp();
-            imp.input_files.borrow_mut().clear();
-            imp.merge_rotations.borrow_mut().clear();
-            imp.merge_previews.borrow_mut().clear();
-            imp.last_output.borrow_mut().take();
+            imp.merge.files.borrow_mut().clear();
+            imp.merge.rotations.borrow_mut().clear();
+            imp.merge.previews.borrow_mut().clear();
+            imp.merge.last_output.borrow_mut().take();
             window.update_files_view();
         });
 
@@ -47,22 +47,8 @@ impl FoliosWindow {
     fn choose_pdf_files(&self) {
         let window = self.clone();
         glib::spawn_future_local(async move {
-            let dialog = gtk::FileDialog::builder()
-                .title(gettext("Add PDFs"))
-                .accept_label(gettext("Add"))
-                .modal(true)
-                .filters(&pdf_filters())
-                .build();
-
-            if let Ok(files) = dialog.open_multiple_future(Some(&window)).await {
-                let mut paths = Vec::new();
-                for position in 0..files.n_items() {
-                    if let Some(file) = files.item(position).and_downcast::<gio::File>() {
-                        if let Some(path) = file.path() {
-                            paths.push(path);
-                        }
-                    }
-                }
+            let paths = open_pdf_files(&window, &gettext("Add PDFs"), &gettext("Add")).await;
+            if !paths.is_empty() {
                 window.add_files(paths);
             }
         });
@@ -71,18 +57,15 @@ impl FoliosWindow {
     fn choose_output_file(&self) {
         let window = self.clone();
         glib::spawn_future_local(async move {
-            let dialog = gtk::FileDialog::builder()
-                .title(gettext("Save Merged PDF"))
-                .accept_label(gettext("Merge"))
-                .initial_name("Merged.pdf")
-                .modal(true)
-                .filters(&pdf_filters())
-                .build();
-
-            if let Ok(file) = dialog.save_future(Some(&window)).await {
-                if let Some(path) = file.path() {
-                    window.merge_to(path);
-                }
+            if let Some(path) = save_pdf_file(
+                &window,
+                &gettext("Save Merged PDF"),
+                &gettext("Merge"),
+                "Merged.pdf",
+            )
+            .await
+            {
+                window.merge_to(path);
             }
         });
     }
@@ -94,15 +77,15 @@ impl FoliosWindow {
 
         let imp = self.imp();
         let paths_to_preview = {
-            let previews = imp.merge_previews.borrow();
+            let previews = imp.merge.previews.borrow();
             paths
                 .iter()
                 .filter(|path| !previews.contains_key(*path))
                 .cloned()
                 .collect::<Vec<_>>()
         };
-        imp.input_files.borrow_mut().extend(paths);
-        imp.last_output.borrow_mut().take();
+        imp.merge.files.borrow_mut().extend(paths);
+        imp.merge.last_output.borrow_mut().take();
         self.update_files_view();
 
         for path in paths_to_preview {
@@ -117,8 +100,8 @@ impl FoliosWindow {
             let imp = window.imp();
 
             if let Ok(Some(preview)) = result {
-                if imp.input_files.borrow().contains(&path) {
-                    imp.merge_previews.borrow_mut().insert(path, preview);
+                if imp.merge.files.borrow().contains(&path) {
+                    imp.merge.previews.borrow_mut().insert(path, preview);
                     window.update_files_view();
                 }
             }
@@ -127,9 +110,10 @@ impl FoliosWindow {
 
     fn merge_to(&self, output_file: PathBuf) {
         let imp = self.imp();
-        let rotations = imp.merge_rotations.borrow();
+        let rotations = imp.merge.rotations.borrow();
         let input_files = imp
-            .input_files
+            .merge
+            .files
             .borrow()
             .iter()
             .map(|path| crate::pdf::PdfInput {
@@ -139,7 +123,7 @@ impl FoliosWindow {
             .collect::<Vec<_>>();
 
         imp.is_running.set(true);
-        imp.last_output.borrow_mut().take();
+        imp.merge.last_output.borrow_mut().take();
         self.update_all_views();
 
         let window = self.clone();
@@ -150,7 +134,7 @@ impl FoliosWindow {
 
             match result {
                 Ok(path) => {
-                    imp.last_output.borrow_mut().replace(path);
+                    imp.merge.last_output.borrow_mut().replace(path);
                     window.show_toast(&gettext("Merged PDF saved"));
                 }
                 Err(error) => {
@@ -166,11 +150,11 @@ impl FoliosWindow {
         self.update_view_mode();
 
         let imp = self.imp();
-        let files = imp.input_files.borrow();
+        let files = imp.merge.files.borrow();
         let has_files = !files.is_empty();
         let can_merge = files.len() > 1 && !imp.is_running.get();
-        let previews = imp.merge_previews.borrow();
-        let rotations = imp.merge_rotations.borrow();
+        let previews = imp.merge.previews.borrow();
+        let rotations = imp.merge.rotations.borrow();
 
         imp.file_list.remove_all();
         imp.merge_file_grid.remove_all();
@@ -198,7 +182,7 @@ impl FoliosWindow {
         imp.clear_button.set_visible(has_files);
         imp.merge_button.set_visible(has_files);
         imp.open_output_button
-            .set_visible(imp.last_output.borrow().is_some());
+            .set_visible(imp.merge.last_output.borrow().is_some());
 
         imp.add_button
             .set_sensitive(has_files && !imp.is_running.get());
@@ -206,7 +190,7 @@ impl FoliosWindow {
             .set_sensitive(has_files && !imp.is_running.get());
         imp.merge_button.set_sensitive(can_merge);
         imp.open_output_button
-            .set_sensitive(imp.last_output.borrow().is_some() && !imp.is_running.get());
+            .set_sensitive(imp.merge.last_output.borrow().is_some() && !imp.is_running.get());
 
         let count_text = if imp.is_running.get() {
             gettext("Merging PDFs...")
@@ -283,40 +267,12 @@ impl FoliosWindow {
         preview: Option<&crate::preview::PagePreview>,
         rotation: i64,
     ) -> gtk::Box {
-        let tile = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(6)
-            .width_request(180)
-            .build();
+        let tile = preview_tile();
+        tile.append(&tile_preview_widget(preview, rotation));
+        tile.append(&tile_label(file_title(path)));
 
-        if let Some(preview) = preview {
-            let picture = rotated_preview_picture(preview, rotation);
-            picture.set_size_request(160, 220);
-            tile.append(&picture);
-        } else {
-            let placeholder = gtk::Image::from_icon_name("view-paged-symbolic");
-            placeholder.set_size_request(160, 220);
-            tile.append(&placeholder);
-        }
-
-        let label = gtk::Label::builder()
-            .label(file_title(path))
-            .xalign(0.0)
-            .ellipsize(gtk::pango::EllipsizeMode::End)
-            .build();
-        tile.append(&label);
-
-        let controls = gtk::Box::builder()
-            .orientation(gtk::Orientation::Horizontal)
-            .spacing(6)
-            .build();
-        let size = gtk::Label::builder()
-            .label(file_subtitle(path))
-            .xalign(0.0)
-            .hexpand(true)
-            .ellipsize(gtk::pango::EllipsizeMode::End)
-            .build();
-        size.add_css_class("dim-label");
+        let controls = tile_controls();
+        let size = dim_tile_label(file_subtitle(path));
         controls.append(&size);
 
         let controls_sensitive = !self.imp().is_running.get();
@@ -361,27 +317,27 @@ impl FoliosWindow {
 
     fn move_file(&self, from: usize, to: usize) {
         let imp = self.imp();
-        let mut files = imp.input_files.borrow_mut();
+        let mut files = imp.merge.files.borrow_mut();
         files.swap(from, to);
-        imp.last_output.borrow_mut().take();
+        imp.merge.last_output.borrow_mut().take();
         drop(files);
         self.update_files_view();
     }
 
     fn rotate_file(&self, index: usize) {
         let imp = self.imp();
-        let Some(path) = imp.input_files.borrow().get(index).cloned() else {
+        let Some(path) = imp.merge.files.borrow().get(index).cloned() else {
             return;
         };
 
-        let mut rotations = imp.merge_rotations.borrow_mut();
+        let mut rotations = imp.merge.rotations.borrow_mut();
         let rotation = (rotations.get(&path).copied().unwrap_or(0) + 90).rem_euclid(360);
         if rotation == 0 {
             rotations.remove(&path);
         } else {
             rotations.insert(path, rotation);
         }
-        imp.last_output.borrow_mut().take();
+        imp.merge.last_output.borrow_mut().take();
         drop(rotations);
 
         self.update_files_view();
@@ -393,14 +349,14 @@ impl FoliosWindow {
         }
 
         let imp = self.imp();
-        let mut files = imp.input_files.borrow_mut();
+        let mut files = imp.merge.files.borrow_mut();
         if from >= files.len() || to >= files.len() {
             return;
         }
 
         let file = files.remove(from);
         files.insert(to, file);
-        imp.last_output.borrow_mut().take();
+        imp.merge.last_output.borrow_mut().take();
         drop(files);
 
         self.update_files_view();
@@ -432,11 +388,11 @@ impl FoliosWindow {
 
     fn remove_file(&self, index: usize) {
         let imp = self.imp();
-        let path = imp.input_files.borrow_mut().remove(index);
-        if !imp.input_files.borrow().contains(&path) {
-            imp.merge_rotations.borrow_mut().remove(&path);
+        let path = imp.merge.files.borrow_mut().remove(index);
+        if !imp.merge.files.borrow().contains(&path) {
+            imp.merge.rotations.borrow_mut().remove(&path);
         }
-        imp.last_output.borrow_mut().take();
+        imp.merge.last_output.borrow_mut().take();
         self.update_files_view();
     }
 }

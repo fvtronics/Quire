@@ -1,6 +1,6 @@
 use super::ui::{
-    icon_button, page_count_label, pdf_filters, rotated_list_preview_prefix,
-    rotated_preview_picture,
+    dim_tile_label, icon_button, open_pdf_file, page_count_label, preview_tile,
+    rotated_list_preview_prefix, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::FoliosWindow;
 use adw::prelude::*;
@@ -42,17 +42,9 @@ impl FoliosWindow {
     fn choose_organize_file(&self) {
         let window = self.clone();
         glib::spawn_future_local(async move {
-            let dialog = gtk::FileDialog::builder()
-                .title(gettext("Open PDF"))
-                .accept_label(gettext("Open"))
-                .modal(true)
-                .filters(&pdf_filters())
-                .build();
-
-            if let Ok(file) = dialog.open_future(Some(&window)).await {
-                if let Some(path) = file.path() {
-                    window.load_organize_pdf(path);
-                }
+            if let Some(path) = open_pdf_file(&window, &gettext("Open PDF"), &gettext("Open")).await
+            {
+                window.load_organize_pdf(path);
             }
         });
     }
@@ -60,18 +52,15 @@ impl FoliosWindow {
     fn choose_organize_output_file(&self) {
         let window = self.clone();
         glib::spawn_future_local(async move {
-            let dialog = gtk::FileDialog::builder()
-                .title(gettext("Save Organized PDF"))
-                .accept_label(gettext("Save"))
-                .initial_name("Organized.pdf")
-                .modal(true)
-                .filters(&pdf_filters())
-                .build();
-
-            if let Ok(file) = dialog.save_future(Some(&window)).await {
-                if let Some(path) = file.path() {
-                    window.organize_to(path);
-                }
+            if let Some(path) = save_pdf_file(
+                &window,
+                &gettext("Save Organized PDF"),
+                &gettext("Save"),
+                "Organized.pdf",
+            )
+            .await
+            {
+                window.organize_to(path);
             }
         });
     }
@@ -79,7 +68,7 @@ impl FoliosWindow {
     fn load_organize_pdf(&self, path: PathBuf) {
         let imp = self.imp();
         imp.is_running.set(true);
-        imp.organize_last_output.borrow_mut().take();
+        imp.organize.last_output.borrow_mut().take();
         self.update_organize_view();
 
         let window = self.clone();
@@ -91,13 +80,13 @@ impl FoliosWindow {
             match result {
                 Ok(previews) => {
                     let page_count = previews.len();
-                    imp.organize_file.borrow_mut().replace(path);
-                    imp.organize_page_count.set(page_count);
-                    *imp.organize_previews.borrow_mut() = previews;
-                    let mut page_order = imp.organize_page_order.borrow_mut();
+                    imp.organize.file.borrow_mut().replace(path);
+                    imp.organize.page_count.set(page_count);
+                    *imp.organize.previews.borrow_mut() = previews;
+                    let mut page_order = imp.organize.page_order.borrow_mut();
                     page_order.clear();
                     page_order.extend(1..=page_count as u32);
-                    imp.organize_rotations.borrow_mut().clear();
+                    imp.organize.rotations.borrow_mut().clear();
                 }
                 Err(error) => {
                     window.show_toast(&error.to_string());
@@ -110,29 +99,30 @@ impl FoliosWindow {
 
     fn reset_organize_pdf(&self) {
         let imp = self.imp();
-        let page_count = imp.organize_page_count.get();
+        let page_count = imp.organize.page_count.get();
 
-        if imp.organize_file.borrow().is_none() || page_count == 0 {
+        if imp.organize.file.borrow().is_none() || page_count == 0 {
             return;
         }
 
-        let mut page_order = imp.organize_page_order.borrow_mut();
+        let mut page_order = imp.organize.page_order.borrow_mut();
         page_order.clear();
         page_order.extend(1..=page_count as u32);
-        imp.organize_rotations.borrow_mut().clear();
-        imp.organize_last_output.borrow_mut().take();
+        imp.organize.rotations.borrow_mut().clear();
+        imp.organize.last_output.borrow_mut().take();
         drop(page_order);
         self.update_organize_view();
     }
 
     fn organize_to(&self, output_file: PathBuf) {
         let imp = self.imp();
-        let Some(input_file) = imp.organize_file.borrow().clone() else {
+        let Some(input_file) = imp.organize.file.borrow().clone() else {
             return;
         };
-        let rotations = imp.organize_rotations.borrow();
+        let rotations = imp.organize.rotations.borrow();
         let page_order = imp
-            .organize_page_order
+            .organize
+            .page_order
             .borrow()
             .iter()
             .map(|page_number| crate::pdf::PageSelection {
@@ -142,7 +132,7 @@ impl FoliosWindow {
             .collect::<Vec<_>>();
 
         imp.is_running.set(true);
-        imp.organize_last_output.borrow_mut().take();
+        imp.organize.last_output.borrow_mut().take();
         self.update_all_views();
 
         let window = self.clone();
@@ -153,7 +143,7 @@ impl FoliosWindow {
 
             match result {
                 Ok(path) => {
-                    imp.organize_last_output.borrow_mut().replace(path);
+                    imp.organize.last_output.borrow_mut().replace(path);
                     window.show_toast(&gettext("Organized PDF saved"));
                 }
                 Err(error) => {
@@ -169,11 +159,11 @@ impl FoliosWindow {
         self.update_view_mode();
 
         let imp = self.imp();
-        let page_order = imp.organize_page_order.borrow();
-        let has_file = imp.organize_file.borrow().is_some();
+        let page_order = imp.organize.page_order.borrow();
+        let has_file = imp.organize.file.borrow().is_some();
         let has_pages = !page_order.is_empty();
-        let previews = imp.organize_previews.borrow();
-        let rotations = imp.organize_rotations.borrow();
+        let previews = imp.organize.previews.borrow();
+        let rotations = imp.organize.rotations.borrow();
 
         imp.organize_page_list.remove_all();
         imp.organize_page_grid.remove_all();
@@ -205,7 +195,7 @@ impl FoliosWindow {
         imp.organize_reset_button.set_visible(has_file);
         imp.organize_save_button.set_visible(has_file);
         imp.organize_open_output_button
-            .set_visible(imp.organize_last_output.borrow().is_some());
+            .set_visible(imp.organize.last_output.borrow().is_some());
 
         imp.organize_choose_button
             .set_sensitive(!imp.is_running.get());
@@ -216,7 +206,7 @@ impl FoliosWindow {
         imp.organize_save_button
             .set_sensitive(has_pages && !imp.is_running.get());
         imp.organize_open_output_button
-            .set_sensitive(imp.organize_last_output.borrow().is_some() && !imp.is_running.get());
+            .set_sensitive(imp.organize.last_output.borrow().is_some() && !imp.is_running.get());
 
         let detail = if imp.is_running.get() {
             gettext("Organizing pages...")
@@ -295,34 +285,16 @@ impl FoliosWindow {
         count: usize,
         rotation: i64,
     ) -> gtk::Box {
-        let tile = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(6)
-            .width_request(180)
-            .build();
+        let tile = preview_tile();
+        tile.append(&tile_preview_widget(Some(preview), rotation));
+        tile.append(&tile_label(format!(
+            "{} {}",
+            gettext("Page"),
+            preview.page_number
+        )));
 
-        let picture = rotated_preview_picture(preview, rotation);
-        picture.set_size_request(160, 220);
-        tile.append(&picture);
-
-        let label = gtk::Label::builder()
-            .label(format!("{} {}", gettext("Page"), preview.page_number))
-            .xalign(0.0)
-            .ellipsize(gtk::pango::EllipsizeMode::End)
-            .build();
-        tile.append(&label);
-
-        let controls = gtk::Box::builder()
-            .orientation(gtk::Orientation::Horizontal)
-            .spacing(6)
-            .build();
-        let position = gtk::Label::builder()
-            .label(format!("{}/{}", index + 1, count))
-            .xalign(0.0)
-            .hexpand(true)
-            .ellipsize(gtk::pango::EllipsizeMode::End)
-            .build();
-        position.add_css_class("dim-label");
+        let controls = tile_controls();
+        let position = dim_tile_label(format!("{}/{}", index + 1, count));
         controls.append(&position);
 
         let controls_sensitive = !self.imp().is_running.get();
@@ -369,23 +341,23 @@ impl FoliosWindow {
 
     fn move_page(&self, from: usize, to: usize) {
         let imp = self.imp();
-        let mut pages = imp.organize_page_order.borrow_mut();
+        let mut pages = imp.organize.page_order.borrow_mut();
         pages.swap(from, to);
-        imp.organize_last_output.borrow_mut().take();
+        imp.organize.last_output.borrow_mut().take();
         drop(pages);
         self.update_organize_view();
     }
 
     fn rotate_page(&self, page_number: u32) {
         let imp = self.imp();
-        let mut rotations = imp.organize_rotations.borrow_mut();
+        let mut rotations = imp.organize.rotations.borrow_mut();
         let rotation = (rotations.get(&page_number).copied().unwrap_or(0) + 90).rem_euclid(360);
         if rotation == 0 {
             rotations.remove(&page_number);
         } else {
             rotations.insert(page_number, rotation);
         }
-        imp.organize_last_output.borrow_mut().take();
+        imp.organize.last_output.borrow_mut().take();
         drop(rotations);
 
         self.update_organize_view();
@@ -397,7 +369,7 @@ impl FoliosWindow {
         }
 
         let imp = self.imp();
-        let mut pages = imp.organize_page_order.borrow_mut();
+        let mut pages = imp.organize.page_order.borrow_mut();
         let Some(from) = pages.iter().position(|page| *page == dragged_page) else {
             return;
         };
@@ -407,7 +379,7 @@ impl FoliosWindow {
 
         let page = pages.remove(from);
         pages.insert(to, page);
-        imp.organize_last_output.borrow_mut().take();
+        imp.organize.last_output.borrow_mut().take();
         drop(pages);
 
         self.update_organize_view();
@@ -439,13 +411,13 @@ impl FoliosWindow {
 
     fn remove_page(&self, index: usize) {
         let imp = self.imp();
-        if imp.organize_page_order.borrow().len() <= 1 {
+        if imp.organize.page_order.borrow().len() <= 1 {
             return;
         }
 
-        let page_number = imp.organize_page_order.borrow_mut().remove(index);
-        imp.organize_rotations.borrow_mut().remove(&page_number);
-        imp.organize_last_output.borrow_mut().take();
+        let page_number = imp.organize.page_order.borrow_mut().remove(index);
+        imp.organize.rotations.borrow_mut().remove(&page_number);
+        imp.organize.last_output.borrow_mut().take();
 
         self.update_organize_view();
     }

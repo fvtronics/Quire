@@ -3,7 +3,7 @@ use gettextrs::{gettext, ngettext};
 use gtk::gdk_pixbuf::PixbufRotation;
 use gtk::gio;
 use std::io::Cursor;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub(super) fn pdf_filters() -> gio::ListStore {
     let filter = gtk::FileFilter::new();
@@ -16,6 +16,65 @@ pub(super) fn pdf_filters() -> gio::ListStore {
     filters
 }
 
+pub(super) async fn open_pdf_file(
+    parent: &impl IsA<gtk::Window>,
+    title: &str,
+    accept_label: &str,
+) -> Option<PathBuf> {
+    pdf_file_dialog(title, accept_label, None)
+        .open_future(Some(parent))
+        .await
+        .ok()
+        .and_then(|file| file.path())
+}
+
+pub(super) async fn open_pdf_files(
+    parent: &impl IsA<gtk::Window>,
+    title: &str,
+    accept_label: &str,
+) -> Vec<PathBuf> {
+    let Ok(files) = pdf_file_dialog(title, accept_label, None)
+        .open_multiple_future(Some(parent))
+        .await
+    else {
+        return Vec::new();
+    };
+
+    (0..files.n_items())
+        .filter_map(|position| files.item(position).and_downcast::<gio::File>())
+        .filter_map(|file| file.path())
+        .collect()
+}
+
+pub(super) async fn save_pdf_file(
+    parent: &impl IsA<gtk::Window>,
+    title: &str,
+    accept_label: &str,
+    initial_name: &str,
+) -> Option<PathBuf> {
+    pdf_file_dialog(title, accept_label, Some(initial_name))
+        .save_future(Some(parent))
+        .await
+        .ok()
+        .and_then(|file| file.path())
+}
+
+pub(super) async fn select_folder(
+    parent: &impl IsA<gtk::Window>,
+    title: &str,
+    accept_label: &str,
+) -> Option<PathBuf> {
+    gtk::FileDialog::builder()
+        .title(title)
+        .accept_label(accept_label)
+        .modal(true)
+        .build()
+        .select_folder_future(Some(parent))
+        .await
+        .ok()
+        .and_then(|folder| folder.path())
+}
+
 pub(super) fn icon_button(icon_name: &str, tooltip: &str) -> gtk::Button {
     let button = gtk::Button::builder()
         .icon_name(icon_name)
@@ -24,6 +83,17 @@ pub(super) fn icon_button(icon_name: &str, tooltip: &str) -> gtk::Button {
         .build();
     button.add_css_class("flat");
     button
+}
+
+pub(super) fn pdf_file_row(path: &Path, subtitle: String) -> adw::ActionRow {
+    let row = adw::ActionRow::builder()
+        .title(file_title(path))
+        .subtitle(subtitle)
+        .activatable(false)
+        .build();
+
+    row.add_prefix(&gtk::Image::from_icon_name("view-paged-symbolic"));
+    row
 }
 
 pub(super) fn file_title(path: &Path) -> &str {
@@ -95,6 +165,51 @@ pub(super) fn single_file_preview_widget(
     }
 }
 
+pub(super) fn preview_tile() -> gtk::Box {
+    gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(6)
+        .width_request(180)
+        .build()
+}
+
+pub(super) fn tile_preview_widget(
+    preview: Option<&crate::preview::PagePreview>,
+    rotation: i64,
+) -> gtk::Widget {
+    if let Some(preview) = preview {
+        let picture = rotated_preview_picture(preview, rotation);
+        picture.set_size_request(160, 220);
+        picture.upcast()
+    } else {
+        let placeholder = gtk::Image::from_icon_name("view-paged-symbolic");
+        placeholder.set_size_request(160, 220);
+        placeholder.upcast()
+    }
+}
+
+pub(super) fn tile_label(text: impl AsRef<str>) -> gtk::Label {
+    gtk::Label::builder()
+        .label(text.as_ref())
+        .xalign(0.0)
+        .ellipsize(gtk::pango::EllipsizeMode::End)
+        .build()
+}
+
+pub(super) fn dim_tile_label(text: impl AsRef<str>) -> gtk::Label {
+    let label = tile_label(text);
+    label.set_hexpand(true);
+    label.add_css_class("dim-label");
+    label
+}
+
+pub(super) fn tile_controls() -> gtk::Box {
+    gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(6)
+        .build()
+}
+
 pub(super) fn clear_box(box_: &gtk::Box) {
     while let Some(child) = box_.first_child() {
         box_.remove(&child);
@@ -150,6 +265,21 @@ fn format_size(bytes: u64) -> String {
 
 fn normalize_rotation(rotation: i64) -> i64 {
     rotation.rem_euclid(360)
+}
+
+fn pdf_file_dialog(title: &str, accept_label: &str, initial_name: Option<&str>) -> gtk::FileDialog {
+    let dialog = gtk::FileDialog::builder()
+        .title(title)
+        .accept_label(accept_label)
+        .modal(true)
+        .filters(&pdf_filters())
+        .build();
+
+    if let Some(initial_name) = initial_name {
+        dialog.set_initial_name(Some(initial_name));
+    }
+
+    dialog
 }
 
 fn format_page_range(start: u32, end: u32) -> String {
