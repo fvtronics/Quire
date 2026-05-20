@@ -54,6 +54,24 @@
   </branding>
 
   <releases>
+    <release version="0.1.1" date="2026-05-20">
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>Added page rotation to merge, organize, and extract pages</li>
+        </ul>
+        <p>Optimizations</p>
+        <ul>
+          <li>Made preview loading more consistent across tabs</li>
+          <li>Improved temporary file handling</li>
+          <li>Refactored shared PDF helpers to reduce duplicated code</li>
+        </ul>
+        <p>Changes</p>
+        <ul>
+          <li>Updated the compress tool icon</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-05-18">
       <description translate="no">
         <p>Initial version with the core PDF tools.</p>
