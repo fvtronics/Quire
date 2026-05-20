@@ -42,7 +42,8 @@ impl SplitMode {
 
 mod imp {
     use super::super::state::SplitState;
-    use super::*;
+    use adw::subclass::prelude::*;
+    use gtk::{glib, TemplateChild};
     use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
@@ -382,7 +383,10 @@ fn split_default_prefix(path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{
+        SplitMode, SPLIT_EVEN_PAGES, SPLIT_EVERY_N_PAGES, SPLIT_EVERY_PAGE, SPLIT_ODD_PAGES,
+        SPLIT_SPECIFIC_PAGES,
+    };
 
     #[test]
     fn split_mode_maps_known_indices() {

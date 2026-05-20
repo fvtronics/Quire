@@ -13,7 +13,8 @@ use std::path::PathBuf;
 
 mod imp {
     use super::super::state::CompressState;
-    use super::*;
+    use adw::subclass::prelude::*;
+    use gtk::{glib, TemplateChild};
     use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]

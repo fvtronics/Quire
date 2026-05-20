@@ -378,7 +378,8 @@ fn move_vec_item<T>(items: &mut Vec<T>, from: usize, to: usize) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{ExtractState, JobState, MergeState, OrganizeState};
+    use std::path::PathBuf;
 
     fn document_previews(
         page_count: usize,

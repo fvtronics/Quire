@@ -10,12 +10,13 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::glib;
-use std::cell::Cell;
 use std::path::{Path, PathBuf};
 
 mod imp {
     use super::super::state::MergeState;
-    use super::*;
+    use adw::subclass::prelude::*;
+    use gtk::{glib, TemplateChild};
+    use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/fvtronics/folios/merge-workspace.ui")]

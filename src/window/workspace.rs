@@ -184,7 +184,7 @@ fn preview_error_message(_error: &crate::preview::PreviewError) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{backend_error_message, preview_error_message};
     use crate::pdf::PdfBackendError;
     use crate::preview::PreviewError;
     use std::path::PathBuf;

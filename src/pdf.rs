@@ -680,9 +680,14 @@ fn split_output_prefix(input_file: &Path, prefix: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use lopdf::{dictionary, Stream};
+    use super::{
+        compress_pdf_blocking, merge_pdfs_blocking, parse_page_numbers, parse_page_ranges,
+        split_breaks, split_pdf_blocking, write_selected_pages, CompressOptions, PageSelection,
+        PdfBackendError, PdfInput, SplitRule,
+    };
+    use lopdf::{dictionary, Document, Object, Stream};
     use std::fs;
+    use std::path::{Path, PathBuf};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     struct TestDir {

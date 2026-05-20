@@ -19,15 +19,16 @@
  */
 
 use adw::prelude::*;
-use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 
 use crate::config::VERSION;
-use crate::FoliosWindow;
 
 mod imp {
-    use super::*;
+    use crate::FoliosWindow;
+    use adw::prelude::*;
+    use adw::subclass::prelude::*;
+    use gtk::glib;
 
     #[derive(Debug, Default)]
     pub struct FoliosApplication {}

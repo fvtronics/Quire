@@ -21,7 +21,6 @@
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gio, glib};
-use std::cell::Cell;
 
 mod compress;
 mod extract;
@@ -67,7 +66,11 @@ mod imp {
     use super::merge::MergeWorkspace;
     use super::organize::OrganizeWorkspace;
     use super::split::SplitWorkspace;
-    use super::*;
+    use super::{PdfTool, ViewMode};
+    use adw::subclass::prelude::*;
+    use gtk::prelude::*;
+    use gtk::{glib, TemplateChild};
+    use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/fvtronics/folios/window.ui")]

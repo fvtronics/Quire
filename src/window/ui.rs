@@ -292,7 +292,7 @@ fn format_page_range(start: u32, end: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{format_page_ranges, normalize_pages};
 
     #[test]
     fn normalize_pages_sorts_and_removes_duplicates() {
