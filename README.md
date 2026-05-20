@@ -8,17 +8,9 @@ documents, and compress files without sending them to an online service.
 
 ## Screenshots
 
-### Merge PDFs
-![Merge PDFs](data/screenshots/merge.png?raw=true "Merge multiple PDF files")
-
-### Organize pages
-![Organize pages](data/screenshots/organize.png?raw=true "Organize PDF pages")
-
-### Extract pages
-![Extract pages](data/screenshots/extract.png?raw=true "Extract PDF pages")
-
-### Split documents
-![Split documents](data/screenshots/split.png?raw=true "Split PDF documents")
+Merge PDFs | Organize pages | Extract pages | Split documents | Compress files
+:------------------:|:-----------------:|:----------------:|:---------------------------:|:----------------:
+![Merge PDFs](data/screenshots/merge.png?raw=true "Merge multiple PDF files") | ![Organize pages](data/screenshots/organize.png?raw=true "Organize PDF pages") | ![Extract pages](data/screenshots/extract.png?raw=true "Extract PDF pages") | ![Split documents](data/screenshots/split.png?raw=true "Split PDF documents") | ![Compress files](data/screenshots/compress.png?raw=true "Compress PDF files")
 
 ## How to install
 
