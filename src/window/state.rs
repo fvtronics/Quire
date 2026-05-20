@@ -1,5 +1,5 @@
 use std::cell::{Cell, RefCell};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 #[derive(Debug, Default)]
@@ -23,20 +23,22 @@ pub struct CompressState {
 pub struct OrganizeState {
     pub file: RefCell<Option<PathBuf>>,
     pub page_count: Cell<usize>,
-    pub previews: RefCell<Vec<crate::preview::PagePreview>>,
+    pub previews: RefCell<BTreeMap<u32, crate::preview::PagePreview>>,
     pub page_order: RefCell<Vec<u32>>,
     pub rotations: RefCell<BTreeMap<u32, i64>>,
     pub last_output: RefCell<Option<PathBuf>>,
+    pub is_loading: Cell<bool>,
 }
 
 #[derive(Debug, Default)]
 pub struct ExtractState {
     pub file: RefCell<Option<PathBuf>>,
     pub page_count: Cell<usize>,
-    pub previews: RefCell<Vec<crate::preview::PagePreview>>,
-    pub selected_pages: RefCell<Vec<u32>>,
+    pub previews: RefCell<BTreeMap<u32, crate::preview::PagePreview>>,
+    pub selected_pages: RefCell<BTreeSet<u32>>,
     pub rotations: RefCell<BTreeMap<u32, i64>>,
     pub last_output: RefCell<Option<PathBuf>>,
+    pub is_loading: Cell<bool>,
 }
 
 #[derive(Debug, Default)]
@@ -183,11 +185,17 @@ impl CompressState {
 }
 
 impl OrganizeState {
-    pub fn load_document(&self, path: PathBuf, previews: Vec<crate::preview::PagePreview>) {
-        let page_count = previews.len();
+    pub fn begin_loading(&self) {
+        self.is_loading.set(true);
+        self.clear_last_output();
+    }
+
+    pub fn load_document(&self, path: PathBuf, previews: crate::preview::DocumentPreviews) {
+        let page_count = previews.page_count;
+        self.is_loading.set(false);
         self.file.borrow_mut().replace(path);
         self.page_count.set(page_count);
-        *self.previews.borrow_mut() = previews;
+        *self.previews.borrow_mut() = previews.previews;
 
         let mut page_order = self.page_order.borrow_mut();
         page_order.clear();
@@ -195,6 +203,10 @@ impl OrganizeState {
 
         self.rotations.borrow_mut().clear();
         self.clear_last_output();
+    }
+
+    pub fn finish_loading_failed(&self) {
+        self.is_loading.set(false);
     }
 
     pub fn reset(&self) -> bool {
@@ -233,6 +245,10 @@ impl OrganizeState {
 
     pub fn set_last_output(&self, path: PathBuf) {
         self.last_output.borrow_mut().replace(path);
+    }
+
+    pub fn is_busy(&self, is_running: bool) -> bool {
+        is_running || self.is_loading.get()
     }
 
     pub fn move_page(&self, from: usize, to: usize) {
@@ -287,16 +303,26 @@ impl ExtractState {
         self.rotations
             .borrow_mut()
             .retain(|page_number, _| pages.contains(page_number));
-        *self.selected_pages.borrow_mut() = pages;
+        *self.selected_pages.borrow_mut() = pages.into_iter().collect();
     }
 
-    pub fn load_document(&self, path: PathBuf, previews: Vec<crate::preview::PagePreview>) {
-        let page_count = previews.len();
+    pub fn begin_loading(&self) {
+        self.is_loading.set(true);
+        self.clear_last_output();
+    }
+
+    pub fn load_document(&self, path: PathBuf, previews: crate::preview::DocumentPreviews) {
+        let page_count = previews.page_count;
+        self.is_loading.set(false);
         self.file.borrow_mut().replace(path);
         self.page_count.set(page_count);
-        *self.previews.borrow_mut() = previews;
+        *self.previews.borrow_mut() = previews.previews;
         self.clear_range_selection();
         self.clear_last_output();
+    }
+
+    pub fn finish_loading_failed(&self) {
+        self.is_loading.set(false);
     }
 
     pub fn selections_from_pages(
@@ -324,16 +350,17 @@ impl ExtractState {
         self.last_output.borrow_mut().replace(path);
     }
 
+    pub fn is_busy(&self, is_running: bool) -> bool {
+        is_running || self.is_loading.get()
+    }
+
     pub fn toggle_page(&self, page_number: u32, selected: bool) {
         let mut pages = self.selected_pages.borrow_mut();
 
         if selected {
-            if !pages.contains(&page_number) {
-                pages.push(page_number);
-                pages.sort_unstable();
-            }
+            pages.insert(page_number);
         } else {
-            pages.retain(|page| *page != page_number);
+            pages.remove(&page_number);
             self.rotations.borrow_mut().remove(&page_number);
         }
 
@@ -401,5 +428,70 @@ where
         rotations.remove(&key);
     } else {
         rotations.insert(key, rotation);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn document_previews(
+        page_count: usize,
+        rendered_pages: &[u32],
+    ) -> crate::preview::DocumentPreviews {
+        crate::preview::DocumentPreviews {
+            page_count,
+            previews: rendered_pages
+                .iter()
+                .map(|page_number| {
+                    (
+                        *page_number,
+                        crate::preview::PagePreview {
+                            page_number: *page_number,
+                            png_data: Vec::new(),
+                        },
+                    )
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn organize_uses_document_page_count_even_when_previews_are_missing() {
+        let state = OrganizeState::default();
+
+        state.load_document(PathBuf::from("input.pdf"), document_previews(3, &[1, 3]));
+
+        assert_eq!(state.page_count.get(), 3);
+        assert_eq!(*state.page_order.borrow(), vec![1, 2, 3]);
+        assert!(!state.previews.borrow().contains_key(&2));
+    }
+
+    #[test]
+    fn extract_uses_document_page_count_even_when_previews_are_missing() {
+        let state = ExtractState::default();
+
+        state.load_document(PathBuf::from("input.pdf"), document_previews(4, &[2, 4]));
+
+        assert_eq!(state.page_count.get(), 4);
+        assert_eq!(state.previews.borrow().len(), 2);
+        assert!(!state.previews.borrow().contains_key(&1));
+    }
+
+    #[test]
+    fn extract_selection_is_sorted_and_deduplicated() {
+        let state = ExtractState::default();
+
+        state.apply_range_selection(vec![3, 1, 3, 2]);
+
+        assert_eq!(
+            state
+                .selected_pages
+                .borrow()
+                .iter()
+                .copied()
+                .collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
     }
 }

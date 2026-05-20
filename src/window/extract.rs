@@ -3,40 +3,110 @@ use super::ui::{
     pdf_file_row, preview_tile, rotated_list_preview_prefix, save_pdf_file, tile_controls,
     tile_label, tile_preview_widget,
 };
-use super::FoliosWindow;
+use super::workspace::{open_output, parent_window, show_toast, update_shell_view_mode};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
+use std::cell::Cell;
 use std::path::PathBuf;
 
-impl FoliosWindow {
-    pub(super) fn setup_extract_callbacks(&self) {
+mod imp {
+    use super::super::state::ExtractState;
+    use super::*;
+
+    #[derive(Debug, Default, gtk::CompositeTemplate)]
+    #[template(resource = "/com/fvtronics/folios/extract-workspace.ui")]
+    pub struct ExtractWorkspace {
+        #[template_child]
+        pub extract_choose_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub extract_empty_choose_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub extract_detail_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub extract_empty_status: TemplateChild<adw::StatusPage>,
+        #[template_child]
+        pub extract_content: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub extract_file_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub extract_ranges_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub extract_view_stack: TemplateChild<adw::ViewStack>,
+        #[template_child]
+        pub extract_page_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub extract_page_grid: TemplateChild<gtk::FlowBox>,
+        #[template_child]
+        pub extract_save_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub extract_open_output_button: TemplateChild<gtk::Button>,
+
+        pub extract: ExtractState,
+        pub is_running: Cell<bool>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for ExtractWorkspace {
+        const NAME: &'static str = "ExtractWorkspace";
+        type Type = super::ExtractWorkspace;
+        type ParentType = gtk::Box;
+
+        fn class_init(klass: &mut Self::Class) {
+            klass.bind_template();
+        }
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
+    }
+
+    impl ObjectImpl for ExtractWorkspace {
+        fn constructed(&self) {
+            self.parent_constructed();
+            let obj = self.obj();
+            obj.setup_callbacks();
+            obj.update_view();
+        }
+    }
+    impl WidgetImpl for ExtractWorkspace {}
+    impl BoxImpl for ExtractWorkspace {}
+}
+
+glib::wrapper! {
+    pub struct ExtractWorkspace(ObjectSubclass<imp::ExtractWorkspace>)
+        @extends gtk::Widget, gtk::Box,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
+}
+
+impl ExtractWorkspace {
+    fn setup_callbacks(&self) {
         let imp = self.imp();
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.extract_choose_button.connect_clicked(move |_| {
-            window.choose_extract_file();
+            workspace.choose_file();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.extract_empty_choose_button.connect_clicked(move |_| {
-            window.choose_extract_file();
+            workspace.choose_file();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.extract_save_button.connect_clicked(move |_| {
-            window.choose_extract_output_file();
+            workspace.choose_output_file();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.extract_open_output_button.connect_clicked(move |_| {
-            window.open_last_output();
+            workspace.open_last_output();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.extract_ranges_entry.connect_changed(move |entry| {
-            let imp = window.imp();
+            let imp = workspace.imp();
             let text = entry.text();
             let text = text.trim();
 
@@ -50,26 +120,35 @@ impl FoliosWindow {
             }
 
             imp.extract.clear_last_output();
-            window.update_extract_view();
+            workspace.update_view();
         });
     }
 
-    fn choose_extract_file(&self) {
-        let window = self.clone();
+    fn choose_file(&self) {
+        let Some(parent) = parent_window(self) else {
+            return;
+        };
+        let workspace = self.clone();
         glib::spawn_future_local(async move {
-            if let Some(path) = open_pdf_file(&window, &gettext("Open PDF"), &gettext("Open")).await
+            if let Some(path) = open_pdf_file(&parent, &gettext("Open PDF"), &gettext("Open")).await
             {
-                window.load_extract_pdf(path);
+                workspace.load_pdf(path);
             }
         });
     }
 
-    fn choose_extract_output_file(&self) {
+    fn choose_output_file(&self) {
         let imp = self.imp();
         let page_numbers = if imp.extract_ranges_entry.text().trim().is_empty() {
-            let pages = imp.extract.selected_pages.borrow().clone();
+            let pages = imp
+                .extract
+                .selected_pages
+                .borrow()
+                .iter()
+                .copied()
+                .collect::<Vec<_>>();
             if pages.is_empty() {
-                self.show_toast(&gettext("Choose at least one page to extract."));
+                show_toast(self, &gettext("Choose at least one page to extract."));
                 return;
             }
             pages
@@ -77,7 +156,7 @@ impl FoliosWindow {
             match self.extract_pages_from_ranges() {
                 Ok(pages) => pages,
                 Err(error) => {
-                    self.show_toast(&error.to_string());
+                    show_toast(self, &error.to_string());
                     return;
                 }
             }
@@ -85,33 +164,34 @@ impl FoliosWindow {
         let Some((input_file, pages)) = imp.extract.selections_from_pages(page_numbers) else {
             return;
         };
+        let Some(parent) = parent_window(self) else {
+            return;
+        };
 
-        let window = self.clone();
+        let workspace = self.clone();
         glib::spawn_future_local(async move {
             if let Some(path) = save_pdf_file(
-                &window,
+                &parent,
                 &gettext("Save Extracted Pages"),
                 &gettext("Extract"),
                 "Extracted.pdf",
             )
             .await
             {
-                window.extract_to(input_file, pages, path);
+                workspace.extract_to(input_file, pages, path);
             }
         });
     }
 
-    fn load_extract_pdf(&self, path: PathBuf) {
+    fn load_pdf(&self, path: PathBuf) {
         let imp = self.imp();
-        imp.is_running.set(true);
-        imp.extract.clear_last_output();
-        self.update_extract_view();
+        imp.extract.begin_loading();
+        self.update_view();
 
-        let window = self.clone();
+        let workspace = self.clone();
         glib::spawn_future_local(async move {
             let result = crate::preview::render_page_previews(path.clone()).await;
-            let imp = window.imp();
-            imp.is_running.set(false);
+            let imp = workspace.imp();
 
             match result {
                 Ok(previews) => {
@@ -119,11 +199,12 @@ impl FoliosWindow {
                     imp.extract_ranges_entry.set_text("");
                 }
                 Err(error) => {
-                    window.show_toast(&error.to_string());
+                    imp.extract.finish_loading_failed();
+                    show_toast(&workspace, &error.to_string());
                 }
             }
 
-            window.update_extract_view();
+            workspace.update_view();
         });
     }
 
@@ -136,36 +217,49 @@ impl FoliosWindow {
         let imp = self.imp();
         imp.is_running.set(true);
         imp.extract.clear_last_output();
-        self.update_all_views();
+        self.update_view();
 
-        let window = self.clone();
+        let workspace = self.clone();
         glib::spawn_future_local(async move {
             let result = crate::pdf::extract_pages(input_file, pages, output_file).await;
-            let imp = window.imp();
+            let imp = workspace.imp();
             imp.is_running.set(false);
 
             match result {
                 Ok(path) => {
                     imp.extract.set_last_output(path);
-                    window.show_toast(&gettext("Extracted pages saved"));
+                    show_toast(&workspace, &gettext("Extracted pages saved"));
                 }
                 Err(error) => {
-                    window.show_toast(&error.to_string());
+                    show_toast(&workspace, &error.to_string());
                 }
             }
 
-            window.update_all_views();
+            workspace.update_view();
         });
     }
 
-    pub(super) fn update_extract_view(&self) {
-        self.update_view_mode();
+    pub(super) fn supports_view_mode(&self) -> bool {
+        true
+    }
 
+    pub(super) fn has_view_mode_content(&self) -> bool {
+        self.imp().extract.file.borrow().is_some()
+    }
+
+    pub(super) fn set_view_mode(&self, view_mode: super::ViewMode) {
+        self.imp()
+            .extract_view_stack
+            .set_visible_child_name(view_mode.name());
+    }
+
+    pub(super) fn update_view(&self) {
         let imp = self.imp();
         let has_file = imp.extract.file.borrow().is_some();
         let has_ranges = !imp.extract_ranges_entry.text().trim().is_empty();
         let has_valid_ranges = has_ranges && self.extract_pages_from_ranges().is_ok();
         let has_selected_pages = !imp.extract.selected_pages.borrow().is_empty();
+        let is_busy = imp.extract.is_busy(imp.is_running.get());
 
         imp.extract_file_list.remove_all();
         if let Some(path) = imp.extract.file.borrow().as_ref() {
@@ -179,9 +273,7 @@ impl FoliosWindow {
         let rotations = imp.extract.rotations.borrow();
         let previews = imp.extract.previews.borrow();
         for page_number in 1..=imp.extract.page_count.get() as u32 {
-            let preview = previews
-                .iter()
-                .find(|preview| preview.page_number == page_number);
+            let preview = previews.get(&page_number);
             let selected = selected_pages.contains(&page_number);
             let rotation = *rotations.get(&page_number).unwrap_or(&0);
             imp.extract_page_list.append(&self.extract_page_row(
@@ -190,12 +282,12 @@ impl FoliosWindow {
                 preview,
                 rotation,
             ));
-        }
-        for preview in previews.iter() {
-            let selected = selected_pages.contains(&preview.page_number);
-            let rotation = *rotations.get(&preview.page_number).unwrap_or(&0);
-            imp.extract_page_grid
-                .append(&self.extract_page_tile(preview, selected, rotation));
+            imp.extract_page_grid.append(&self.extract_page_tile(
+                page_number,
+                preview,
+                selected,
+                rotation,
+            ));
         }
 
         imp.extract_empty_status.set_visible(!has_file);
@@ -205,28 +297,26 @@ impl FoliosWindow {
         imp.extract_open_output_button
             .set_visible(imp.extract.last_output.borrow().is_some());
 
-        imp.extract_choose_button
-            .set_sensitive(!imp.is_running.get());
-        imp.extract_empty_choose_button
-            .set_sensitive(!imp.is_running.get());
+        imp.extract_choose_button.set_sensitive(!is_busy);
+        imp.extract_empty_choose_button.set_sensitive(!is_busy);
         imp.extract_save_button.set_sensitive(
-            has_file
-                && (has_valid_ranges || (!has_ranges && has_selected_pages))
-                && !imp.is_running.get(),
+            has_file && (has_valid_ranges || (!has_ranges && has_selected_pages)) && !is_busy,
         );
         imp.extract_open_output_button
-            .set_sensitive(imp.extract.last_output.borrow().is_some() && !imp.is_running.get());
-        imp.extract_ranges_entry
-            .set_sensitive(has_file && !imp.is_running.get());
+            .set_sensitive(imp.extract.last_output.borrow().is_some() && !is_busy);
+        imp.extract_ranges_entry.set_sensitive(has_file && !is_busy);
 
         let detail = if imp.is_running.get() {
             gettext("Extracting pages...")
+        } else if imp.extract.is_loading.get() {
+            gettext("Loading PDF...")
         } else if has_file {
             page_count_label(imp.extract.page_count.get())
         } else {
             gettext("No PDF selected")
         };
         imp.extract_detail_label.set_label(&detail);
+        update_shell_view_mode(self);
     }
 
     fn extract_pages_from_ranges(&self) -> Result<Vec<u32>, crate::pdf::PdfBackendError> {
@@ -282,13 +372,13 @@ impl FoliosWindow {
 
     fn extract_page_tile(
         &self,
-        preview: &crate::preview::PagePreview,
+        page_number: u32,
+        preview: Option<&crate::preview::PagePreview>,
         selected: bool,
         rotation: i64,
     ) -> gtk::Box {
         let tile = preview_tile();
-        let preview_widget = tile_preview_widget(Some(preview), rotation);
-        let page_number = preview.page_number;
+        let preview_widget = tile_preview_widget(preview, rotation);
         let window = self.clone();
         let click = gtk::GestureClick::new();
         click.connect_released(move |_, _, _, _| {
@@ -298,12 +388,11 @@ impl FoliosWindow {
         tile.append(&preview_widget);
 
         let footer = tile_controls();
-        let label = tile_label(format!("{} {}", gettext("Page"), preview.page_number));
+        let label = tile_label(format!("{} {}", gettext("Page"), page_number));
         label.set_hexpand(true);
         let rotate_button =
             icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
         rotate_button.set_sensitive(selected && !self.imp().is_running.get());
-        let page_number = preview.page_number;
         let window = self.clone();
         rotate_button.connect_clicked(move |_| {
             window.rotate_extract_page(page_number);
@@ -320,7 +409,6 @@ impl FoliosWindow {
         tile.append(&footer);
 
         let window = self.clone();
-        let page_number = preview.page_number;
         check_button.connect_toggled(move |button| {
             window.toggle_extract_page(page_number, button.is_active());
         });
@@ -331,12 +419,12 @@ impl FoliosWindow {
     fn toggle_extract_page(&self, page_number: u32, selected: bool) {
         self.imp().extract.toggle_page(page_number, selected);
         self.update_extract_ranges_entry();
-        self.update_extract_view();
+        self.update_view();
     }
 
     fn rotate_extract_page(&self, page_number: u32) {
         if self.imp().extract.rotate_page(page_number) {
-            self.update_extract_view();
+            self.update_view();
         }
     }
 
@@ -344,11 +432,18 @@ impl FoliosWindow {
         let imp = self.imp();
         let text = {
             let pages = imp.extract.selected_pages.borrow();
+            let pages = pages.iter().copied().collect::<Vec<_>>();
             format_page_ranges(&pages)
         };
 
         if imp.extract_ranges_entry.text().as_str() != text {
             imp.extract_ranges_entry.set_text(&text);
+        }
+    }
+
+    fn open_last_output(&self) {
+        if let Some(path) = self.imp().extract.last_output.borrow().as_ref() {
+            open_output(self, path);
         }
     }
 }

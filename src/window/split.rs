@@ -2,7 +2,7 @@ use super::ui::{
     clear_box, file_subtitle, open_pdf_file, page_count_label, pdf_file_row, select_folder,
     single_file_preview_widget,
 };
-use super::FoliosWindow;
+use super::workspace::{open_output, parent_window, show_toast, update_shell_view_mode};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
@@ -15,8 +15,102 @@ const SPLIT_ODD_PAGES: u32 = 2;
 const SPLIT_SPECIFIC_PAGES: u32 = 3;
 const SPLIT_EVERY_N_PAGES: u32 = 4;
 
-impl FoliosWindow {
-    pub(super) fn setup_split_callbacks(&self) {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum SplitMode {
+    EveryPage,
+    EvenPages,
+    OddPages,
+    SpecificPages,
+    EveryNPages,
+}
+
+impl SplitMode {
+    fn from_index(index: u32) -> Option<Self> {
+        match index {
+            SPLIT_EVERY_PAGE => Some(Self::EveryPage),
+            SPLIT_EVEN_PAGES => Some(Self::EvenPages),
+            SPLIT_ODD_PAGES => Some(Self::OddPages),
+            SPLIT_SPECIFIC_PAGES => Some(Self::SpecificPages),
+            SPLIT_EVERY_N_PAGES => Some(Self::EveryNPages),
+            _ => None,
+        }
+    }
+}
+
+mod imp {
+    use super::super::state::SplitState;
+    use super::*;
+    use std::cell::Cell;
+
+    #[derive(Debug, Default, gtk::CompositeTemplate)]
+    #[template(resource = "/com/fvtronics/folios/split-workspace.ui")]
+    pub struct SplitWorkspace {
+        #[template_child]
+        pub split_choose_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub split_empty_choose_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub split_detail_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub split_empty_status: TemplateChild<adw::StatusPage>,
+        #[template_child]
+        pub split_content: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub split_preview_box: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub split_file_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub split_after_row: TemplateChild<adw::ComboRow>,
+        #[template_child]
+        pub split_specific_pages_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub split_pages_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub split_prefix_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub split_save_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub split_open_output_button: TemplateChild<gtk::Button>,
+
+        pub split: SplitState,
+        pub is_running: Cell<bool>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for SplitWorkspace {
+        const NAME: &'static str = "SplitWorkspace";
+        type Type = super::SplitWorkspace;
+        type ParentType = gtk::Box;
+
+        fn class_init(klass: &mut Self::Class) {
+            klass.bind_template();
+        }
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
+    }
+
+    impl ObjectImpl for SplitWorkspace {
+        fn constructed(&self) {
+            self.parent_constructed();
+            let obj = self.obj();
+            obj.setup_callbacks();
+            obj.update_view();
+        }
+    }
+    impl WidgetImpl for SplitWorkspace {}
+    impl BoxImpl for SplitWorkspace {}
+}
+
+glib::wrapper! {
+    pub struct SplitWorkspace(ObjectSubclass<imp::SplitWorkspace>)
+        @extends gtk::Widget, gtk::Box,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
+}
+
+impl SplitWorkspace {
+    fn setup_callbacks(&self) {
         let imp = self.imp();
 
         let split_after_options = [
@@ -39,62 +133,65 @@ impl FoliosWindow {
                 "string",
             )));
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.split_choose_button.connect_clicked(move |_| {
-            window.choose_split_file();
+            workspace.choose_file();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.split_empty_choose_button.connect_clicked(move |_| {
-            window.choose_split_file();
+            workspace.choose_file();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.split_save_button.connect_clicked(move |_| {
-            window.choose_split_output_folder();
+            workspace.choose_output_folder();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.split_open_output_button.connect_clicked(move |_| {
-            window.open_last_output();
+            workspace.open_last_output();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.split_after_row.connect_selected_notify(move |_| {
-            window.imp().split.clear_last_output();
-            window.update_split_view();
+            workspace.imp().split.clear_last_output();
+            workspace.update_view();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.split_specific_pages_entry.connect_changed(move |_| {
-            window.imp().split.clear_last_output();
-            window.update_split_view();
+            workspace.imp().split.clear_last_output();
+            workspace.update_view();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.split_pages_entry.connect_changed(move |_| {
-            window.imp().split.clear_last_output();
-            window.update_split_view();
+            workspace.imp().split.clear_last_output();
+            workspace.update_view();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.split_prefix_entry.connect_changed(move |_| {
-            window.imp().split.clear_last_output();
-            window.update_split_view();
+            workspace.imp().split.clear_last_output();
+            workspace.update_view();
         });
     }
 
-    fn choose_split_file(&self) {
-        let window = self.clone();
+    fn choose_file(&self) {
+        let Some(parent) = parent_window(self) else {
+            return;
+        };
+        let workspace = self.clone();
         glib::spawn_future_local(async move {
-            if let Some(path) = open_pdf_file(&window, &gettext("Open PDF"), &gettext("Open")).await
+            if let Some(path) = open_pdf_file(&parent, &gettext("Open PDF"), &gettext("Open")).await
             {
-                window.load_split_pdf(path);
+                workspace.load_pdf(path);
             }
         });
     }
 
-    fn choose_split_output_folder(&self) {
+    fn choose_output_folder(&self) {
         let imp = self.imp();
         let Some(input_file) = imp.split.input_file() else {
             return;
@@ -102,31 +199,34 @@ impl FoliosWindow {
         let rule = match self.split_rule() {
             Ok(rule) => rule,
             Err(error) => {
-                self.show_toast(&error.to_string());
+                show_toast(self, &error.to_string());
                 return;
             }
         };
         let prefix = imp.split_prefix_entry.text().to_string();
+        let Some(parent) = parent_window(self) else {
+            return;
+        };
 
-        let window = self.clone();
+        let workspace = self.clone();
         glib::spawn_future_local(async move {
             if let Some(path) =
-                select_folder(&window, &gettext("Choose Output Folder"), &gettext("Split")).await
+                select_folder(&parent, &gettext("Choose Output Folder"), &gettext("Split")).await
             {
-                window.split_to(input_file, path, prefix, rule);
+                workspace.split_to(input_file, path, prefix, rule);
             }
         });
     }
 
-    fn load_split_pdf(&self, path: PathBuf) {
+    fn load_pdf(&self, path: PathBuf) {
         let imp = self.imp();
         imp.split.begin_loading();
-        self.update_split_view();
+        self.update_view();
 
-        let window = self.clone();
+        let workspace = self.clone();
         glib::spawn_future_local(async move {
             let result = crate::preview::render_first_page_preview_with_count(path.clone()).await;
-            let imp = window.imp();
+            let imp = workspace.imp();
 
             match result {
                 Ok((preview, page_count)) => {
@@ -136,11 +236,11 @@ impl FoliosWindow {
                 }
                 Err(error) => {
                     imp.split.finish_loading_failed();
-                    window.show_toast(&error.to_string());
+                    show_toast(&workspace, &error.to_string());
                 }
             }
 
-            window.update_split_view();
+            workspace.update_view();
         });
     }
 
@@ -154,35 +254,45 @@ impl FoliosWindow {
         let imp = self.imp();
         imp.is_running.set(true);
         imp.split.clear_last_output();
-        self.update_all_views();
+        self.update_view();
 
-        let window = self.clone();
+        let workspace = self.clone();
         glib::spawn_future_local(async move {
             let result = crate::pdf::split_pdf(input_file, output_folder, prefix, rule).await;
-            let imp = window.imp();
+            let imp = workspace.imp();
             imp.is_running.set(false);
 
             match result {
                 Ok(path) => {
                     imp.split.set_last_output(path);
-                    window.show_toast(&gettext("Split PDFs saved"));
+                    show_toast(&workspace, &gettext("Split PDFs saved"));
                 }
                 Err(error) => {
-                    window.show_toast(&error.to_string());
+                    show_toast(&workspace, &error.to_string());
                 }
             }
 
-            window.update_all_views();
+            workspace.update_view();
         });
     }
 
-    pub(super) fn update_split_view(&self) {
+    pub(super) fn supports_view_mode(&self) -> bool {
+        false
+    }
+
+    pub(super) fn has_view_mode_content(&self) -> bool {
+        false
+    }
+
+    pub(super) fn set_view_mode(&self, _view_mode: super::ViewMode) {}
+
+    pub(super) fn update_view(&self) {
         let imp = self.imp();
         let file = imp.split.file.borrow();
         let has_file = file.is_some();
         let has_split_rule = self.split_rule().is_ok();
         let is_busy = imp.split.is_busy(imp.is_running.get());
-        let split_mode = imp.split_after_row.selected();
+        let split_mode = SplitMode::from_index(imp.split_after_row.selected());
         let preview = imp.split.preview.borrow();
 
         imp.split_file_list.remove_all();
@@ -209,13 +319,13 @@ impl FoliosWindow {
             .set_sensitive(imp.split.last_output.borrow().is_some() && !is_busy);
         imp.split_after_row.set_sensitive(has_file && !is_busy);
         imp.split_specific_pages_entry
-            .set_visible(split_mode == SPLIT_SPECIFIC_PAGES);
+            .set_visible(split_mode == Some(SplitMode::SpecificPages));
         imp.split_specific_pages_entry
-            .set_sensitive(has_file && split_mode == SPLIT_SPECIFIC_PAGES && !is_busy);
+            .set_sensitive(has_file && split_mode == Some(SplitMode::SpecificPages) && !is_busy);
         imp.split_pages_entry
-            .set_visible(split_mode == SPLIT_EVERY_N_PAGES);
+            .set_visible(split_mode == Some(SplitMode::EveryNPages));
         imp.split_pages_entry
-            .set_sensitive(has_file && split_mode == SPLIT_EVERY_N_PAGES && !is_busy);
+            .set_sensitive(has_file && split_mode == Some(SplitMode::EveryNPages) && !is_busy);
         imp.split_prefix_entry.set_sensitive(has_file && !is_busy);
 
         let detail = if imp.is_running.get() {
@@ -228,22 +338,23 @@ impl FoliosWindow {
             gettext("No PDF selected")
         };
         imp.split_detail_label.set_label(&detail);
+        update_shell_view_mode(self);
     }
 
     fn split_rule(&self) -> Result<crate::pdf::SplitRule, crate::pdf::PdfBackendError> {
         let imp = self.imp();
-        match imp.split_after_row.selected() {
-            SPLIT_EVERY_PAGE => Ok(crate::pdf::SplitRule::EveryPage),
-            SPLIT_EVEN_PAGES => Ok(crate::pdf::SplitRule::EvenPages),
-            SPLIT_ODD_PAGES => Ok(crate::pdf::SplitRule::OddPages),
-            SPLIT_SPECIFIC_PAGES => {
+        match SplitMode::from_index(imp.split_after_row.selected()) {
+            Some(SplitMode::EveryPage) => Ok(crate::pdf::SplitRule::EveryPage),
+            Some(SplitMode::EvenPages) => Ok(crate::pdf::SplitRule::EvenPages),
+            Some(SplitMode::OddPages) => Ok(crate::pdf::SplitRule::OddPages),
+            Some(SplitMode::SpecificPages) => {
                 let pages = crate::pdf::parse_page_numbers(
                     imp.split_specific_pages_entry.text().as_str(),
                     imp.split.page_count.get(),
                 )?;
                 Ok(crate::pdf::SplitRule::SpecificPages(pages))
             }
-            SPLIT_EVERY_N_PAGES => {
+            Some(SplitMode::EveryNPages) => {
                 let pages = imp
                     .split_pages_entry
                     .text()
@@ -263,7 +374,9 @@ impl FoliosWindow {
                     Ok(crate::pdf::SplitRule::EveryNPages(pages))
                 }
             }
-            _ => Ok(crate::pdf::SplitRule::EveryPage),
+            None => Err(crate::pdf::PdfBackendError::InvalidPageRange(
+                "Choose how to split this PDF.".to_string(),
+            )),
         }
     }
 
@@ -273,6 +386,12 @@ impl FoliosWindow {
             format!("{} - {}", page_count_label(page_count), file_subtitle(path)),
         )
     }
+
+    fn open_last_output(&self) {
+        if let Some(path) = self.imp().split.last_output.borrow().as_ref() {
+            open_output(self, path);
+        }
+    }
 }
 
 fn split_default_prefix(path: &Path) -> String {
@@ -280,4 +399,38 @@ fn split_default_prefix(path: &Path) -> String {
         .and_then(|name| name.to_str())
         .unwrap_or("Split")
         .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split_mode_maps_known_indices() {
+        assert_eq!(
+            SplitMode::from_index(SPLIT_EVERY_PAGE),
+            Some(SplitMode::EveryPage)
+        );
+        assert_eq!(
+            SplitMode::from_index(SPLIT_EVEN_PAGES),
+            Some(SplitMode::EvenPages)
+        );
+        assert_eq!(
+            SplitMode::from_index(SPLIT_ODD_PAGES),
+            Some(SplitMode::OddPages)
+        );
+        assert_eq!(
+            SplitMode::from_index(SPLIT_SPECIFIC_PAGES),
+            Some(SplitMode::SpecificPages)
+        );
+        assert_eq!(
+            SplitMode::from_index(SPLIT_EVERY_N_PAGES),
+            Some(SplitMode::EveryNPages)
+        );
+    }
+
+    #[test]
+    fn split_mode_rejects_unknown_indices() {
+        assert_eq!(SplitMode::from_index(99), None);
+    }
 }

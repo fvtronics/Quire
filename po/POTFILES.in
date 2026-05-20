@@ -4,6 +4,11 @@ data/com.fvtronics.folios.desktop.in
 data/com.fvtronics.folios.metainfo.xml.in
 data/com.fvtronics.folios.gschema.xml
 src/application.rs
+src/compress-workspace.blp
+src/extract-workspace.blp
+src/merge-workspace.blp
+src/organize-workspace.blp
+src/split-workspace.blp
 src/shortcuts-dialog.blp
 src/window.rs
 src/window.blp

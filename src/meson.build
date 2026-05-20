@@ -5,6 +5,11 @@ blueprints = custom_target('blueprints',
   input: files(
     'shortcuts-dialog.blp',
     'window.blp',
+    'merge-workspace.blp',
+    'compress-workspace.blp',
+    'organize-workspace.blp',
+    'extract-workspace.blp',
+    'split-workspace.blp',
   ),
   output: '.',
   command: [

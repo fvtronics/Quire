@@ -2,66 +2,138 @@ use super::ui::{
     dim_tile_label, file_subtitle, file_title, icon_button, open_pdf_files, preview_tile,
     rotated_list_preview_prefix, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
-use super::FoliosWindow;
+use super::workspace::{open_output, parent_window, show_toast, update_shell_view_mode};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::glib;
+use std::cell::Cell;
 use std::path::{Path, PathBuf};
 
-impl FoliosWindow {
-    pub(super) fn setup_merge_callbacks(&self) {
+mod imp {
+    use super::super::state::MergeState;
+    use super::*;
+
+    #[derive(Debug, Default, gtk::CompositeTemplate)]
+    #[template(resource = "/com/fvtronics/folios/merge-workspace.ui")]
+    pub struct MergeWorkspace {
+        #[template_child]
+        pub add_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub empty_add_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub file_count_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub empty_status: TemplateChild<adw::StatusPage>,
+        #[template_child]
+        pub merge_view_stack: TemplateChild<adw::ViewStack>,
+        #[template_child]
+        pub file_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub merge_file_grid: TemplateChild<gtk::FlowBox>,
+        #[template_child]
+        pub clear_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub merge_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub open_output_button: TemplateChild<gtk::Button>,
+
+        pub merge: MergeState,
+        pub is_running: Cell<bool>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for MergeWorkspace {
+        const NAME: &'static str = "MergeWorkspace";
+        type Type = super::MergeWorkspace;
+        type ParentType = gtk::Box;
+
+        fn class_init(klass: &mut Self::Class) {
+            klass.bind_template();
+        }
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
+    }
+
+    impl ObjectImpl for MergeWorkspace {
+        fn constructed(&self) {
+            self.parent_constructed();
+            let obj = self.obj();
+            obj.setup_callbacks();
+            obj.update_view();
+        }
+    }
+    impl WidgetImpl for MergeWorkspace {}
+    impl BoxImpl for MergeWorkspace {}
+}
+
+glib::wrapper! {
+    pub struct MergeWorkspace(ObjectSubclass<imp::MergeWorkspace>)
+        @extends gtk::Widget, gtk::Box,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
+}
+
+impl MergeWorkspace {
+    fn setup_callbacks(&self) {
         let imp = self.imp();
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.add_button.connect_clicked(move |_| {
-            window.choose_pdf_files();
+            workspace.choose_pdf_files();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.empty_add_button.connect_clicked(move |_| {
-            window.choose_pdf_files();
+            workspace.choose_pdf_files();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.clear_button.connect_clicked(move |_| {
-            window.imp().merge.clear();
-            window.update_files_view();
+            workspace.imp().merge.clear();
+            workspace.update_view();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.merge_button.connect_clicked(move |_| {
-            window.choose_output_file();
+            workspace.choose_output_file();
         });
 
-        let window = self.clone();
+        let workspace = self.clone();
         imp.open_output_button.connect_clicked(move |_| {
-            window.open_last_output();
+            workspace.open_last_output();
         });
     }
 
     fn choose_pdf_files(&self) {
-        let window = self.clone();
+        let Some(parent) = parent_window(self) else {
+            return;
+        };
+        let workspace = self.clone();
         glib::spawn_future_local(async move {
-            let paths = open_pdf_files(&window, &gettext("Add PDFs"), &gettext("Add")).await;
+            let paths = open_pdf_files(&parent, &gettext("Add PDFs"), &gettext("Add")).await;
             if !paths.is_empty() {
-                window.add_files(paths);
+                workspace.add_files(paths);
             }
         });
     }
 
     fn choose_output_file(&self) {
-        let window = self.clone();
+        let Some(parent) = parent_window(self) else {
+            return;
+        };
+        let workspace = self.clone();
         glib::spawn_future_local(async move {
             if let Some(path) = save_pdf_file(
-                &window,
+                &parent,
                 &gettext("Save Merged PDF"),
                 &gettext("Merge"),
                 "Merged.pdf",
             )
             .await
             {
-                window.merge_to(path);
+                workspace.merge_to(path);
             }
         });
     }
@@ -77,17 +149,17 @@ impl FoliosWindow {
 
         if paths_to_preview.is_empty() {
             imp.merge.add_files(paths);
-            self.update_files_view();
+            self.update_view();
             return;
         }
 
         imp.merge.begin_loading();
-        self.update_files_view();
+        self.update_view();
         self.load_merge_previews(paths, paths_to_preview);
     }
 
     fn load_merge_previews(&self, paths: Vec<PathBuf>, paths_to_preview: Vec<PathBuf>) {
-        let window = self.clone();
+        let workspace = self.clone();
         glib::spawn_future_local(async move {
             let mut loaded_paths = Vec::new();
             let mut loaded_previews = Vec::new();
@@ -101,7 +173,7 @@ impl FoliosWindow {
                         }
                     }
                     Err(error) => {
-                        window.show_toast(&error.to_string());
+                        show_toast(&workspace, &error.to_string());
                     }
                 }
             }
@@ -110,11 +182,11 @@ impl FoliosWindow {
                 .into_iter()
                 .filter(|path| !paths_to_preview.contains(path) || loaded_paths.contains(path))
                 .collect::<Vec<_>>();
-            window
+            workspace
                 .imp()
                 .merge
                 .finish_loading(files_to_add, loaded_previews);
-            window.update_files_view();
+            workspace.update_view();
         });
     }
 
@@ -124,31 +196,43 @@ impl FoliosWindow {
 
         imp.is_running.set(true);
         imp.merge.clear_last_output();
-        self.update_all_views();
+        self.update_view();
 
-        let window = self.clone();
+        let workspace = self.clone();
         glib::spawn_future_local(async move {
             let result = crate::pdf::merge_pdfs(input_files, output_file).await;
-            let imp = window.imp();
+            let imp = workspace.imp();
             imp.is_running.set(false);
 
             match result {
                 Ok(path) => {
                     imp.merge.set_last_output(path);
-                    window.show_toast(&gettext("Merged PDF saved"));
+                    show_toast(&workspace, &gettext("Merged PDF saved"));
                 }
                 Err(error) => {
-                    window.show_toast(&error.to_string());
+                    show_toast(&workspace, &error.to_string());
                 }
             }
 
-            window.update_all_views();
+            workspace.update_view();
         });
     }
 
-    pub(super) fn update_files_view(&self) {
-        self.update_view_mode();
+    pub(super) fn supports_view_mode(&self) -> bool {
+        true
+    }
 
+    pub(super) fn has_view_mode_content(&self) -> bool {
+        !self.imp().merge.files.borrow().is_empty()
+    }
+
+    pub(super) fn set_view_mode(&self, view_mode: super::ViewMode) {
+        self.imp()
+            .merge_view_stack
+            .set_visible_child_name(view_mode.name());
+    }
+
+    pub(super) fn update_view(&self) {
         let imp = self.imp();
         let files = imp.merge.files.borrow();
         let has_files = !files.is_empty();
@@ -204,6 +288,7 @@ impl FoliosWindow {
             }
         };
         imp.file_count_label.set_label(&count_text);
+        update_shell_view_mode(self);
     }
 
     fn file_row(
@@ -321,18 +406,18 @@ impl FoliosWindow {
 
     fn move_file(&self, from: usize, to: usize) {
         self.imp().merge.move_file(from, to);
-        self.update_files_view();
+        self.update_view();
     }
 
     fn rotate_file(&self, index: usize) {
         if self.imp().merge.rotate_file(index) {
-            self.update_files_view();
+            self.update_view();
         }
     }
 
     fn reorder_file(&self, from: usize, to: usize) {
         if self.imp().merge.reorder_file(from, to) {
-            self.update_files_view();
+            self.update_view();
         }
     }
 
@@ -362,6 +447,12 @@ impl FoliosWindow {
 
     fn remove_file(&self, index: usize) {
         self.imp().merge.remove_file(index);
-        self.update_files_view();
+        self.update_view();
+    }
+
+    fn open_last_output(&self) {
+        if let Some(path) = self.imp().merge.last_output.borrow().as_ref() {
+            open_output(self, path);
+        }
     }
 }

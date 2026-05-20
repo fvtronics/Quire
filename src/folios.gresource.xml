@@ -2,6 +2,11 @@
 <gresources>
   <gresource prefix="/com/fvtronics/folios">
     <file preprocess="xml-stripblanks">window.ui</file>
+    <file preprocess="xml-stripblanks">merge-workspace.ui</file>
+    <file preprocess="xml-stripblanks">compress-workspace.ui</file>
+    <file preprocess="xml-stripblanks">organize-workspace.ui</file>
+    <file preprocess="xml-stripblanks">extract-workspace.ui</file>
+    <file preprocess="xml-stripblanks">split-workspace.ui</file>
     <file preprocess="xml-stripblanks">shortcuts-dialog.ui</file>
   </gresource>
 </gresources>

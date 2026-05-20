@@ -1,0 +1,133 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $SplitWorkspace: Gtk.Box {
+  orientation: vertical;
+  spacing: 18;
+  hexpand: true;
+  visible: false;
+  margin-start: 36;
+  margin-end: 36;
+  margin-top: 30;
+  margin-bottom: 30;
+
+  Gtk.Box {
+    orientation: horizontal;
+    spacing: 12;
+
+    Gtk.Box {
+      orientation: vertical;
+      spacing: 3;
+      hexpand: true;
+
+      Gtk.Label {
+        label: _("Split PDF");
+        xalign: 0;
+        styles ["title-2"]
+      }
+
+      Gtk.Label split_detail_label {
+        label: _("No PDF selected");
+        xalign: 0;
+        styles ["dim-label"]
+      }
+    }
+
+    Gtk.Button split_choose_button {
+      visible: false;
+      valign: center;
+      tooltip-text: _("Open PDF");
+      child: Adw.ButtonContent {
+        icon-name: "document-open-symbolic";
+        label: _("Open PDF");
+      };
+    }
+
+    Gtk.Button split_open_output_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Open Output Folder");
+
+      child: Adw.ButtonContent {
+        icon-name: "folder-open-symbolic";
+        label: _("Open Folder");
+      };
+    }
+
+    Gtk.Button split_save_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Split PDF");
+      styles ["suggested-action"]
+
+      child: Adw.ButtonContent {
+        icon-name: "document-save-symbolic";
+        label: _("Split");
+      };
+    }
+  }
+
+  Adw.StatusPage split_empty_status {
+    icon-name: "edit-cut-symbolic";
+    title: _("Open a PDF to Split");
+    description: _("Choose where the PDF should be split by page.");
+
+    child: Gtk.Button split_empty_choose_button {
+      halign: center;
+      tooltip-text: _("Open PDF");
+      styles ["suggested-action"]
+
+      child: Adw.ButtonContent {
+        icon-name: "document-open-symbolic";
+        label: _("Open PDF");
+      };
+    };
+  }
+
+  Gtk.Box split_content {
+    orientation: horizontal;
+    spacing: 18;
+    vexpand: true;
+    visible: false;
+
+    Gtk.Box split_preview_box {
+      width-request: 180;
+    }
+
+    Gtk.Box {
+      orientation: vertical;
+      spacing: 18;
+      hexpand: true;
+
+      Gtk.ListBox split_file_list {
+        selection-mode: none;
+        styles ["boxed-list"]
+      }
+
+      Gtk.ListBox {
+        selection-mode: none;
+        styles ["boxed-list"]
+
+        Adw.ComboRow split_after_row {
+          title: _("Split After");
+        }
+
+        Adw.EntryRow split_specific_pages_entry {
+          title: _("Specific Pages");
+        }
+
+        Adw.EntryRow split_pages_entry {
+          title: _("Every N Pages");
+          text: "1";
+        }
+
+        Adw.EntryRow split_prefix_entry {
+          title: _("Output Name Prefix");
+          text: "";
+        }
+      }
+    }
+  }
+}

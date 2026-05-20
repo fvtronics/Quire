@@ -6,6 +6,7 @@
  */
 
 use gtk::{gio, prelude::*};
+use std::collections::BTreeMap;
 use std::fmt;
 use std::path::PathBuf;
 
@@ -16,6 +17,12 @@ const SINGLE_FILE_PREVIEW_WIDTH: i32 = 360;
 pub struct PagePreview {
     pub page_number: u32,
     pub png_data: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct DocumentPreviews {
+    pub page_count: usize,
+    pub previews: BTreeMap<u32, PagePreview>,
 }
 
 #[derive(Debug)]
@@ -35,7 +42,7 @@ impl fmt::Display for PreviewError {
     }
 }
 
-pub async fn render_page_previews(input_file: PathBuf) -> Result<Vec<PagePreview>, PreviewError> {
+pub async fn render_page_previews(input_file: PathBuf) -> Result<DocumentPreviews, PreviewError> {
     gio::spawn_blocking(move || render_page_previews_blocking(input_file))
         .await
         .unwrap_or(Err(PreviewError::WorkerStopped))
@@ -65,19 +72,23 @@ pub async fn render_first_page_preview_with_count(
         .unwrap_or(Err(PreviewError::WorkerStopped))
 }
 
-fn render_page_previews_blocking(input_file: PathBuf) -> Result<Vec<PagePreview>, PreviewError> {
+fn render_page_previews_blocking(input_file: PathBuf) -> Result<DocumentPreviews, PreviewError> {
     let file = gio::File::for_path(input_file);
     let document = poppler::Document::from_file(file.uri().as_str(), None)
         .map_err(|error| PreviewError::Load(error.to_string()))?;
-    let mut previews = Vec::with_capacity(document.n_pages() as usize);
+    let page_count = document.n_pages().max(0) as usize;
+    let mut previews = BTreeMap::new();
 
-    for index in 0..document.n_pages() {
+    for index in 0..page_count as i32 {
         if let Some(preview) = render_page_preview(&document, index, PAGE_PREVIEW_WIDTH)? {
-            previews.push(preview);
+            previews.insert(preview.page_number, preview);
         }
     }
 
-    Ok(previews)
+    Ok(DocumentPreviews {
+        page_count,
+        previews,
+    })
 }
 
 fn render_first_page_preview_blocking(

@@ -1,0 +1,151 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $ExtractWorkspace: Gtk.Box {
+  orientation: vertical;
+  spacing: 18;
+  hexpand: true;
+  visible: false;
+  margin-start: 36;
+  margin-end: 36;
+  margin-top: 30;
+  margin-bottom: 30;
+
+  Gtk.Box {
+    orientation: horizontal;
+    spacing: 12;
+
+    Gtk.Box {
+      orientation: vertical;
+      spacing: 3;
+      hexpand: true;
+
+      Gtk.Label {
+        label: _("Extract Pages");
+        xalign: 0;
+        styles ["title-2"]
+      }
+
+      Gtk.Label extract_detail_label {
+        label: _("No PDF selected");
+        xalign: 0;
+        styles ["dim-label"]
+      }
+    }
+
+    Gtk.Button extract_choose_button {
+      visible: false;
+      valign: center;
+      tooltip-text: _("Open PDF");
+      child: Adw.ButtonContent {
+        icon-name: "document-open-symbolic";
+        label: _("Open PDF");
+      };
+    }
+
+    Gtk.Button extract_open_output_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Open Output File");
+
+      child: Adw.ButtonContent {
+        icon-name: "document-open-symbolic";
+        label: _("Open Output");
+      };
+    }
+
+    Gtk.Button extract_save_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Extract Selected Pages");
+      styles ["suggested-action"]
+
+      child: Adw.ButtonContent {
+        icon-name: "document-save-symbolic";
+        label: _("Extract");
+      };
+    }
+  }
+
+  Adw.StatusPage extract_empty_status {
+    icon-name: "edit-copy-symbolic";
+    title: _("Open a PDF to Extract Pages");
+    description: _("Choose page ranges, then save them as a new document.");
+
+    child: Gtk.Button extract_empty_choose_button {
+      halign: center;
+      tooltip-text: _("Open PDF");
+      styles ["suggested-action"]
+
+      child: Adw.ButtonContent {
+        icon-name: "document-open-symbolic";
+        label: _("Open PDF");
+      };
+    };
+  }
+
+  Gtk.Box extract_content {
+    orientation: vertical;
+    spacing: 18;
+    visible: false;
+
+    Gtk.Box {
+      orientation: horizontal;
+      spacing: 12;
+
+      Gtk.ListBox extract_file_list {
+        selection-mode: none;
+        hexpand: true;
+        styles ["boxed-list"]
+      }
+
+      Gtk.ListBox {
+        selection-mode: none;
+        width-request: 280;
+        styles ["boxed-list"]
+
+        Adw.EntryRow extract_ranges_entry {
+          title: _("Pages");
+          text: "";
+        }
+      }
+    }
+
+    Adw.ViewStack extract_view_stack {
+      vexpand: true;
+
+      Adw.ViewStackPage {
+        name: "list";
+        title: _("List");
+        icon-name: "view-list-symbolic";
+
+        child: Gtk.ScrolledWindow {
+          child: Gtk.ListBox extract_page_list {
+            selection-mode: none;
+            styles ["boxed-list"]
+          };
+        };
+      }
+
+      Adw.ViewStackPage {
+        name: "grid";
+        title: _("Grid");
+        icon-name: "view-grid-symbolic";
+
+        child: Gtk.ScrolledWindow {
+          child: Gtk.FlowBox extract_page_grid {
+            column-spacing: 12;
+            row-spacing: 12;
+            margin-end: 12;
+            homogeneous: true;
+            selection-mode: none;
+            min-children-per-line: 2;
+            max-children-per-line: 5;
+          };
+        };
+      }
+    }
+  }
+}

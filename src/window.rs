@@ -30,6 +30,7 @@ mod organize;
 mod split;
 mod state;
 mod ui;
+mod workspace;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(super) enum PdfTool {
@@ -42,7 +43,7 @@ pub(super) enum PdfTool {
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-enum ViewMode {
+pub(super) enum ViewMode {
     #[default]
     List,
     Grid,
@@ -51,8 +52,21 @@ enum ViewMode {
 const LIST_VIEW_NAME: &str = "list";
 const GRID_VIEW_NAME: &str = "grid";
 
+impl ViewMode {
+    pub(super) fn name(self) -> &'static str {
+        match self {
+            Self::List => LIST_VIEW_NAME,
+            Self::Grid => GRID_VIEW_NAME,
+        }
+    }
+}
+
 mod imp {
-    use super::state::{CompressState, ExtractState, MergeState, OrganizeState, SplitState};
+    use super::compress::CompressWorkspace;
+    use super::extract::ExtractWorkspace;
+    use super::merge::MergeWorkspace;
+    use super::organize::OrganizeWorkspace;
+    use super::split::SplitWorkspace;
     use super::*;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
@@ -79,141 +93,18 @@ mod imp {
         #[template_child]
         pub split_tool_row: TemplateChild<adw::ActionRow>,
         #[template_child]
-        pub merge_workspace: TemplateChild<gtk::Box>,
+        pub merge_workspace: TemplateChild<MergeWorkspace>,
         #[template_child]
-        pub compress_workspace: TemplateChild<gtk::Box>,
+        pub compress_workspace: TemplateChild<CompressWorkspace>,
         #[template_child]
-        pub organize_workspace: TemplateChild<gtk::Box>,
+        pub organize_workspace: TemplateChild<OrganizeWorkspace>,
         #[template_child]
-        pub extract_workspace: TemplateChild<gtk::Box>,
+        pub extract_workspace: TemplateChild<ExtractWorkspace>,
         #[template_child]
-        pub split_workspace: TemplateChild<gtk::Box>,
-
-        #[template_child]
-        pub add_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub empty_add_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub file_count_label: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub empty_status: TemplateChild<adw::StatusPage>,
-        #[template_child]
-        pub merge_view_stack: TemplateChild<adw::ViewStack>,
-        #[template_child]
-        pub file_list: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub merge_file_grid: TemplateChild<gtk::FlowBox>,
-        #[template_child]
-        pub clear_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub merge_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub open_output_button: TemplateChild<gtk::Button>,
-
-        #[template_child]
-        pub compress_choose_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub compress_empty_choose_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub compress_detail_label: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub compress_empty_status: TemplateChild<adw::StatusPage>,
-        #[template_child]
-        pub compress_content: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub compress_preview_box: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub compress_file_list: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub compress_save_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub compress_open_output_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub compress_prune_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub compress_empty_streams_row: TemplateChild<adw::SwitchRow>,
-
-        #[template_child]
-        pub organize_choose_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub organize_empty_choose_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub organize_detail_label: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub organize_empty_status: TemplateChild<adw::StatusPage>,
-        #[template_child]
-        pub organize_view_stack: TemplateChild<adw::ViewStack>,
-        #[template_child]
-        pub organize_page_list: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub organize_page_grid: TemplateChild<gtk::FlowBox>,
-        #[template_child]
-        pub organize_reset_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub organize_save_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub organize_open_output_button: TemplateChild<gtk::Button>,
-
-        #[template_child]
-        pub extract_choose_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub extract_empty_choose_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub extract_detail_label: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub extract_empty_status: TemplateChild<adw::StatusPage>,
-        #[template_child]
-        pub extract_content: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub extract_file_list: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub extract_ranges_entry: TemplateChild<adw::EntryRow>,
-        #[template_child]
-        pub extract_view_stack: TemplateChild<adw::ViewStack>,
-        #[template_child]
-        pub extract_page_list: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub extract_page_grid: TemplateChild<gtk::FlowBox>,
-        #[template_child]
-        pub extract_save_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub extract_open_output_button: TemplateChild<gtk::Button>,
-
-        #[template_child]
-        pub split_choose_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub split_empty_choose_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub split_detail_label: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub split_empty_status: TemplateChild<adw::StatusPage>,
-        #[template_child]
-        pub split_content: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub split_preview_box: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub split_file_list: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub split_after_row: TemplateChild<adw::ComboRow>,
-        #[template_child]
-        pub split_specific_pages_entry: TemplateChild<adw::EntryRow>,
-        #[template_child]
-        pub split_pages_entry: TemplateChild<adw::EntryRow>,
-        #[template_child]
-        pub split_prefix_entry: TemplateChild<adw::EntryRow>,
-        #[template_child]
-        pub split_save_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub split_open_output_button: TemplateChild<gtk::Button>,
+        pub split_workspace: TemplateChild<SplitWorkspace>,
 
         pub(super) active_tool: Cell<PdfTool>,
         pub(super) view_mode: Cell<ViewMode>,
-        pub merge: MergeState,
-        pub compress: CompressState,
-        pub organize: OrganizeState,
-        pub extract: ExtractState,
-        pub split: SplitState,
-        pub is_running: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -223,6 +114,11 @@ mod imp {
         type ParentType = adw::ApplicationWindow;
 
         fn class_init(klass: &mut Self::Class) {
+            MergeWorkspace::static_type();
+            CompressWorkspace::static_type();
+            OrganizeWorkspace::static_type();
+            ExtractWorkspace::static_type();
+            SplitWorkspace::static_type();
             klass.bind_template();
         }
 
@@ -237,7 +133,6 @@ mod imp {
             let obj = self.obj();
             obj.setup_callbacks();
             obj.switch_tool(PdfTool::Merge);
-            obj.update_all_views();
         }
     }
     impl WidgetImpl for FoliosWindow {}
@@ -296,12 +191,6 @@ impl FoliosWindow {
         imp.split_tool_row.connect_activated(move |_| {
             window.switch_tool(PdfTool::Split);
         });
-
-        self.setup_merge_callbacks();
-        self.setup_compress_callbacks();
-        self.setup_organize_callbacks();
-        self.setup_extract_callbacks();
-        self.setup_split_callbacks();
     }
 
     fn switch_tool(&self, tool: PdfTool) {
@@ -331,65 +220,47 @@ impl FoliosWindow {
         self.update_view_mode();
     }
 
-    fn update_view_mode(&self) {
+    pub(super) fn update_view_mode(&self) {
         let imp = self.imp();
         let view_mode = imp.view_mode.get();
-        let view_name = match view_mode {
-            ViewMode::List => LIST_VIEW_NAME,
-            ViewMode::Grid => GRID_VIEW_NAME,
-        };
-
         imp.view_mode_box
             .set_visible(self.active_tool_has_view_mode_content());
         imp.list_view_button.set_active(view_mode == ViewMode::List);
         imp.grid_view_button.set_active(view_mode == ViewMode::Grid);
-        imp.merge_view_stack.set_visible_child_name(view_name);
-        imp.organize_view_stack.set_visible_child_name(view_name);
-        imp.extract_view_stack.set_visible_child_name(view_name);
+        imp.merge_workspace.set_view_mode(view_mode);
+        imp.compress_workspace.set_view_mode(view_mode);
+        imp.organize_workspace.set_view_mode(view_mode);
+        imp.extract_workspace.set_view_mode(view_mode);
+        imp.split_workspace.set_view_mode(view_mode);
     }
 
     fn active_tool_has_view_mode_content(&self) -> bool {
         let imp = self.imp();
         match imp.active_tool.get() {
-            PdfTool::Merge => !imp.merge.files.borrow().is_empty(),
-            PdfTool::Organize => imp.organize.file.borrow().is_some(),
-            PdfTool::Extract => imp.extract.file.borrow().is_some(),
-            PdfTool::Compress | PdfTool::Split => false,
+            PdfTool::Merge => {
+                imp.merge_workspace.supports_view_mode()
+                    && imp.merge_workspace.has_view_mode_content()
+            }
+            PdfTool::Compress => {
+                imp.compress_workspace.supports_view_mode()
+                    && imp.compress_workspace.has_view_mode_content()
+            }
+            PdfTool::Organize => {
+                imp.organize_workspace.supports_view_mode()
+                    && imp.organize_workspace.has_view_mode_content()
+            }
+            PdfTool::Extract => {
+                imp.extract_workspace.supports_view_mode()
+                    && imp.extract_workspace.has_view_mode_content()
+            }
+            PdfTool::Split => {
+                imp.split_workspace.supports_view_mode()
+                    && imp.split_workspace.has_view_mode_content()
+            }
         }
     }
 
-    fn update_all_views(&self) {
-        self.update_view_mode();
-        self.update_files_view();
-        self.update_compress_view();
-        self.update_organize_view();
-        self.update_extract_view();
-        self.update_split_view();
-    }
-
-    fn open_last_output(&self) {
-        let imp = self.imp();
-        let path = match imp.active_tool.get() {
-            PdfTool::Merge => imp.merge.last_output.borrow().clone(),
-            PdfTool::Compress => imp.compress.last_output.borrow().clone(),
-            PdfTool::Organize => imp.organize.last_output.borrow().clone(),
-            PdfTool::Extract => imp.extract.last_output.borrow().clone(),
-            PdfTool::Split => imp.split.last_output.borrow().clone(),
-        };
-        let Some(path) = path else {
-            return;
-        };
-
-        let file = gio::File::for_path(path);
-        if let Err(error) = gio::AppInfo::launch_default_for_uri(
-            file.uri().as_str(),
-            None::<&gio::AppLaunchContext>,
-        ) {
-            self.show_toast(&error.to_string());
-        }
-    }
-
-    fn show_toast(&self, message: &str) {
+    pub(super) fn show_toast(&self, message: &str) {
         let imp = self.imp();
         imp.toast_overlay.add_toast(adw::Toast::new(message));
     }

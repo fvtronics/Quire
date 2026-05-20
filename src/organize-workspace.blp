@@ -1,0 +1,135 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $OrganizeWorkspace: Gtk.Box {
+  orientation: vertical;
+  spacing: 18;
+  hexpand: true;
+  visible: false;
+  margin-start: 36;
+  margin-end: 36;
+  margin-top: 30;
+  margin-bottom: 30;
+
+  Gtk.Box {
+    orientation: horizontal;
+    spacing: 12;
+
+    Gtk.Box {
+      orientation: vertical;
+      spacing: 3;
+      hexpand: true;
+
+      Gtk.Label {
+        label: _("Organize Pages");
+        xalign: 0;
+        styles ["title-2"]
+      }
+
+      Gtk.Label organize_detail_label {
+        label: _("No PDF selected");
+        xalign: 0;
+        styles ["dim-label"]
+      }
+    }
+
+    Gtk.Button organize_choose_button {
+      visible: false;
+      valign: center;
+      tooltip-text: _("Open PDF");
+      child: Adw.ButtonContent {
+        icon-name: "document-open-symbolic";
+        label: _("Open PDF");
+      };
+    }
+
+    Gtk.Button organize_open_output_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Open Output File");
+
+      child: Adw.ButtonContent {
+        icon-name: "document-open-symbolic";
+        label: _("Open Output");
+      };
+    }
+
+    Gtk.Button organize_reset_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Reset Page Order");
+
+      child: Adw.ButtonContent {
+        icon-name: "edit-undo-symbolic";
+        label: _("Reset");
+      };
+    }
+
+    Gtk.Button organize_save_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Save Organized PDF");
+      styles ["suggested-action"]
+
+      child: Adw.ButtonContent {
+        icon-name: "document-save-symbolic";
+        label: _("Save");
+      };
+    }
+  }
+
+  Adw.StatusPage organize_empty_status {
+    icon-name: "view-grid-symbolic";
+    title: _("Open a PDF to Organize");
+    description: _("Reorder or remove pages, then save a new document.");
+
+    child: Gtk.Button organize_empty_choose_button {
+      halign: center;
+      tooltip-text: _("Open PDF");
+      styles ["suggested-action"]
+
+      child: Adw.ButtonContent {
+        icon-name: "document-open-symbolic";
+        label: _("Open PDF");
+      };
+    };
+  }
+
+  Adw.ViewStack organize_view_stack {
+    vexpand: true;
+    visible: false;
+
+    Adw.ViewStackPage {
+      name: "list";
+      title: _("List");
+      icon-name: "view-list-symbolic";
+
+      child: Gtk.ScrolledWindow {
+        child: Gtk.ListBox organize_page_list {
+          selection-mode: none;
+          styles ["boxed-list"]
+        };
+      };
+    }
+
+    Adw.ViewStackPage {
+      name: "grid";
+      title: _("Grid");
+      icon-name: "view-grid-symbolic";
+
+      child: Gtk.ScrolledWindow {
+        child: Gtk.FlowBox organize_page_grid {
+          column-spacing: 12;
+          row-spacing: 12;
+          homogeneous: true;
+          selection-mode: none;
+          min-children-per-line: 2;
+          max-children-per-line: 5;
+        };
+      };
+    }
+  }
+}

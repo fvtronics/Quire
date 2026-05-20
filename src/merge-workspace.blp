@@ -1,0 +1,130 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $MergeWorkspace: Gtk.Box {
+  orientation: vertical;
+  spacing: 18;
+  hexpand: true;
+  margin-start: 36;
+  margin-end: 36;
+  margin-top: 30;
+  margin-bottom: 30;
+
+  Gtk.Box {
+    orientation: horizontal;
+    spacing: 12;
+
+    Gtk.Box {
+      orientation: vertical;
+      spacing: 3;
+      hexpand: true;
+
+      Gtk.Label {
+        label: _("Merge PDFs");
+        xalign: 0;
+        styles ["title-2"]
+      }
+
+      Gtk.Label file_count_label {
+        label: _("No files selected");
+        xalign: 0;
+        styles ["dim-label"]
+      }
+    }
+
+    Gtk.Button add_button {
+      visible: false;
+      valign: center;
+      tooltip-text: _("Add PDF Files");
+      child: Adw.ButtonContent {
+        icon-name: "list-add-symbolic";
+        label: _("Add PDFs");
+      };
+    }
+
+    Gtk.Button open_output_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Open Output File");
+
+      child: Adw.ButtonContent {
+        icon-name: "document-open-symbolic";
+        label: _("Open Output");
+      };
+    }
+
+    Gtk.Button clear_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Clear File List");
+
+      child: Adw.ButtonContent {
+        icon-name: "edit-clear-symbolic";
+        label: _("Clear");
+      };
+    }
+
+    Gtk.Button merge_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Merge Selected PDFs");
+      styles ["suggested-action"]
+
+      child: Adw.ButtonContent {
+        icon-name: "document-save-symbolic";
+        label: _("Merge");
+      };
+    }
+  }
+
+  Adw.StatusPage empty_status {
+    icon-name: "view-paged-symbolic";
+    title: _("Add PDFs to Begin");
+    description: _("Choose two or more PDF files to combine into a new document.");
+
+    child: Gtk.Button empty_add_button {
+      halign: center;
+      tooltip-text: _("Add PDF Files");
+      styles ["suggested-action"]
+
+      child: Adw.ButtonContent {
+        icon-name: "list-add-symbolic";
+        label: _("Add PDFs");
+      };
+    };
+  }
+
+  Adw.ViewStack merge_view_stack {
+    vexpand: true;
+    visible: false;
+
+    Adw.ViewStackPage {
+      name: "list";
+
+      child: Gtk.ScrolledWindow {
+        child: Gtk.ListBox file_list {
+          selection-mode: none;
+          styles ["boxed-list"]
+        };
+      };
+    }
+
+    Adw.ViewStackPage {
+      name: "grid";
+
+      child: Gtk.ScrolledWindow {
+        child: Gtk.FlowBox merge_file_grid {
+          column-spacing: 12;
+          row-spacing: 12;
+          homogeneous: true;
+          selection-mode: none;
+          min-children-per-line: 2;
+          max-children-per-line: 5;
+        };
+      };
+    }
+  }
+}
