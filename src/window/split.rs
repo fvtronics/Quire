@@ -120,27 +120,23 @@ impl FoliosWindow {
 
     fn load_split_pdf(&self, path: PathBuf) {
         let imp = self.imp();
-        imp.is_running.set(true);
-        imp.split.file.borrow_mut().replace(path.clone());
-        imp.split.page_count.set(0);
-        imp.split.preview.borrow_mut().take();
+        imp.split.is_loading.set(true);
         imp.split.last_output.borrow_mut().take();
-        imp.split_prefix_entry
-            .set_text(&split_default_prefix(&path));
         self.update_split_view();
 
         let window = self.clone();
         glib::spawn_future_local(async move {
             let result = crate::preview::render_first_page_preview_with_count(path.clone()).await;
             let imp = window.imp();
-            imp.is_running.set(false);
+            imp.split.is_loading.set(false);
 
             match result {
                 Ok((preview, page_count)) => {
-                    if imp.split.file.borrow().as_ref() == Some(&path) {
-                        imp.split.page_count.set(page_count);
-                        *imp.split.preview.borrow_mut() = preview;
-                    }
+                    imp.split.file.borrow_mut().replace(path.clone());
+                    imp.split.page_count.set(page_count);
+                    *imp.split.preview.borrow_mut() = preview;
+                    imp.split_prefix_entry
+                        .set_text(&split_default_prefix(&path));
                 }
                 Err(error) => {
                     window.show_toast(&error.to_string());
@@ -188,6 +184,7 @@ impl FoliosWindow {
         let file = imp.split.file.borrow();
         let has_file = file.is_some();
         let has_split_rule = self.split_rule().is_ok();
+        let is_busy = imp.is_running.get() || imp.split.is_loading.get();
         let split_mode = imp.split_after_row.selected();
         let preview = imp.split.preview.borrow();
 
@@ -207,28 +204,27 @@ impl FoliosWindow {
         imp.split_open_output_button
             .set_visible(imp.split.last_output.borrow().is_some());
 
-        imp.split_choose_button.set_sensitive(!imp.is_running.get());
-        imp.split_empty_choose_button
-            .set_sensitive(!imp.is_running.get());
+        imp.split_choose_button.set_sensitive(!is_busy);
+        imp.split_empty_choose_button.set_sensitive(!is_busy);
         imp.split_save_button
-            .set_sensitive(has_file && has_split_rule && !imp.is_running.get());
+            .set_sensitive(has_file && has_split_rule && !is_busy);
         imp.split_open_output_button
-            .set_sensitive(imp.split.last_output.borrow().is_some() && !imp.is_running.get());
-        imp.split_after_row
-            .set_sensitive(has_file && !imp.is_running.get());
+            .set_sensitive(imp.split.last_output.borrow().is_some() && !is_busy);
+        imp.split_after_row.set_sensitive(has_file && !is_busy);
         imp.split_specific_pages_entry
             .set_visible(split_mode == SPLIT_SPECIFIC_PAGES);
         imp.split_specific_pages_entry
-            .set_sensitive(has_file && split_mode == SPLIT_SPECIFIC_PAGES && !imp.is_running.get());
+            .set_sensitive(has_file && split_mode == SPLIT_SPECIFIC_PAGES && !is_busy);
         imp.split_pages_entry
             .set_visible(split_mode == SPLIT_EVERY_N_PAGES);
         imp.split_pages_entry
-            .set_sensitive(has_file && split_mode == SPLIT_EVERY_N_PAGES && !imp.is_running.get());
-        imp.split_prefix_entry
-            .set_sensitive(has_file && !imp.is_running.get());
+            .set_sensitive(has_file && split_mode == SPLIT_EVERY_N_PAGES && !is_busy);
+        imp.split_prefix_entry.set_sensitive(has_file && !is_busy);
 
         let detail = if imp.is_running.get() {
             gettext("Splitting PDF...")
+        } else if imp.split.is_loading.get() {
+            gettext("Loading PDF...")
         } else if has_file {
             page_count_label(imp.split.page_count.get())
         } else {

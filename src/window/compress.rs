@@ -66,9 +66,7 @@ impl FoliosWindow {
 
     fn load_compress_pdf(&self, path: PathBuf) {
         let imp = self.imp();
-        imp.is_running.set(true);
-        imp.compress.file.borrow_mut().replace(path.clone());
-        imp.compress.preview.borrow_mut().take();
+        imp.compress.is_loading.set(true);
         imp.compress.last_output.borrow_mut().take();
         self.update_compress_view();
 
@@ -76,13 +74,12 @@ impl FoliosWindow {
         glib::spawn_future_local(async move {
             let result = crate::preview::render_single_file_preview(path.clone()).await;
             let imp = window.imp();
-            imp.is_running.set(false);
+            imp.compress.is_loading.set(false);
 
             match result {
                 Ok(preview) => {
-                    if imp.compress.file.borrow().as_ref() == Some(&path) {
-                        *imp.compress.preview.borrow_mut() = preview;
-                    }
+                    imp.compress.file.borrow_mut().replace(path);
+                    *imp.compress.preview.borrow_mut() = preview;
                 }
                 Err(error) => {
                     window.show_toast(&error.to_string());
@@ -128,6 +125,7 @@ impl FoliosWindow {
         let imp = self.imp();
         let file = imp.compress.file.borrow();
         let has_file = file.is_some();
+        let is_busy = imp.is_running.get() || imp.compress.is_loading.get();
         let preview = imp.compress.preview.borrow();
 
         imp.compress_file_list.remove_all();
@@ -146,21 +144,19 @@ impl FoliosWindow {
         imp.compress_open_output_button
             .set_visible(imp.compress.last_output.borrow().is_some());
 
-        imp.compress_choose_button
-            .set_sensitive(!imp.is_running.get());
-        imp.compress_empty_choose_button
-            .set_sensitive(!imp.is_running.get());
-        imp.compress_save_button
-            .set_sensitive(has_file && !imp.is_running.get());
+        imp.compress_choose_button.set_sensitive(!is_busy);
+        imp.compress_empty_choose_button.set_sensitive(!is_busy);
+        imp.compress_save_button.set_sensitive(has_file && !is_busy);
         imp.compress_open_output_button
-            .set_sensitive(imp.compress.last_output.borrow().is_some() && !imp.is_running.get());
-        imp.compress_prune_row
-            .set_sensitive(has_file && !imp.is_running.get());
+            .set_sensitive(imp.compress.last_output.borrow().is_some() && !is_busy);
+        imp.compress_prune_row.set_sensitive(has_file && !is_busy);
         imp.compress_empty_streams_row
-            .set_sensitive(has_file && !imp.is_running.get());
+            .set_sensitive(has_file && !is_busy);
 
         let detail = if imp.is_running.get() {
             gettext("Compressing PDF...")
+        } else if imp.compress.is_loading.get() {
+            gettext("Loading PDF...")
         } else if let Some(path) = file.as_ref() {
             file_subtitle(path)
         } else {

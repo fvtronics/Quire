@@ -84,27 +84,54 @@ impl FoliosWindow {
                 .cloned()
                 .collect::<Vec<_>>()
         };
-        imp.merge.files.borrow_mut().extend(paths);
         imp.merge.last_output.borrow_mut().take();
-        self.update_files_view();
 
-        for path in paths_to_preview {
-            self.load_merge_preview(path);
+        if paths_to_preview.is_empty() {
+            imp.merge.files.borrow_mut().extend(paths);
+            self.update_files_view();
+            return;
         }
+
+        imp.merge.is_loading.set(true);
+        self.update_files_view();
+        self.load_merge_previews(paths, paths_to_preview);
     }
 
-    fn load_merge_preview(&self, path: PathBuf) {
+    fn load_merge_previews(&self, paths: Vec<PathBuf>, paths_to_preview: Vec<PathBuf>) {
         let window = self.clone();
         glib::spawn_future_local(async move {
-            let result = crate::preview::render_first_page_preview(path.clone()).await;
-            let imp = window.imp();
+            let mut loaded_paths = Vec::new();
+            let mut loaded_previews = Vec::new();
 
-            if let Ok(Some(preview)) = result {
-                if imp.merge.files.borrow().contains(&path) {
-                    imp.merge.previews.borrow_mut().insert(path, preview);
-                    window.update_files_view();
+            for path in &paths_to_preview {
+                match crate::preview::render_first_page_preview(path.clone()).await {
+                    Ok(preview) => {
+                        loaded_paths.push(path.clone());
+                        if let Some(preview) = preview {
+                            loaded_previews.push((path.clone(), preview));
+                        }
+                    }
+                    Err(error) => {
+                        window.show_toast(&error.to_string());
+                    }
                 }
             }
+
+            let files_to_add = paths
+                .into_iter()
+                .filter(|path| !paths_to_preview.contains(path) || loaded_paths.contains(path))
+                .collect::<Vec<_>>();
+            let imp = window.imp();
+            imp.merge.is_loading.set(false);
+
+            if !loaded_previews.is_empty() {
+                imp.merge.previews.borrow_mut().extend(loaded_previews);
+            }
+            if !files_to_add.is_empty() {
+                imp.merge.files.borrow_mut().extend(files_to_add);
+            }
+
+            window.update_files_view();
         });
     }
 
@@ -152,7 +179,8 @@ impl FoliosWindow {
         let imp = self.imp();
         let files = imp.merge.files.borrow();
         let has_files = !files.is_empty();
-        let can_merge = files.len() > 1 && !imp.is_running.get();
+        let is_busy = imp.is_running.get() || imp.merge.is_loading.get();
+        let can_merge = files.len() > 1 && !is_busy;
         let previews = imp.merge.previews.borrow();
         let rotations = imp.merge.rotations.borrow();
 
@@ -184,16 +212,17 @@ impl FoliosWindow {
         imp.open_output_button
             .set_visible(imp.merge.last_output.borrow().is_some());
 
-        imp.add_button
-            .set_sensitive(has_files && !imp.is_running.get());
-        imp.clear_button
-            .set_sensitive(has_files && !imp.is_running.get());
+        imp.add_button.set_sensitive(has_files && !is_busy);
+        imp.empty_add_button.set_sensitive(!is_busy);
+        imp.clear_button.set_sensitive(has_files && !is_busy);
         imp.merge_button.set_sensitive(can_merge);
         imp.open_output_button
-            .set_sensitive(imp.merge.last_output.borrow().is_some() && !imp.is_running.get());
+            .set_sensitive(imp.merge.last_output.borrow().is_some() && !is_busy);
 
         let count_text = if imp.is_running.get() {
             gettext("Merging PDFs...")
+        } else if imp.merge.is_loading.get() {
+            gettext("Loading PDFs...")
         } else {
             match files.len() {
                 0 => gettext("No files selected"),
@@ -220,7 +249,8 @@ impl FoliosWindow {
 
         row.add_prefix(&rotated_list_preview_prefix(preview, rotation));
 
-        let controls_sensitive = !self.imp().is_running.get();
+        let imp = self.imp();
+        let controls_sensitive = !imp.is_running.get() && !imp.merge.is_loading.get();
         let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
         up_button.set_sensitive(controls_sensitive && index > 0);
         let window = self.clone();
@@ -275,7 +305,8 @@ impl FoliosWindow {
         let size = dim_tile_label(file_subtitle(path));
         controls.append(&size);
 
-        let controls_sensitive = !self.imp().is_running.get();
+        let imp = self.imp();
+        let controls_sensitive = !imp.is_running.get() && !imp.merge.is_loading.get();
         let up_button = icon_button("go-up-symbolic", &gettext("Move Up"));
         up_button.set_sensitive(controls_sensitive && index > 0);
         let window = self.clone();

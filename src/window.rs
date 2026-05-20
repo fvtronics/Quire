@@ -61,6 +61,7 @@ mod imp {
         pub rotations: RefCell<BTreeMap<PathBuf, i64>>,
         pub previews: RefCell<BTreeMap<PathBuf, crate::preview::PagePreview>>,
         pub last_output: RefCell<Option<PathBuf>>,
+        pub is_loading: Cell<bool>,
     }
 
     #[derive(Debug, Default)]
@@ -68,6 +69,7 @@ mod imp {
         pub file: RefCell<Option<PathBuf>>,
         pub preview: RefCell<Option<crate::preview::PagePreview>>,
         pub last_output: RefCell<Option<PathBuf>>,
+        pub is_loading: Cell<bool>,
     }
 
     #[derive(Debug, Default)]
@@ -96,6 +98,7 @@ mod imp {
         pub page_count: Cell<usize>,
         pub preview: RefCell<Option<crate::preview::PagePreview>>,
         pub last_output: RefCell<Option<PathBuf>>,
+        pub is_loading: Cell<bool>,
     }
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
