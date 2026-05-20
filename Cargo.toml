@@ -9,6 +9,7 @@ gettext-rs = { version = "0.7", features = ["gettext-system"] }
 gtk = { version = "0.9", package = "gtk4", features = ["gnome_47"] }
 lopdf = { version = "0.36", default-features = false }
 poppler-rs = "0.24"
+tempfile = "3.20"
 
 [dependencies.adw]
 package = "libadwaita"

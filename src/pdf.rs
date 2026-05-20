@@ -10,7 +10,6 @@ use lopdf::{Document, Object, ObjectId};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 const PAGE_RANGE_HINT: &str = "Enter page ranges like 1,3-5,8.";
 const PAGE_LIST_HINT: &str = "Enter pages like 2,4,7.";
@@ -628,33 +627,27 @@ fn save_document(
     document.renumber_objects();
     document.adjust_zero_pages();
 
-    let temp_file = temporary_output_path(output_file);
+    let temp_file = temporary_output_file(output_file)?;
 
-    if let Err(error) = document.save(&temp_file) {
-        let _ = std::fs::remove_file(&temp_file);
+    if let Err(error) = document.save(temp_file.path()) {
         return Err(PdfBackendError::Write(error.to_string()));
     }
 
-    let result = std::fs::copy(&temp_file, output_file).map(|_| output_file.to_path_buf());
-    let _ = std::fs::remove_file(&temp_file);
-
-    result.map_err(PdfBackendError::Save)
+    std::fs::copy(temp_file.path(), output_file).map_err(PdfBackendError::Save)?;
+    Ok(output_file.to_path_buf())
 }
 
-fn temporary_output_path(output_file: &Path) -> PathBuf {
+fn temporary_output_file(output_file: &Path) -> Result<tempfile::NamedTempFile, PdfBackendError> {
     let name = output_file
         .file_stem()
         .and_then(|stem| stem.to_str())
         .unwrap_or("folios");
-    let unique = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_nanos())
-        .unwrap_or_default();
 
-    std::env::temp_dir().join(format!(
-        ".{name}.folios-{}-{unique}.pdf",
-        std::process::id()
-    ))
+    tempfile::Builder::new()
+        .prefix(&format!(".{name}.folios-"))
+        .suffix(".pdf")
+        .tempfile()
+        .map_err(PdfBackendError::Save)
 }
 
 fn parse_page_number(input: &str, page_count: usize) -> Result<u32, PdfBackendError> {
@@ -771,7 +764,6 @@ mod tests {
 
         assert_eq!(result.unwrap(), output);
         assert_eq!(page_markers(&output), vec![10, 20, 30]);
-        assert!(!temporary_output_path(&output).exists());
     }
 
     #[test]
