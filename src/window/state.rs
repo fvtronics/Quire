@@ -134,9 +134,15 @@ impl MergeState {
             .collect()
     }
 
-    pub fn move_file(&self, from: usize, to: usize) {
-        self.files.borrow_mut().swap(from, to);
+    pub fn move_file(&self, from: usize, to: usize) -> bool {
+        let mut files = self.files.borrow_mut();
+        if !move_vec_item(&mut files, from, to) {
+            return false;
+        }
+
+        drop(files);
         self.job.clear_last_output();
+        true
     }
 
     pub fn rotate_file(&self, index: usize) -> bool {
@@ -149,20 +155,7 @@ impl MergeState {
     }
 
     pub fn reorder_file(&self, from: usize, to: usize) -> bool {
-        if from == to {
-            return false;
-        }
-
-        let mut files = self.files.borrow_mut();
-        if from >= files.len() || to >= files.len() {
-            return false;
-        }
-
-        let file = files.remove(from);
-        files.insert(to, file);
-        drop(files);
-        self.job.clear_last_output();
-        true
+        self.move_file(from, to)
     }
 
     pub fn remove_file(&self, index: usize) {
@@ -232,9 +225,15 @@ impl OrganizeState {
         Some((input_file, pages))
     }
 
-    pub fn move_page(&self, from: usize, to: usize) {
-        self.page_order.borrow_mut().swap(from, to);
+    pub fn move_page(&self, from: usize, to: usize) -> bool {
+        let mut page_order = self.page_order.borrow_mut();
+        if !move_vec_item(&mut page_order, from, to) {
+            return false;
+        }
+
+        drop(page_order);
         self.job.clear_last_output();
+        true
     }
 
     pub fn rotate_page(&self, page_number: u32) {
@@ -247,7 +246,7 @@ impl OrganizeState {
             return false;
         }
 
-        let mut pages = self.page_order.borrow_mut();
+        let pages = self.page_order.borrow();
         let Some(from) = pages.iter().position(|page| *page == dragged_page) else {
             return false;
         };
@@ -255,11 +254,8 @@ impl OrganizeState {
             return false;
         };
 
-        let page = pages.remove(from);
-        pages.insert(to, page);
         drop(pages);
-        self.job.clear_last_output();
-        true
+        self.move_page(from, to)
     }
 
     pub fn remove_page(&self, index: usize) -> bool {
@@ -370,6 +366,16 @@ where
     }
 }
 
+fn move_vec_item<T>(items: &mut Vec<T>, from: usize, to: usize) -> bool {
+    if from == to || from >= items.len() || to >= items.len() {
+        return false;
+    }
+
+    let item = items.remove(from);
+    items.insert(to, item);
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -424,6 +430,75 @@ mod tests {
 
         assert!(!state.is_loading());
         assert_eq!(state.last_output(), None);
+    }
+
+    #[test]
+    fn merge_move_file_moves_by_index_and_clears_output() {
+        let state = MergeState::default();
+        *state.files.borrow_mut() = vec![
+            PathBuf::from("first.pdf"),
+            PathBuf::from("second.pdf"),
+            PathBuf::from("third.pdf"),
+        ];
+        state.job.set_last_output(PathBuf::from("merged.pdf"));
+
+        assert!(state.move_file(0, 2));
+
+        assert_eq!(
+            *state.files.borrow(),
+            vec![
+                PathBuf::from("second.pdf"),
+                PathBuf::from("third.pdf"),
+                PathBuf::from("first.pdf"),
+            ]
+        );
+        assert_eq!(state.job.last_output(), None);
+    }
+
+    #[test]
+    fn merge_move_file_rejects_invalid_indices() {
+        let state = MergeState::default();
+        *state.files.borrow_mut() = vec![PathBuf::from("first.pdf"), PathBuf::from("second.pdf")];
+        state.job.set_last_output(PathBuf::from("merged.pdf"));
+
+        assert!(!state.move_file(0, 0));
+        assert!(!state.move_file(0, 2));
+        assert!(!state.move_file(2, 0));
+
+        assert_eq!(
+            *state.files.borrow(),
+            vec![PathBuf::from("first.pdf"), PathBuf::from("second.pdf")]
+        );
+        assert_eq!(state.job.last_output(), Some(PathBuf::from("merged.pdf")));
+    }
+
+    #[test]
+    fn organize_move_page_moves_by_index_and_clears_output() {
+        let state = OrganizeState::default();
+        *state.page_order.borrow_mut() = vec![1, 2, 3];
+        state.job.set_last_output(PathBuf::from("organized.pdf"));
+
+        assert!(state.move_page(2, 0));
+
+        assert_eq!(*state.page_order.borrow(), vec![3, 1, 2]);
+        assert_eq!(state.job.last_output(), None);
+    }
+
+    #[test]
+    fn organize_move_page_rejects_invalid_indices() {
+        let state = OrganizeState::default();
+        *state.page_order.borrow_mut() = vec![1, 2];
+        state.job.set_last_output(PathBuf::from("organized.pdf"));
+
+        assert!(!state.move_page(1, 1));
+        assert!(!state.move_page(0, 2));
+        assert!(!state.move_page(2, 0));
+
+        assert_eq!(*state.page_order.borrow(), vec![1, 2]);
+        assert_eq!(
+            state.job.last_output(),
+            Some(PathBuf::from("organized.pdf"))
+        );
     }
 
     #[test]

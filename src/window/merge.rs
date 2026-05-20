@@ -295,9 +295,9 @@ impl MergeWorkspace {
         let imp = self.imp();
         let controls_sensitive = !imp.merge.job.is_busy(imp.is_running.get());
         let workspace = self.clone();
-        let move_up = move || workspace.move_file(index, index - 1);
+        let move_up = move || workspace.move_file(index, index.saturating_sub(1));
         let workspace = self.clone();
-        let move_down = move || workspace.move_file(index, index + 1);
+        let move_down = move || workspace.move_file(index, index.saturating_add(1));
         let workspace = self.clone();
         let rotate = move || workspace.rotate_file(index);
         let workspace = self.clone();
@@ -340,9 +340,9 @@ impl MergeWorkspace {
         let imp = self.imp();
         let controls_sensitive = !imp.merge.job.is_busy(imp.is_running.get());
         let workspace = self.clone();
-        let move_up = move || workspace.move_file(index, index - 1);
+        let move_up = move || workspace.move_file(index, index.saturating_sub(1));
         let workspace = self.clone();
-        let move_down = move || workspace.move_file(index, index + 1);
+        let move_down = move || workspace.move_file(index, index.saturating_add(1));
         let workspace = self.clone();
         let rotate = move || workspace.rotate_file(index);
         let workspace = self.clone();
@@ -368,17 +368,30 @@ impl MergeWorkspace {
     }
 
     fn move_file(&self, from: usize, to: usize) {
-        self.imp().merge.move_file(from, to);
-        self.update_view();
+        if self.is_busy() {
+            return;
+        }
+
+        if self.imp().merge.move_file(from, to) {
+            self.update_view();
+        }
     }
 
     fn rotate_file(&self, index: usize) {
+        if self.is_busy() {
+            return;
+        }
+
         if self.imp().merge.rotate_file(index) {
             self.update_view();
         }
     }
 
     fn reorder_file(&self, from: usize, to: usize) {
+        if self.is_busy() {
+            return;
+        }
+
         if self.imp().merge.reorder_file(from, to) {
             self.update_view();
         }
@@ -409,6 +422,10 @@ impl MergeWorkspace {
     }
 
     fn remove_file(&self, index: usize) {
+        if self.is_busy() {
+            return;
+        }
+
         self.imp().merge.remove_file(index);
         self.update_view();
     }
@@ -417,5 +434,10 @@ impl MergeWorkspace {
         if let Some(path) = self.imp().merge.job.last_output() {
             open_output(self, &path);
         }
+    }
+
+    fn is_busy(&self) -> bool {
+        let imp = self.imp();
+        imp.merge.job.is_busy(imp.is_running.get())
     }
 }

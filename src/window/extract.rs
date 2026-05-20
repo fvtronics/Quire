@@ -325,6 +325,7 @@ impl ExtractWorkspace {
     ) -> adw::ActionRow {
         let check_button = gtk::CheckButton::builder()
             .active(selected)
+            .sensitive(!self.is_busy())
             .tooltip_text(gettext("Select Page"))
             .valign(gtk::Align::Center)
             .build();
@@ -338,7 +339,7 @@ impl ExtractWorkspace {
 
         let rotate_button =
             icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
-        rotate_button.set_sensitive(selected && !self.imp().is_running.get());
+        rotate_button.set_sensitive(selected && !self.is_busy());
         let window = self.clone();
         rotate_button.connect_clicked(move |_| {
             window.rotate_extract_page(page_number);
@@ -377,13 +378,14 @@ impl ExtractWorkspace {
         label.set_hexpand(true);
         let rotate_button =
             icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
-        rotate_button.set_sensitive(selected && !self.imp().is_running.get());
+        rotate_button.set_sensitive(selected && !self.is_busy());
         let window = self.clone();
         rotate_button.connect_clicked(move |_| {
             window.rotate_extract_page(page_number);
         });
         let check_button = gtk::CheckButton::builder()
             .active(selected)
+            .sensitive(!self.is_busy())
             .tooltip_text(gettext("Select Page"))
             .valign(gtk::Align::Center)
             .build();
@@ -402,15 +404,28 @@ impl ExtractWorkspace {
     }
 
     fn toggle_extract_page(&self, page_number: u32, selected: bool) {
+        if self.is_busy() {
+            return;
+        }
+
         self.imp().extract.toggle_page(page_number, selected);
         self.update_extract_ranges_entry();
         self.update_view();
     }
 
     fn rotate_extract_page(&self, page_number: u32) {
+        if self.is_busy() {
+            return;
+        }
+
         if self.imp().extract.rotate_page(page_number) {
             self.update_view();
         }
+    }
+
+    fn is_busy(&self) -> bool {
+        let imp = self.imp();
+        imp.extract.job.is_busy(imp.is_running.get())
     }
 
     fn update_extract_ranges_entry(&self) {

@@ -278,11 +278,12 @@ impl OrganizeWorkspace {
 
         row.add_prefix(&rotated_list_preview_prefix(preview, rotation));
 
-        let controls_sensitive = !self.imp().is_running.get();
+        let imp = self.imp();
+        let controls_sensitive = !imp.organize.job.is_busy(imp.is_running.get());
         let workspace = self.clone();
-        let move_up = move || workspace.move_page(index, index - 1);
+        let move_up = move || workspace.move_page(index, index.saturating_sub(1));
         let workspace = self.clone();
-        let move_down = move || workspace.move_page(index, index + 1);
+        let move_down = move || workspace.move_page(index, index.saturating_add(1));
         let workspace = self.clone();
         let rotate = move || workspace.rotate_page(page_number);
         let workspace = self.clone();
@@ -322,11 +323,12 @@ impl OrganizeWorkspace {
         let position = dim_tile_label(format!("{}/{}", index + 1, count));
         controls.append(&position);
 
-        let controls_sensitive = !self.imp().is_running.get();
+        let imp = self.imp();
+        let controls_sensitive = !imp.organize.job.is_busy(imp.is_running.get());
         let workspace = self.clone();
-        let move_up = move || workspace.move_page(index, index - 1);
+        let move_up = move || workspace.move_page(index, index.saturating_sub(1));
         let workspace = self.clone();
-        let move_down = move || workspace.move_page(index, index + 1);
+        let move_down = move || workspace.move_page(index, index.saturating_add(1));
         let workspace = self.clone();
         let rotate = move || workspace.rotate_page(page_number);
         let workspace = self.clone();
@@ -353,16 +355,29 @@ impl OrganizeWorkspace {
     }
 
     fn move_page(&self, from: usize, to: usize) {
-        self.imp().organize.move_page(from, to);
-        self.update_view();
+        if self.is_busy() {
+            return;
+        }
+
+        if self.imp().organize.move_page(from, to) {
+            self.update_view();
+        }
     }
 
     fn rotate_page(&self, page_number: u32) {
+        if self.is_busy() {
+            return;
+        }
+
         self.imp().organize.rotate_page(page_number);
         self.update_view();
     }
 
     fn reorder_page(&self, dragged_page: u32, target_page: u32) {
+        if self.is_busy() {
+            return;
+        }
+
         if self.imp().organize.reorder_page(dragged_page, target_page) {
             self.update_view();
         }
@@ -393,6 +408,10 @@ impl OrganizeWorkspace {
     }
 
     fn remove_page(&self, index: usize) {
+        if self.is_busy() {
+            return;
+        }
+
         if self.imp().organize.remove_page(index) {
             self.update_view();
         }
@@ -402,5 +421,10 @@ impl OrganizeWorkspace {
         if let Some(path) = self.imp().organize.job.last_output() {
             open_output(self, &path);
         }
+    }
+
+    fn is_busy(&self) -> bool {
+        let imp = self.imp();
+        imp.organize.job.is_busy(imp.is_running.get())
     }
 }
