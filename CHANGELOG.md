@@ -1,16 +1,16 @@
-# v0.1.1
+# v0.1.2
 
 <p>New</p>
 <ul>
-  <li>Added page rotation to merge, organize, and extract pages</li>
+  <li>Refreshed the application icon and screenshots</li>
 </ul>
 <p>Optimizations</p>
 <ul>
-  <li>Made preview loading more consistent across tabs</li>
-  <li>Improved temporary file handling</li>
-  <li>Refactored shared PDF helpers to reduce duplicated code</li>
+  <li>Improved consistency across the PDF tools</li>
+  <li>Made file handling behavior more reliable</li>
 </ul>
 <p>Changes</p>
 <ul>
-  <li>Updated the compress tool icon</li>
+  <li>Improved page selection in the extract tool</li>
+  <li>Updated the app structure for easier future maintenance</li>
 </ul>
