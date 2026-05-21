@@ -167,7 +167,10 @@ pub(super) fn rotated_preview_picture(
                 pixbuf = rotated;
             }
 
-            let texture = gtk::gdk::Texture::for_pixbuf(&pixbuf);
+            let texture = gtk::gdk::Texture::from_bytes(&glib::Bytes::from(
+                &pixbuf.save_to_bufferv("png", &[]).unwrap(),
+            ))
+            .unwrap();
             gtk::Picture::for_paintable(&texture)
         }
         Err(_) => gtk::Picture::new(),
