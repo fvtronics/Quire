@@ -12,7 +12,7 @@ env:
 jobs:
   checks:
     name: Checks
-    runs-on: linux-amd64
+    runs-on: fedora
 
     steps:
       - name: Checkout
@@ -20,24 +20,18 @@ jobs:
 
       - name: Install System Dependencies
         run: |
-          if command -v sudo >/dev/null; then
-            SUDO=sudo
-          else
-            SUDO=
-          fi
-
-          $SUDO apt-get update
-          $SUDO apt-get install -y --no-install-recommends \
+          dnf install -y \
             appstream \
             desktop-file-utils \
             gettext \
             git \
-            libglib2.0-bin \
-            libadwaita-1-dev \
-            libgtk-4-dev \
-            libpoppler-glib-dev \
+            glib2-devel \
+            gtk4-devel \
+            libadwaita-devel \
+            poppler-glib-devel \
             meson \
-            pkg-config
+            pkgconf-pkg-config \
+            blueprint-compiler
 
       - name: Install Rust
         uses: https://github.com/dtolnay/rust-toolchain@stable
@@ -59,6 +53,9 @@ jobs:
       - name: Generate Build Configuration
         run: meson setup builddir --wrap-mode=forcefallback
 
+      - name: Blueprint Check
+	        run: meson compile -C builddir blueprints
+
       - name: Format Check
         run: cargo fmt --all -- --check
 
@@ -75,7 +72,7 @@ jobs:
     name: Create Forgejo Release
     needs: checks
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    runs-on: linux-amd64
+    runs-on: fedora
 
     steps:
       - name: Checkout
@@ -83,24 +80,18 @@ jobs:
 
       - name: Install System Dependencies
         run: |
-          if command -v sudo >/dev/null; then
-            SUDO=sudo
-          else
-            SUDO=
-          fi
-
-          $SUDO apt-get update
-          $SUDO apt-get install -y --no-install-recommends \
+          dnf install -y \
             appstream \
             desktop-file-utils \
             gettext \
             git \
-            libglib2.0-bin \
-            libadwaita-1-dev \
-            libgtk-4-dev \
-            libpoppler-glib-dev \
+            glib2-devel \
+            gtk4-devel \
+            libadwaita-devel \
+            poppler-glib-devel \
             meson \
-            pkg-config
+            pkgconf-pkg-config \
+            python3
 
       - name: Install Rust
         uses: https://github.com/dtolnay/rust-toolchain@stable
