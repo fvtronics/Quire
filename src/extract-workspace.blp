@@ -67,6 +67,14 @@ template $ExtractWorkspace: Gtk.Box {
         label: _("Extract");
       };
     }
+
+    Gtk.MenuButton extract_advanced_options_button {
+      visible: false;
+      valign: center;
+      icon-name: "view-more-symbolic";
+      tooltip-text: _("Advanced Options");
+      styles ["flat"]
+    }
   }
 
   Adw.StatusPage extract_empty_status {

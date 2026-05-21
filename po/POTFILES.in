@@ -17,4 +17,5 @@ src/window/extract.rs
 src/window/merge.rs
 src/window/organize.rs
 src/window/split.rs
+src/window/workspace.rs
 src/window/ui.rs

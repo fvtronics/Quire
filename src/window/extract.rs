@@ -4,8 +4,8 @@ use super::ui::{
     tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    open_output, parent_window, run_output_job, show_backend_error, show_preview_error, show_toast,
-    update_shell_view_mode,
+    open_output, parent_window, run_output_job, setup_advanced_options_menu, show_backend_error,
+    show_preview_error, show_toast, update_shell_view_mode,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -44,6 +44,8 @@ mod imp {
         pub extract_page_grid: TemplateChild<gtk::FlowBox>,
         #[template_child]
         pub extract_save_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub extract_advanced_options_button: TemplateChild<gtk::MenuButton>,
         #[template_child]
         pub extract_open_output_button: TemplateChild<gtk::Button>,
 
@@ -87,6 +89,32 @@ glib::wrapper! {
 impl ExtractWorkspace {
     fn setup_callbacks(&self) {
         let imp = self.imp();
+
+        let workspace = self.clone();
+        let rotate_all = move || workspace.rotate_selected_pages();
+        let workspace = self.clone();
+        let normalize_page_size = move |active| {
+            workspace
+                .imp()
+                .extract
+                .options
+                .set_normalize_page_size(active);
+            workspace.imp().extract.job.clear_last_output();
+            workspace.update_view();
+        };
+        let workspace = self.clone();
+        let remove_metadata = move |active| {
+            workspace.imp().extract.options.set_remove_metadata(active);
+            workspace.imp().extract.job.clear_last_output();
+            workspace.update_view();
+        };
+        setup_advanced_options_menu(
+            &imp.extract_advanced_options_button,
+            gettext("Rotate Selected Pages"),
+            rotate_all,
+            normalize_page_size,
+            remove_metadata,
+        );
 
         let workspace = self.clone();
         imp.extract_choose_button.connect_clicked(move |_| {
@@ -218,9 +246,11 @@ impl ExtractWorkspace {
         pages: Vec<crate::pdf::PageSelection>,
         output_file: PathBuf,
     ) {
+        let options = self.imp().extract.options.options();
+
         run_output_job(
             self.clone(),
-            crate::pdf::extract_pages(input_file, pages, output_file),
+            crate::pdf::extract_pages(input_file, pages, output_file, options),
             gettext("Extracted pages saved"),
             |workspace, running| workspace.imp().is_running.set(running),
             |workspace| workspace.imp().extract.job.clear_last_output(),
@@ -279,11 +309,14 @@ impl ExtractWorkspace {
         imp.extract_empty_status.set_visible(!has_file);
         imp.extract_content.set_visible(has_file);
         imp.extract_choose_button.set_visible(has_file);
+        imp.extract_advanced_options_button.set_visible(has_file);
         imp.extract_save_button.set_visible(has_file);
         imp.extract_open_output_button
             .set_visible(imp.extract.job.has_last_output());
 
         imp.extract_choose_button.set_sensitive(!is_busy);
+        imp.extract_advanced_options_button
+            .set_sensitive(has_file && !is_busy);
         imp.extract_empty_choose_button.set_sensitive(!is_busy);
         imp.extract_save_button.set_sensitive(
             has_file && (has_valid_ranges || (!has_ranges && has_selected_pages)) && !is_busy,
@@ -420,6 +453,16 @@ impl ExtractWorkspace {
         }
 
         if self.imp().extract.rotate_page(page_number) {
+            self.update_view();
+        }
+    }
+
+    fn rotate_selected_pages(&self) {
+        if self.is_busy() {
+            return;
+        }
+
+        if self.imp().extract.rotate_selected_pages() {
             self.update_view();
         }
     }

@@ -78,6 +78,14 @@ template $MergeWorkspace: Gtk.Box {
         label: _("Merge");
       };
     }
+
+    Gtk.MenuButton advanced_options_button {
+      visible: false;
+      valign: center;
+      icon-name: "view-more-symbolic";
+      tooltip-text: _("Advanced Options");
+      styles ["flat"]
+    }
   }
 
   Adw.StatusPage empty_status {

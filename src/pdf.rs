@@ -7,13 +7,12 @@
 
 use gtk::gio;
 use lopdf::{Document, Object, ObjectId};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
 const PAGE_RANGE_HINT: &str = "Enter page ranges like 1,3-5,8.";
 const PAGE_LIST_HINT: &str = "Enter pages like 2,4,7.";
-
 #[derive(Clone, Debug)]
 pub struct PdfInput {
     pub path: PathBuf,
@@ -24,6 +23,12 @@ pub struct PdfInput {
 pub struct PageSelection {
     pub page_number: u32,
     pub rotation: i64,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct PdfOutputOptions {
+    pub normalize_page_size: bool,
+    pub remove_metadata: bool,
 }
 
 #[derive(Debug)]
@@ -81,8 +86,9 @@ impl fmt::Display for PdfBackendError {
 pub async fn merge_pdfs(
     input_files: Vec<PdfInput>,
     output_file: PathBuf,
+    options: PdfOutputOptions,
 ) -> Result<PathBuf, PdfBackendError> {
-    gio::spawn_blocking(move || merge_pdfs_blocking(input_files, output_file))
+    gio::spawn_blocking(move || merge_pdfs_blocking(input_files, output_file, options))
         .await
         .unwrap_or(Err(PdfBackendError::WorkerStopped))
 }
@@ -91,8 +97,9 @@ pub async fn organize_pdf(
     input_file: PathBuf,
     page_order: Vec<PageSelection>,
     output_file: PathBuf,
+    options: PdfOutputOptions,
 ) -> Result<PathBuf, PdfBackendError> {
-    gio::spawn_blocking(move || write_selected_pages(input_file, page_order, output_file))
+    gio::spawn_blocking(move || write_selected_pages(input_file, page_order, output_file, options))
         .await
         .unwrap_or(Err(PdfBackendError::WorkerStopped))
 }
@@ -101,8 +108,9 @@ pub async fn extract_pages(
     input_file: PathBuf,
     pages: Vec<PageSelection>,
     output_file: PathBuf,
+    options: PdfOutputOptions,
 ) -> Result<PathBuf, PdfBackendError> {
-    gio::spawn_blocking(move || write_selected_pages(input_file, pages, output_file))
+    gio::spawn_blocking(move || write_selected_pages(input_file, pages, output_file, options))
         .await
         .unwrap_or(Err(PdfBackendError::WorkerStopped))
 }
@@ -144,6 +152,7 @@ pub fn parse_page_numbers(input: &str, page_count: usize) -> Result<Vec<u32>, Pd
 fn merge_pdfs_blocking(
     input_files: Vec<PdfInput>,
     output_file: PathBuf,
+    options: PdfOutputOptions,
 ) -> Result<PathBuf, PdfBackendError> {
     if input_files.len() < 2 {
         return Err(PdfBackendError::NotEnoughInputs);
@@ -176,20 +185,21 @@ fn merge_pdfs_blocking(
         document_objects.extend(document.objects);
     }
 
-    build_and_save_document(document_objects, output_pages, &output_file)
+    build_and_save_document(document_objects, output_pages, &output_file, options)
 }
 
 fn write_selected_pages(
     input_file: PathBuf,
     page_numbers: Vec<PageSelection>,
     output_file: PathBuf,
+    options: PdfOutputOptions,
 ) -> Result<PathBuf, PdfBackendError> {
     let document = Document::load(&input_file).map_err(|error| PdfBackendError::Load {
         path: input_file.clone(),
         message: error.to_string(),
     })?;
 
-    write_selected_pages_from_document(&input_file, &document, page_numbers, &output_file)
+    write_selected_pages_from_document(&input_file, &document, page_numbers, &output_file, options)
 }
 
 fn write_selected_pages_from_document(
@@ -197,6 +207,7 @@ fn write_selected_pages_from_document(
     document: &Document,
     page_numbers: Vec<PageSelection>,
     output_file: &Path,
+    options: PdfOutputOptions,
 ) -> Result<PathBuf, PdfBackendError> {
     if page_numbers.is_empty() {
         return Err(PdfBackendError::NoPagesSelected);
@@ -222,7 +233,7 @@ fn write_selected_pages_from_document(
         );
     }
 
-    build_and_save_document(document.objects.clone(), output_pages, output_file)
+    build_and_save_document(document.objects.clone(), output_pages, output_file, options)
 }
 
 fn split_pdf_blocking(
@@ -250,7 +261,13 @@ fn split_pdf_blocking(
 
         let output_file = output_folder.join(format!("{} {}.pdf", prefix, index));
         let page_numbers = page_selections(start..=end);
-        write_selected_pages_from_document(&input_file, &document, page_numbers, &output_file)?;
+        write_selected_pages_from_document(
+            &input_file,
+            &document,
+            page_numbers,
+            &output_file,
+            PdfOutputOptions::default(),
+        )?;
         start = end + 1;
         index += 1;
     }
@@ -258,7 +275,13 @@ fn split_pdf_blocking(
     if start <= page_count {
         let output_file = output_folder.join(format!("{} {}.pdf", prefix, index));
         let page_numbers = page_selections(start..=page_count);
-        write_selected_pages_from_document(&input_file, &document, page_numbers, &output_file)?;
+        write_selected_pages_from_document(
+            &input_file,
+            &document,
+            page_numbers,
+            &output_file,
+            PdfOutputOptions::default(),
+        )?;
     }
 
     Ok(output_folder)
@@ -459,6 +482,7 @@ fn build_and_save_document(
     document_objects: BTreeMap<ObjectId, Object>,
     output_pages: OutputPages,
     output_file: &Path,
+    options: PdfOutputOptions,
 ) -> Result<PathBuf, PdfBackendError> {
     let mut output = Document::with_version("1.5");
     let (catalog_id, catalog_object, pages_id, pages_object) =
@@ -472,6 +496,8 @@ fn build_and_save_document(
         &output_pages.ordered_ids,
     )?;
     insert_catalog_root(&mut output, catalog_id, catalog_object, pages_id)?;
+    output.trailer.set("Root", catalog_id);
+    apply_output_options(&mut output, &output_pages.ordered_ids, options)?;
 
     save_document(output, catalog_id, output_file)
 }
@@ -558,6 +584,214 @@ fn rotated_page_object(
     set_page_rotation(&mut dictionary, page_rotation, rotation);
 
     Ok(Object::Dictionary(dictionary))
+}
+
+fn apply_output_options(
+    document: &mut Document,
+    page_ids: &[ObjectId],
+    options: PdfOutputOptions,
+) -> Result<(), PdfBackendError> {
+    if options.remove_metadata {
+        remove_metadata(document);
+    }
+
+    if page_ids.is_empty() {
+        return Ok(());
+    }
+
+    refresh_max_id(document);
+
+    if options.normalize_page_size {
+        normalize_page_sizes(document, page_ids)?;
+    }
+    Ok(())
+}
+
+fn remove_metadata(document: &mut Document) {
+    let mut object_ids = BTreeSet::new();
+
+    if let Some(info) = document.trailer.remove(b"Info") {
+        if let Ok(object_id) = info.as_reference() {
+            object_ids.insert(object_id);
+        }
+    }
+
+    for (object_id, object) in document.objects.iter_mut() {
+        if object.type_name().ok() == Some(b"Metadata") {
+            object_ids.insert(*object_id);
+        }
+
+        let Ok(dictionary) = object.as_dict_mut() else {
+            continue;
+        };
+
+        if dictionary.has_type(b"Catalog") {
+            if let Some(metadata) = dictionary.remove(b"Metadata") {
+                if let Ok(object_id) = metadata.as_reference() {
+                    object_ids.insert(object_id);
+                }
+            }
+        }
+    }
+
+    for object_id in object_ids {
+        document.delete_object(object_id);
+    }
+    document.prune_objects();
+}
+
+fn normalize_page_sizes(
+    document: &mut Document,
+    page_ids: &[ObjectId],
+) -> Result<(), PdfBackendError> {
+    let mut page_boxes = Vec::with_capacity(page_ids.len());
+    let mut target_width = 0.0_f32;
+    let mut target_height = 0.0_f32;
+
+    for page_id in page_ids {
+        let page_box = inherited_page_box(document, *page_id, b"MediaBox")?;
+        let (display_width, display_height) =
+            page_box.display_size(inherited_page_rotation(document, *page_id));
+        target_width = target_width.max(display_width);
+        target_height = target_height.max(display_height);
+        page_boxes.push((*page_id, page_box));
+    }
+
+    for (page_id, page_box) in page_boxes {
+        let media_box = page_box.objects_for_display_size(
+            target_width,
+            target_height,
+            inherited_page_rotation(document, page_id),
+        );
+        let page = document
+            .get_object_mut(page_id)
+            .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
+            .as_dict_mut()
+            .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?;
+        page.set("MediaBox", Object::Array(media_box.clone()));
+        page.set("CropBox", Object::Array(media_box.clone()));
+    }
+
+    Ok(())
+}
+
+#[derive(Clone)]
+struct PageBox {
+    left: f32,
+    bottom: f32,
+    width: f32,
+    height: f32,
+}
+
+impl PageBox {
+    fn display_size(&self, rotation: i64) -> (f32, f32) {
+        if rotates_page_size(rotation) {
+            (self.height, self.width)
+        } else {
+            (self.width, self.height)
+        }
+    }
+
+    fn objects_for_display_size(
+        &self,
+        display_width: f32,
+        display_height: f32,
+        rotation: i64,
+    ) -> Vec<Object> {
+        let (width, height) = if rotates_page_size(rotation) {
+            (display_height, display_width)
+        } else {
+            (display_width, display_height)
+        };
+
+        vec![
+            pdf_number(self.left),
+            pdf_number(self.bottom),
+            pdf_number(self.left + width),
+            pdf_number(self.bottom + height),
+        ]
+    }
+}
+
+fn rotates_page_size(rotation: i64) -> bool {
+    matches!(normalize_rotation(rotation), 90 | 270)
+}
+
+fn inherited_page_box(
+    document: &Document,
+    object_id: ObjectId,
+    key: &[u8],
+) -> Result<PageBox, PdfBackendError> {
+    let object = inherited_page_object(document, object_id, key).ok_or_else(|| {
+        PdfBackendError::InvalidDocument(format!("{} not found", String::from_utf8_lossy(key)))
+    })?;
+    parse_page_box(object)
+}
+
+fn inherited_page_object(
+    document: &Document,
+    mut object_id: ObjectId,
+    key: &[u8],
+) -> Option<Object> {
+    for _ in 0..document.objects.len() {
+        let dictionary = document.get_object(object_id).ok()?.as_dict().ok()?;
+
+        if let Ok(object) = dictionary.get(key) {
+            return Some(object.clone());
+        }
+
+        object_id = dictionary.get(b"Parent").ok()?.as_reference().ok()?;
+    }
+
+    None
+}
+
+fn parse_page_box(object: Object) -> Result<PageBox, PdfBackendError> {
+    let values = object
+        .as_array()
+        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?;
+    if values.len() < 4 {
+        return Err(PdfBackendError::InvalidDocument(
+            "page box has fewer than four values".to_string(),
+        ));
+    }
+
+    let left = values[0]
+        .as_float()
+        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?;
+    let bottom = values[1]
+        .as_float()
+        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?;
+    let right = values[2]
+        .as_float()
+        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?;
+    let top = values[3]
+        .as_float()
+        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?;
+
+    Ok(PageBox {
+        left,
+        bottom,
+        width: right - left,
+        height: top - bottom,
+    })
+}
+
+fn pdf_number(value: f32) -> Object {
+    if value.fract().abs() < f32::EPSILON {
+        Object::Integer(value as i64)
+    } else {
+        Object::Real(value)
+    }
+}
+
+fn refresh_max_id(document: &mut Document) {
+    document.max_id = document
+        .objects
+        .keys()
+        .map(|(id, _)| *id)
+        .max()
+        .unwrap_or(1);
 }
 
 fn collect_document_roots(
@@ -683,7 +917,7 @@ mod tests {
     use super::{
         compress_pdf_blocking, merge_pdfs_blocking, parse_page_numbers, parse_page_ranges,
         split_breaks, split_pdf_blocking, write_selected_pages, CompressOptions, PageSelection,
-        PdfBackendError, PdfInput, SplitRule,
+        PdfBackendError, PdfInput, PdfOutputOptions, SplitRule,
     };
     use lopdf::{dictionary, Document, Object, Stream};
     use std::fs;
@@ -765,6 +999,7 @@ mod tests {
         let result = merge_pdfs_blocking(
             vec![pdf_input(first.clone(), 0), pdf_input(second.clone(), 0)],
             output.clone(),
+            PdfOutputOptions::default(),
         );
 
         assert_eq!(result.unwrap(), output);
@@ -778,7 +1013,11 @@ mod tests {
         write_test_pdf(&input, &[10]);
 
         assert_error(
-            merge_pdfs_blocking(vec![pdf_input(input.clone(), 0)], dir.join("out.pdf")),
+            merge_pdfs_blocking(
+                vec![pdf_input(input.clone(), 0)],
+                dir.join("out.pdf"),
+                PdfOutputOptions::default(),
+            ),
             "Choose at least two PDF files to merge.",
         );
         assert_error(
@@ -788,6 +1027,7 @@ mod tests {
                     pdf_input(dir.join("other.pdf"), 0),
                 ],
                 input,
+                PdfOutputOptions::default(),
             ),
             "Save the PDF as a new file, not over the input file.",
         );
@@ -805,10 +1045,37 @@ mod tests {
         let result = merge_pdfs_blocking(
             vec![pdf_input(first, 90), pdf_input(second, 180)],
             output.clone(),
+            PdfOutputOptions::default(),
         );
 
         assert_eq!(result.unwrap(), output);
         assert_eq!(page_rotations(&output), vec![90, 90, 180]);
+    }
+
+    #[test]
+    fn merge_pdfs_removes_metadata_from_all_inputs() {
+        let dir = TestDir::new("merge-remove-metadata");
+        let first = dir.join("first.pdf");
+        let second = dir.join("second.pdf");
+        let output = dir.join("merged.pdf");
+        write_test_pdf(&first, &[10]);
+        write_test_pdf(&second, &[20]);
+        add_test_metadata(&first);
+        add_test_metadata(&second);
+
+        let result = merge_pdfs_blocking(
+            vec![pdf_input(first, 0), pdf_input(second, 0)],
+            output.clone(),
+            PdfOutputOptions {
+                remove_metadata: true,
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(result.unwrap(), output);
+        assert_eq!(page_markers(&output), vec![10, 20]);
+        assert!(!has_metadata(&output));
+        assert!(!contains_private_metadata(&output));
     }
 
     #[test]
@@ -822,6 +1089,7 @@ mod tests {
             input.clone(),
             vec![page_selection(3, 0), page_selection(1, 0)],
             output.clone(),
+            PdfOutputOptions::default(),
         );
 
         assert_eq!(result.unwrap(), output);
@@ -839,11 +1107,87 @@ mod tests {
             input.clone(),
             vec![page_selection(3, 90), page_selection(1, 270)],
             output.clone(),
+            PdfOutputOptions::default(),
         );
 
         assert_eq!(result.unwrap(), output);
         assert_eq!(page_markers(&output), vec![30, 10]);
         assert_eq!(page_rotations(&output), vec![90, 270]);
+    }
+
+    #[test]
+    fn write_selected_pages_normalizes_page_boxes() {
+        let dir = TestDir::new("selected-pages-options");
+        let input = dir.join("input.pdf");
+        let output = dir.join("output.pdf");
+        write_test_pdf(&input, &[10, 20, 30]);
+
+        let result = write_selected_pages(
+            input.clone(),
+            vec![page_selection(2, 0), page_selection(3, 0)],
+            output.clone(),
+            PdfOutputOptions {
+                normalize_page_size: true,
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(result.unwrap(), output);
+        assert_eq!(page_markers(&output), vec![30, 30]);
+        assert_eq!(page_boxes(&output), vec![[0, 0, 30, 100], [0, 0, 30, 100]]);
+        assert_eq!(crop_boxes(&output), vec![[0, 0, 30, 100], [0, 0, 30, 100]]);
+    }
+
+    #[test]
+    fn write_selected_pages_normalizes_rotated_display_size() {
+        let dir = TestDir::new("selected-pages-normalize-rotation");
+        let input = dir.join("input.pdf");
+        let output = dir.join("output.pdf");
+        write_test_pdf(&input, &[20, 30]);
+
+        let result = write_selected_pages(
+            input.clone(),
+            vec![page_selection(1, 0), page_selection(2, 90)],
+            output.clone(),
+            PdfOutputOptions {
+                normalize_page_size: true,
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(result.unwrap(), output);
+        assert_eq!(page_rotations(&output), vec![0, 90]);
+        assert_eq!(
+            page_boxes(&output),
+            vec![[0, 0, 100, 100], [0, 0, 100, 100]]
+        );
+        assert_eq!(
+            crop_boxes(&output),
+            vec![[0, 0, 100, 100], [0, 0, 100, 100]]
+        );
+    }
+
+    #[test]
+    fn write_selected_pages_removes_metadata() {
+        let dir = TestDir::new("selected-pages-remove-metadata");
+        let input = dir.join("input.pdf");
+        let output = dir.join("output.pdf");
+        write_test_pdf(&input, &[10, 20]);
+        add_test_metadata(&input);
+
+        let result = write_selected_pages(
+            input.clone(),
+            vec![page_selection(1, 0), page_selection(2, 0)],
+            output.clone(),
+            PdfOutputOptions {
+                remove_metadata: true,
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(result.unwrap(), output);
+        assert!(!has_metadata(&output));
+        assert!(!contains_private_metadata(&output));
     }
 
     #[test]
@@ -853,15 +1197,30 @@ mod tests {
         write_test_pdf(&input, &[10, 20]);
 
         assert_error(
-            write_selected_pages(input.clone(), Vec::new(), dir.join("empty.pdf")),
+            write_selected_pages(
+                input.clone(),
+                Vec::new(),
+                dir.join("empty.pdf"),
+                PdfOutputOptions::default(),
+            ),
             "Choose at least one page to save.",
         );
         assert_error(
-            write_selected_pages(input.clone(), vec![page_selection(1, 0)], input.clone()),
+            write_selected_pages(
+                input.clone(),
+                vec![page_selection(1, 0)],
+                input.clone(),
+                PdfOutputOptions::default(),
+            ),
             "Save the PDF as a new file, not over the input file.",
         );
         assert_error(
-            write_selected_pages(input, vec![page_selection(3, 0)], dir.join("missing.pdf")),
+            write_selected_pages(
+                input,
+                vec![page_selection(3, 0)],
+                dir.join("missing.pdf"),
+                PdfOutputOptions::default(),
+            ),
             "Page 3 is not in this PDF.",
         );
     }
@@ -1197,6 +1556,27 @@ mod tests {
         document.save(path).expect("test PDF should be saved");
     }
 
+    fn add_test_metadata(path: &Path) {
+        let mut document = Document::load(path).expect("test PDF should load");
+        let info_id = document.add_object(dictionary! {
+            "Title" => Object::string_literal("Private title"),
+        });
+        let metadata_id = document.add_object(Stream::new(
+            dictionary! {
+                "Type" => "Metadata",
+                "Subtype" => "XML",
+            },
+            b"<metadata>private</metadata>".to_vec(),
+        ));
+
+        document.trailer.set("Info", info_id);
+        document
+            .catalog_mut()
+            .expect("test PDF should have a catalog")
+            .set("Metadata", metadata_id);
+        document.save(path).expect("test PDF should be saved");
+    }
+
     fn pdf_input(path: PathBuf, rotation: i64) -> PdfInput {
         PdfInput { path, rotation }
     }
@@ -1248,6 +1628,66 @@ mod tests {
                     .unwrap_or(0)
             })
             .collect()
+    }
+
+    fn page_boxes(path: &Path) -> Vec<[i64; 4]> {
+        page_box_values(path, b"MediaBox")
+    }
+
+    fn crop_boxes(path: &Path) -> Vec<[i64; 4]> {
+        page_box_values(path, b"CropBox")
+    }
+
+    fn page_box_values(path: &Path, key: &[u8]) -> Vec<[i64; 4]> {
+        let document = Document::load(path).expect("test PDF should load");
+        document
+            .get_pages()
+            .into_values()
+            .map(|object_id| {
+                let page = document
+                    .get_object(object_id)
+                    .expect("page object should exist")
+                    .as_dict()
+                    .expect("page should be a dictionary");
+                let media_box = page
+                    .get(key)
+                    .expect("page should have requested box")
+                    .as_array()
+                    .expect("page box should be an array");
+                [
+                    media_box[0].as_i64().expect("left should be an integer"),
+                    media_box[1].as_i64().expect("bottom should be an integer"),
+                    media_box[2].as_i64().expect("right should be an integer"),
+                    media_box[3].as_i64().expect("top should be an integer"),
+                ]
+            })
+            .collect()
+    }
+
+    fn has_metadata(path: &Path) -> bool {
+        let document = Document::load(path).expect("test PDF should load");
+        let has_info = document.trailer.get(b"Info").is_ok();
+        let has_catalog_metadata = document
+            .catalog()
+            .expect("test PDF should have a catalog")
+            .get(b"Metadata")
+            .is_ok();
+        let has_metadata_stream = document
+            .objects
+            .values()
+            .any(|object| object.type_name().ok() == Some(b"Metadata"));
+
+        has_info || has_catalog_metadata || has_metadata_stream
+    }
+
+    fn contains_private_metadata(path: &Path) -> bool {
+        let bytes = fs::read(path).expect("test PDF should be readable");
+        bytes
+            .windows(b"private".len())
+            .any(|window| window == b"private")
+            || bytes
+                .windows(b"Private title".len())
+                .any(|window| window == b"Private title")
     }
 
     fn sorted_pdf_files(folder: &Path) -> Vec<PathBuf> {

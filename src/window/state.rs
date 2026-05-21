@@ -48,10 +48,34 @@ impl JobState {
 }
 
 #[derive(Debug, Default)]
+pub struct OutputOptionsState {
+    normalize_page_size: Cell<bool>,
+    remove_metadata: Cell<bool>,
+}
+
+impl OutputOptionsState {
+    pub fn set_normalize_page_size(&self, active: bool) {
+        self.normalize_page_size.set(active);
+    }
+
+    pub fn set_remove_metadata(&self, active: bool) {
+        self.remove_metadata.set(active);
+    }
+
+    pub fn options(&self) -> crate::pdf::PdfOutputOptions {
+        crate::pdf::PdfOutputOptions {
+            normalize_page_size: self.normalize_page_size.get(),
+            remove_metadata: self.remove_metadata.get(),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct MergeState {
     pub files: RefCell<Vec<PathBuf>>,
     pub rotations: RefCell<BTreeMap<PathBuf, i64>>,
     pub previews: RefCell<BTreeMap<PathBuf, crate::preview::PagePreview>>,
+    pub options: OutputOptionsState,
     pub job: JobState,
 }
 
@@ -69,6 +93,7 @@ pub struct OrganizeState {
     pub previews: RefCell<BTreeMap<u32, crate::preview::PagePreview>>,
     pub page_order: RefCell<Vec<u32>>,
     pub rotations: RefCell<BTreeMap<u32, i64>>,
+    pub options: OutputOptionsState,
     pub job: JobState,
 }
 
@@ -79,6 +104,7 @@ pub struct ExtractState {
     pub previews: RefCell<BTreeMap<u32, crate::preview::PagePreview>>,
     pub selected_pages: RefCell<BTreeSet<u32>>,
     pub rotations: RefCell<BTreeMap<u32, i64>>,
+    pub options: OutputOptionsState,
     pub job: JobState,
 }
 
@@ -150,6 +176,19 @@ impl MergeState {
             return false;
         };
         rotate_entry(&self.rotations, path);
+        self.job.clear_last_output();
+        true
+    }
+
+    pub fn rotate_all_files(&self) -> bool {
+        let files = self.files.borrow();
+        if files.is_empty() {
+            return false;
+        }
+
+        for path in files.iter().cloned().collect::<BTreeSet<_>>() {
+            rotate_entry(&self.rotations, path);
+        }
         self.job.clear_last_output();
         true
     }
@@ -241,6 +280,19 @@ impl OrganizeState {
         self.job.clear_last_output();
     }
 
+    pub fn rotate_all_pages(&self) -> bool {
+        let pages = self.page_order.borrow();
+        if pages.is_empty() {
+            return false;
+        }
+
+        for page_number in pages.iter() {
+            rotate_entry(&self.rotations, *page_number);
+        }
+        self.job.clear_last_output();
+        true
+    }
+
     pub fn reorder_page(&self, dragged_page: u32, target_page: u32) -> bool {
         if dragged_page == target_page {
             return false;
@@ -330,6 +382,19 @@ impl ExtractState {
         }
 
         rotate_entry(&self.rotations, page_number);
+        self.job.clear_last_output();
+        true
+    }
+
+    pub fn rotate_selected_pages(&self) -> bool {
+        let pages = self.selected_pages.borrow();
+        if pages.is_empty() {
+            return false;
+        }
+
+        for page_number in pages.iter() {
+            rotate_entry(&self.rotations, *page_number);
+        }
         self.job.clear_last_output();
         true
     }

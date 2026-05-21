@@ -79,6 +79,14 @@ template $OrganizeWorkspace: Gtk.Box {
         label: _("Save");
       };
     }
+
+    Gtk.MenuButton organize_advanced_options_button {
+      visible: false;
+      valign: center;
+      icon-name: "view-more-symbolic";
+      tooltip-text: _("Advanced Options");
+      styles ["flat"]
+    }
   }
 
   Adw.StatusPage organize_empty_status {

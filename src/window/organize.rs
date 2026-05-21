@@ -3,8 +3,8 @@ use super::ui::{
     save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    open_output, ordered_item_controls, parent_window, run_output_job, show_preview_error,
-    update_shell_view_mode, OrderedItemControlOptions,
+    open_output, ordered_item_controls, parent_window, run_output_job, setup_advanced_options_menu,
+    show_preview_error, update_shell_view_mode, OrderedItemControlOptions,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -37,6 +37,8 @@ mod imp {
         pub organize_page_grid: TemplateChild<gtk::FlowBox>,
         #[template_child]
         pub organize_reset_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub organize_advanced_options_button: TemplateChild<gtk::MenuButton>,
         #[template_child]
         pub organize_save_button: TemplateChild<gtk::Button>,
         #[template_child]
@@ -82,6 +84,32 @@ glib::wrapper! {
 impl OrganizeWorkspace {
     fn setup_callbacks(&self) {
         let imp = self.imp();
+
+        let workspace = self.clone();
+        let rotate_all = move || workspace.rotate_all_pages();
+        let workspace = self.clone();
+        let normalize_page_size = move |active| {
+            workspace
+                .imp()
+                .organize
+                .options
+                .set_normalize_page_size(active);
+            workspace.imp().organize.job.clear_last_output();
+            workspace.update_view();
+        };
+        let workspace = self.clone();
+        let remove_metadata = move |active| {
+            workspace.imp().organize.options.set_remove_metadata(active);
+            workspace.imp().organize.job.clear_last_output();
+            workspace.update_view();
+        };
+        setup_advanced_options_menu(
+            &imp.organize_advanced_options_button,
+            gettext("Rotate All Pages"),
+            rotate_all,
+            normalize_page_size,
+            remove_metadata,
+        );
 
         let workspace = self.clone();
         imp.organize_choose_button.connect_clicked(move |_| {
@@ -176,10 +204,11 @@ impl OrganizeWorkspace {
         let Some((input_file, page_order)) = imp.organize.selections() else {
             return;
         };
+        let options = imp.organize.options.options();
 
         run_output_job(
             self.clone(),
-            crate::pdf::organize_pdf(input_file, page_order, output_file),
+            crate::pdf::organize_pdf(input_file, page_order, output_file, options),
             gettext("Organized PDF saved"),
             |workspace, running| workspace.imp().is_running.set(running),
             |workspace| workspace.imp().organize.job.clear_last_output(),
@@ -231,12 +260,15 @@ impl OrganizeWorkspace {
         imp.organize_empty_status.set_visible(!has_file);
         imp.organize_view_stack.set_visible(has_file);
         imp.organize_choose_button.set_visible(has_file);
+        imp.organize_advanced_options_button.set_visible(has_file);
         imp.organize_reset_button.set_visible(has_file);
         imp.organize_save_button.set_visible(has_file);
         imp.organize_open_output_button
             .set_visible(imp.organize.job.has_last_output());
 
         imp.organize_choose_button.set_sensitive(!is_busy);
+        imp.organize_advanced_options_button
+            .set_sensitive(has_file && !is_busy);
         imp.organize_empty_choose_button.set_sensitive(!is_busy);
         imp.organize_reset_button
             .set_sensitive(has_file && !is_busy);
@@ -372,6 +404,16 @@ impl OrganizeWorkspace {
 
         self.imp().organize.rotate_page(page_number);
         self.update_view();
+    }
+
+    fn rotate_all_pages(&self) {
+        if self.is_busy() {
+            return;
+        }
+
+        if self.imp().organize.rotate_all_pages() {
+            self.update_view();
+        }
     }
 
     fn reorder_page(&self, dragged_page: u32, target_page: u32) {

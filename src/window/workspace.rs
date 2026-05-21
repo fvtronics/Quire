@@ -90,6 +90,45 @@ pub(super) fn update_shell_view_mode(widget: &impl IsA<gtk::Widget>) {
     window.update_view_mode();
 }
 
+pub(super) fn setup_advanced_options_menu(
+    button: &gtk::MenuButton,
+    rotate_title: String,
+    on_rotate_all: impl Fn() + 'static,
+    on_normalize_page_size: impl Fn(bool) + 'static,
+    on_remove_metadata: impl Fn(bool) + 'static,
+) {
+    let popover = gtk::Popover::new();
+    let list = gtk::ListBox::new();
+    list.set_selection_mode(gtk::SelectionMode::None);
+    list.add_css_class("boxed-list");
+    list.set_margin_top(6);
+    list.set_margin_bottom(6);
+    list.set_margin_start(6);
+    list.set_margin_end(6);
+
+    let rotate_row = adw::ActionRow::builder()
+        .title(rotate_title)
+        .activatable(true)
+        .build();
+    rotate_row.connect_activated(move |_| on_rotate_all());
+    list.append(&rotate_row);
+
+    let normalize_page_size = adw::SwitchRow::builder()
+        .title(gettext("Normalize Page Size"))
+        .build();
+    normalize_page_size.connect_active_notify(move |row| on_normalize_page_size(row.is_active()));
+    let remove_metadata = adw::SwitchRow::builder()
+        .title(gettext("Remove Metadata"))
+        .build();
+    remove_metadata.connect_active_notify(move |row| on_remove_metadata(row.is_active()));
+
+    list.append(&normalize_page_size);
+    list.append(&remove_metadata);
+
+    popover.set_child(Some(&list));
+    button.set_popover(Some(&popover));
+}
+
 pub(super) fn open_output(widget: &impl IsA<gtk::Widget>, path: &Path) {
     let file = gio::File::for_path(path);
     if let Err(error) =

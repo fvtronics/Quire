@@ -3,8 +3,8 @@ use super::ui::{
     rotated_list_preview_prefix, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    open_output, ordered_item_controls, parent_window, run_output_job, show_preview_error,
-    update_shell_view_mode, OrderedItemControlOptions,
+    open_output, ordered_item_controls, parent_window, run_output_job, setup_advanced_options_menu,
+    show_preview_error, update_shell_view_mode, OrderedItemControlOptions,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -37,6 +37,8 @@ mod imp {
         pub merge_file_grid: TemplateChild<gtk::FlowBox>,
         #[template_child]
         pub clear_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub advanced_options_button: TemplateChild<gtk::MenuButton>,
         #[template_child]
         pub merge_button: TemplateChild<gtk::Button>,
         #[template_child]
@@ -82,6 +84,32 @@ glib::wrapper! {
 impl MergeWorkspace {
     fn setup_callbacks(&self) {
         let imp = self.imp();
+
+        let workspace = self.clone();
+        let rotate_all = move || workspace.rotate_all_files();
+        let workspace = self.clone();
+        let normalize_page_size = move |active| {
+            workspace
+                .imp()
+                .merge
+                .options
+                .set_normalize_page_size(active);
+            workspace.imp().merge.job.clear_last_output();
+            workspace.update_view();
+        };
+        let workspace = self.clone();
+        let remove_metadata = move |active| {
+            workspace.imp().merge.options.set_remove_metadata(active);
+            workspace.imp().merge.job.clear_last_output();
+            workspace.update_view();
+        };
+        setup_advanced_options_menu(
+            &imp.advanced_options_button,
+            gettext("Rotate All Files"),
+            rotate_all,
+            normalize_page_size,
+            remove_metadata,
+        );
 
         let workspace = self.clone();
         imp.add_button.connect_clicked(move |_| {
@@ -195,11 +223,13 @@ impl MergeWorkspace {
     }
 
     fn merge_to(&self, output_file: PathBuf) {
-        let input_files = self.imp().merge.pdf_inputs();
+        let imp = self.imp();
+        let input_files = imp.merge.pdf_inputs();
+        let options = imp.merge.options.options();
 
         run_output_job(
             self.clone(),
-            crate::pdf::merge_pdfs(input_files, output_file),
+            crate::pdf::merge_pdfs(input_files, output_file, options),
             gettext("Merged PDF saved"),
             |workspace, running| workspace.imp().is_running.set(running),
             |workspace| workspace.imp().merge.job.clear_last_output(),
@@ -250,12 +280,15 @@ impl MergeWorkspace {
         imp.empty_status.set_visible(!has_files);
         imp.merge_view_stack.set_visible(has_files);
         imp.add_button.set_visible(has_files);
+        imp.advanced_options_button.set_visible(has_files);
         imp.clear_button.set_visible(has_files);
         imp.merge_button.set_visible(has_files);
         imp.open_output_button
             .set_visible(imp.merge.job.has_last_output());
 
         imp.add_button.set_sensitive(has_files && !is_busy);
+        imp.advanced_options_button
+            .set_sensitive(has_files && !is_busy);
         imp.empty_add_button.set_sensitive(!is_busy);
         imp.clear_button.set_sensitive(has_files && !is_busy);
         imp.merge_button.set_sensitive(can_merge);
@@ -384,6 +417,16 @@ impl MergeWorkspace {
         }
 
         if self.imp().merge.rotate_file(index) {
+            self.update_view();
+        }
+    }
+
+    fn rotate_all_files(&self) {
+        if self.is_busy() {
+            return;
+        }
+
+        if self.imp().merge.rotate_all_files() {
             self.update_view();
         }
     }
