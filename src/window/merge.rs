@@ -3,8 +3,9 @@ use super::ui::{
     rotated_list_preview_prefix, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    open_output, ordered_item_controls, parent_window, run_output_job, setup_advanced_options_menu,
-    show_preview_error, update_shell_view_mode, OrderedItemControlOptions,
+    load_processable_pdf, open_output, ordered_item_controls, parent_window, run_output_job,
+    setup_advanced_options_menu, show_pdf_load_error, update_shell_view_mode,
+    OrderedItemControlOptions, PdfLoadResult,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -146,7 +147,7 @@ impl MergeWorkspace {
         glib::spawn_future_local(async move {
             let paths = open_pdf_files(&parent, &gettext("Add PDFs"), &gettext("Add")).await;
             if !paths.is_empty() {
-                workspace.add_files(paths);
+                workspace.add_files(paths, parent);
             }
         });
     }
@@ -170,7 +171,7 @@ impl MergeWorkspace {
         });
     }
 
-    fn add_files(&self, paths: Vec<PathBuf>) {
+    fn add_files(&self, paths: Vec<PathBuf>, parent: gtk::Window) {
         if paths.is_empty() {
             return;
         }
@@ -187,26 +188,37 @@ impl MergeWorkspace {
 
         imp.merge.job.begin_loading();
         self.update_view();
-        self.load_merge_previews(paths, paths_to_preview);
+        self.load_merge_previews(paths, paths_to_preview, parent);
     }
 
-    fn load_merge_previews(&self, paths: Vec<PathBuf>, paths_to_preview: Vec<PathBuf>) {
+    fn load_merge_previews(
+        &self,
+        paths: Vec<PathBuf>,
+        paths_to_preview: Vec<PathBuf>,
+        parent: gtk::Window,
+    ) {
         let workspace = self.clone();
         glib::spawn_future_local(async move {
             let mut loaded_paths = Vec::new();
             let mut loaded_previews = Vec::new();
+            let mut loaded_passwords = Vec::new();
 
             for path in &paths_to_preview {
-                match crate::preview::render_first_page_preview(path.clone()).await {
-                    Ok(preview) => {
+                match Self::load_merge_preview(&parent, path).await {
+                    PdfLoadResult::Loaded {
+                        output: preview,
+                        password,
+                    } => {
                         loaded_paths.push(path.clone());
+                        loaded_passwords.push((path.clone(), password));
                         if let Some(preview) = preview {
                             loaded_previews.push((path.clone(), preview));
                         }
                     }
-                    Err(error) => {
-                        show_preview_error(&workspace, &error);
+                    PdfLoadResult::Failed(error) => {
+                        show_pdf_load_error(&workspace, &error);
                     }
+                    PdfLoadResult::Cancelled => {}
                 }
             }
 
@@ -217,9 +229,19 @@ impl MergeWorkspace {
             workspace
                 .imp()
                 .merge
-                .finish_loading(files_to_add, loaded_previews);
+                .finish_loading(files_to_add, loaded_previews, loaded_passwords);
             workspace.update_view();
         });
+    }
+
+    async fn load_merge_preview(
+        parent: &gtk::Window,
+        path: &Path,
+    ) -> PdfLoadResult<Option<crate::preview::PagePreview>> {
+        load_processable_pdf(parent, path, |password| {
+            crate::preview::render_first_page_preview(path.to_path_buf(), password)
+        })
+        .await
     }
 
     fn merge_to(&self, output_file: PathBuf) {

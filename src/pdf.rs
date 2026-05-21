@@ -16,6 +16,7 @@ const PAGE_LIST_HINT: &str = "Enter pages like 2,4,7.";
 #[derive(Clone, Debug)]
 pub struct PdfInput {
     pub path: PathBuf,
+    pub password: Option<String>,
     pub rotation: i64,
 }
 
@@ -37,6 +38,8 @@ pub enum PdfBackendError {
     NoPagesSelected,
     OutputMatchesInput,
     Load { path: PathBuf, message: String },
+    PasswordRequired { path: PathBuf },
+    InvalidPassword { path: PathBuf },
     InvalidPageRange(String),
     InvalidDocument(String),
     Write(String),
@@ -74,6 +77,20 @@ impl fmt::Display for PdfBackendError {
                     .and_then(|name| name.to_str())
                     .unwrap_or("PDF")
             ),
+            Self::PasswordRequired { path } => write!(
+                f,
+                "{} is password protected.",
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("PDF")
+            ),
+            Self::InvalidPassword { path } => write!(
+                f,
+                "The password for {} is incorrect.",
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("PDF")
+            ),
             Self::InvalidPageRange(message) => write!(f, "{message}"),
             Self::InvalidDocument(message) => write!(f, "Could not process this PDF: {message}"),
             Self::Write(message) => write!(f, "Could not write the PDF: {message}"),
@@ -95,43 +112,62 @@ pub async fn merge_pdfs(
 
 pub async fn organize_pdf(
     input_file: PathBuf,
+    password: Option<String>,
     page_order: Vec<PageSelection>,
     output_file: PathBuf,
     options: PdfOutputOptions,
 ) -> Result<PathBuf, PdfBackendError> {
-    gio::spawn_blocking(move || write_selected_pages(input_file, page_order, output_file, options))
-        .await
-        .unwrap_or(Err(PdfBackendError::WorkerStopped))
+    gio::spawn_blocking(move || {
+        write_selected_pages(input_file, password, page_order, output_file, options)
+    })
+    .await
+    .unwrap_or(Err(PdfBackendError::WorkerStopped))
 }
 
 pub async fn extract_pages(
     input_file: PathBuf,
+    password: Option<String>,
     pages: Vec<PageSelection>,
     output_file: PathBuf,
     options: PdfOutputOptions,
 ) -> Result<PathBuf, PdfBackendError> {
-    gio::spawn_blocking(move || write_selected_pages(input_file, pages, output_file, options))
-        .await
-        .unwrap_or(Err(PdfBackendError::WorkerStopped))
+    gio::spawn_blocking(move || {
+        write_selected_pages(input_file, password, pages, output_file, options)
+    })
+    .await
+    .unwrap_or(Err(PdfBackendError::WorkerStopped))
 }
 
 pub async fn split_pdf(
     input_file: PathBuf,
+    password: Option<String>,
     output_folder: PathBuf,
     prefix: String,
     rule: SplitRule,
 ) -> Result<PathBuf, PdfBackendError> {
-    gio::spawn_blocking(move || split_pdf_blocking(input_file, output_folder, prefix, rule))
-        .await
-        .unwrap_or(Err(PdfBackendError::WorkerStopped))
+    gio::spawn_blocking(move || {
+        split_pdf_blocking(input_file, password, output_folder, prefix, rule)
+    })
+    .await
+    .unwrap_or(Err(PdfBackendError::WorkerStopped))
 }
 
 pub async fn compress_pdf(
     input_file: PathBuf,
+    password: Option<String>,
     output_file: PathBuf,
     options: CompressOptions,
 ) -> Result<PathBuf, PdfBackendError> {
-    gio::spawn_blocking(move || compress_pdf_blocking(input_file, output_file, options))
+    gio::spawn_blocking(move || compress_pdf_blocking(input_file, password, output_file, options))
+        .await
+        .unwrap_or(Err(PdfBackendError::WorkerStopped))
+}
+
+pub async fn validate_pdf(
+    input_file: PathBuf,
+    password: Option<String>,
+) -> Result<(), PdfBackendError> {
+    gio::spawn_blocking(move || load_document(&input_file, password.as_deref()).map(|_| ()))
         .await
         .unwrap_or(Err(PdfBackendError::WorkerStopped))
 }
@@ -147,6 +183,34 @@ pub fn parse_page_numbers(input: &str, page_count: usize) -> Result<Vec<u32>, Pd
         false,
         PdfBackendError::InvalidPageRange(PAGE_LIST_HINT.to_string()),
     )
+}
+
+fn load_document(path: &Path, password: Option<&str>) -> Result<Document, PdfBackendError> {
+    let document = match password {
+        Some(password) => {
+            Document::load_with_password(path, password).map_err(|error| match error {
+                lopdf::Error::InvalidPassword => PdfBackendError::InvalidPassword {
+                    path: path.to_path_buf(),
+                },
+                error => PdfBackendError::Load {
+                    path: path.to_path_buf(),
+                    message: error.to_string(),
+                },
+            })?
+        }
+        None => Document::load(path).map_err(|error| PdfBackendError::Load {
+            path: path.to_path_buf(),
+            message: error.to_string(),
+        })?,
+    };
+
+    if document.is_encrypted() {
+        return Err(PdfBackendError::PasswordRequired {
+            path: path.to_path_buf(),
+        });
+    }
+
+    Ok(document)
 }
 
 fn merge_pdfs_blocking(
@@ -167,10 +231,7 @@ fn merge_pdfs_blocking(
     let mut document_objects = BTreeMap::new();
 
     for input in input_files {
-        let mut document = Document::load(&input.path).map_err(|error| PdfBackendError::Load {
-            path: input.path.clone(),
-            message: error.to_string(),
-        })?;
+        let mut document = load_document(&input.path, input.password.as_deref())?;
 
         document.renumber_objects_with(max_id);
         max_id = document.max_id + 1;
@@ -190,14 +251,12 @@ fn merge_pdfs_blocking(
 
 fn write_selected_pages(
     input_file: PathBuf,
+    password: Option<String>,
     page_numbers: Vec<PageSelection>,
     output_file: PathBuf,
     options: PdfOutputOptions,
 ) -> Result<PathBuf, PdfBackendError> {
-    let document = Document::load(&input_file).map_err(|error| PdfBackendError::Load {
-        path: input_file.clone(),
-        message: error.to_string(),
-    })?;
+    let document = load_document(&input_file, password.as_deref())?;
 
     write_selected_pages_from_document(&input_file, &document, page_numbers, &output_file, options)
 }
@@ -238,14 +297,12 @@ fn write_selected_pages_from_document(
 
 fn split_pdf_blocking(
     input_file: PathBuf,
+    password: Option<String>,
     output_folder: PathBuf,
     prefix: String,
     rule: SplitRule,
 ) -> Result<PathBuf, PdfBackendError> {
-    let document = Document::load(&input_file).map_err(|error| PdfBackendError::Load {
-        path: input_file.clone(),
-        message: error.to_string(),
-    })?;
+    let document = load_document(&input_file, password.as_deref())?;
     let page_count = document.get_pages().len() as u32;
     if page_count == 0 {
         return Err(PdfBackendError::NoPagesSelected);
@@ -424,6 +481,7 @@ fn page_input_hint(allow_ranges: bool) -> &'static str {
 
 fn compress_pdf_blocking(
     input_file: PathBuf,
+    password: Option<String>,
     output_file: PathBuf,
     options: CompressOptions,
 ) -> Result<PathBuf, PdfBackendError> {
@@ -431,10 +489,7 @@ fn compress_pdf_blocking(
         return Err(PdfBackendError::OutputMatchesInput);
     }
 
-    let mut document = Document::load(&input_file).map_err(|error| PdfBackendError::Load {
-        path: input_file.clone(),
-        message: error.to_string(),
-    })?;
+    let mut document = load_document(&input_file, password.as_deref())?;
     let catalog_id = document
         .trailer
         .get(b"Root")
@@ -915,11 +970,13 @@ fn split_output_prefix(input_file: &Path, prefix: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        compress_pdf_blocking, merge_pdfs_blocking, parse_page_numbers, parse_page_ranges,
-        split_breaks, split_pdf_blocking, write_selected_pages, CompressOptions, PageSelection,
-        PdfBackendError, PdfInput, PdfOutputOptions, SplitRule,
+        compress_pdf_blocking, load_document, merge_pdfs_blocking, parse_page_numbers,
+        parse_page_ranges, split_breaks, split_pdf_blocking, write_selected_pages, CompressOptions,
+        PageSelection, PdfBackendError, PdfInput, PdfOutputOptions, SplitRule,
     };
-    use lopdf::{dictionary, Document, Object, Stream};
+    use lopdf::{
+        dictionary, Document, EncryptionState, EncryptionVersion, Object, Permissions, Stream,
+    };
     use std::fs;
     use std::path::{Path, PathBuf};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -1087,6 +1144,7 @@ mod tests {
 
         let result = write_selected_pages(
             input.clone(),
+            None,
             vec![page_selection(3, 0), page_selection(1, 0)],
             output.clone(),
             PdfOutputOptions::default(),
@@ -1105,6 +1163,7 @@ mod tests {
 
         let result = write_selected_pages(
             input.clone(),
+            None,
             vec![page_selection(3, 90), page_selection(1, 270)],
             output.clone(),
             PdfOutputOptions::default(),
@@ -1124,6 +1183,7 @@ mod tests {
 
         let result = write_selected_pages(
             input.clone(),
+            None,
             vec![page_selection(2, 0), page_selection(3, 0)],
             output.clone(),
             PdfOutputOptions {
@@ -1147,6 +1207,7 @@ mod tests {
 
         let result = write_selected_pages(
             input.clone(),
+            None,
             vec![page_selection(1, 0), page_selection(2, 90)],
             output.clone(),
             PdfOutputOptions {
@@ -1177,6 +1238,7 @@ mod tests {
 
         let result = write_selected_pages(
             input.clone(),
+            None,
             vec![page_selection(1, 0), page_selection(2, 0)],
             output.clone(),
             PdfOutputOptions {
@@ -1199,6 +1261,7 @@ mod tests {
         assert_error(
             write_selected_pages(
                 input.clone(),
+                None,
                 Vec::new(),
                 dir.join("empty.pdf"),
                 PdfOutputOptions::default(),
@@ -1208,6 +1271,7 @@ mod tests {
         assert_error(
             write_selected_pages(
                 input.clone(),
+                None,
                 vec![page_selection(1, 0)],
                 input.clone(),
                 PdfOutputOptions::default(),
@@ -1217,12 +1281,59 @@ mod tests {
         assert_error(
             write_selected_pages(
                 input,
+                None,
                 vec![page_selection(3, 0)],
                 dir.join("missing.pdf"),
                 PdfOutputOptions::default(),
             ),
             "Page 3 is not in this PDF.",
         );
+    }
+
+    #[test]
+    fn load_document_reports_missing_and_invalid_passwords() {
+        let dir = TestDir::new("encrypted-load");
+        let input = dir.join("locked.pdf");
+        write_encrypted_test_pdf(&input, &[10], "secret");
+
+        let missing_password = load_document(&input, None).unwrap_err();
+        assert!(matches!(
+            missing_password,
+            PdfBackendError::PasswordRequired { .. }
+        ));
+        assert_eq!(
+            missing_password.to_string(),
+            "locked.pdf is password protected."
+        );
+
+        let invalid_password = load_document(&input, Some("wrong")).unwrap_err();
+        assert!(matches!(
+            invalid_password,
+            PdfBackendError::InvalidPassword { .. }
+        ));
+        assert_eq!(
+            invalid_password.to_string(),
+            "The password for locked.pdf is incorrect."
+        );
+    }
+
+    #[test]
+    fn write_selected_pages_accepts_valid_password() {
+        let dir = TestDir::new("encrypted-selected-pages");
+        let input = dir.join("locked.pdf");
+        let output = dir.join("unlocked-output.pdf");
+        write_encrypted_test_pdf(&input, &[10, 20], "secret");
+
+        let result = write_selected_pages(
+            input,
+            Some("secret".to_string()),
+            vec![page_selection(2, 0)],
+            output.clone(),
+            PdfOutputOptions::default(),
+        );
+
+        assert_eq!(result.unwrap(), output);
+        assert_eq!(page_markers(&output), vec![20]);
     }
 
     #[test]
@@ -1235,6 +1346,7 @@ mod tests {
 
         let result = split_pdf_blocking(
             input,
+            None,
             output_folder.clone(),
             "Chapter".to_string(),
             SplitRule::EveryNPages(2),
@@ -1261,6 +1373,7 @@ mod tests {
 
         let result = split_pdf_blocking(
             input,
+            None,
             output_folder.clone(),
             "Page".to_string(),
             SplitRule::EveryPage,
@@ -1287,6 +1400,7 @@ mod tests {
 
         let result = split_pdf_blocking(
             input,
+            None,
             output_folder.clone(),
             "Even".to_string(),
             SplitRule::EvenPages,
@@ -1313,6 +1427,7 @@ mod tests {
 
         let result = split_pdf_blocking(
             input,
+            None,
             output_folder.clone(),
             "Odd".to_string(),
             SplitRule::OddPages,
@@ -1339,6 +1454,7 @@ mod tests {
 
         let result = split_pdf_blocking(
             input,
+            None,
             output_folder.clone(),
             "Specific".to_string(),
             SplitRule::SpecificPages(vec![4, 2, 2]),
@@ -1365,6 +1481,7 @@ mod tests {
 
         let result = split_pdf_blocking(
             input,
+            None,
             output_folder.clone(),
             "   ".to_string(),
             SplitRule::EveryPage,
@@ -1391,6 +1508,7 @@ mod tests {
         assert_error(
             split_pdf_blocking(
                 input,
+                None,
                 output_folder,
                 "Empty".to_string(),
                 SplitRule::EveryPage,
@@ -1409,6 +1527,7 @@ mod tests {
 
         let error = split_pdf_blocking(
             input,
+            None,
             output_folder,
             "Broken".to_string(),
             SplitRule::EveryPage,
@@ -1429,6 +1548,7 @@ mod tests {
 
         let result = split_pdf_blocking(
             input,
+            None,
             missing_output_folder,
             "Split".to_string(),
             SplitRule::EveryPage,
@@ -1474,6 +1594,7 @@ mod tests {
 
         let result = compress_pdf_blocking(
             input.clone(),
+            None,
             output.clone(),
             CompressOptions {
                 remove_empty_streams: true,
@@ -1486,6 +1607,7 @@ mod tests {
         assert_error(
             compress_pdf_blocking(
                 input.clone(),
+                None,
                 input,
                 CompressOptions {
                     remove_empty_streams: false,
@@ -1552,8 +1674,32 @@ mod tests {
             "Pages" => pages_id,
         });
         document.trailer.set("Root", catalog_id);
+        document.trailer.set(
+            "ID",
+            Object::Array(vec![
+                Object::string_literal(b"folios-test-id-1"),
+                Object::string_literal(b"folios-test-id-2"),
+            ]),
+        );
         document.compress();
         document.save(path).expect("test PDF should be saved");
+    }
+
+    fn write_encrypted_test_pdf(path: &Path, page_markers: &[i64], password: &str) {
+        write_test_pdf(path, page_markers);
+
+        let mut document = Document::load(path).expect("test PDF should load");
+        let version = EncryptionVersion::V1 {
+            document: &document,
+            owner_password: password,
+            user_password: password,
+            permissions: Permissions::PRINTABLE,
+        };
+        let state = EncryptionState::try_from(version).expect("encryption state should build");
+        document.encrypt(&state).expect("test PDF should encrypt");
+        document
+            .save(path)
+            .expect("encrypted test PDF should be saved");
     }
 
     fn add_test_metadata(path: &Path) {
@@ -1578,7 +1724,11 @@ mod tests {
     }
 
     fn pdf_input(path: PathBuf, rotation: i64) -> PdfInput {
-        PdfInput { path, rotation }
+        PdfInput {
+            path,
+            password: None,
+            rotation,
+        }
     }
 
     fn page_selection(page_number: u32, rotation: i64) -> PageSelection {

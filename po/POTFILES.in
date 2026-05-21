@@ -8,6 +8,7 @@ src/compress-workspace.blp
 src/extract-workspace.blp
 src/merge-workspace.blp
 src/organize-workspace.blp
+src/password-dialog.blp
 src/split-workspace.blp
 src/shortcuts-dialog.blp
 src/window.rs

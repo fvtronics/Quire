@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use gtk::{gio, prelude::*};
+use gtk::{gio, glib, prelude::FileExt};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::path::PathBuf;
@@ -27,6 +27,8 @@ pub struct DocumentPreviews {
 
 #[derive(Debug)]
 pub enum PreviewError {
+    PasswordRequired,
+    InvalidPassword,
     Load(String),
     Render(String),
     WorkerStopped,
@@ -35,6 +37,8 @@ pub enum PreviewError {
 impl fmt::Display for PreviewError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::PasswordRequired => write!(f, "This PDF is password protected."),
+            Self::InvalidPassword => write!(f, "The PDF password is incorrect."),
             Self::Load(message) => write!(f, "Could not preview this PDF: {message}"),
             Self::Render(message) => write!(f, "Could not render page previews: {message}"),
             Self::WorkerStopped => write!(f, "The preview operation stopped unexpectedly."),
@@ -42,87 +46,126 @@ impl fmt::Display for PreviewError {
     }
 }
 
-pub async fn render_page_previews(input_file: PathBuf) -> Result<DocumentPreviews, PreviewError> {
-    gio::spawn_blocking(move || render_page_previews_blocking(input_file))
+pub async fn render_page_previews(
+    input_file: PathBuf,
+    password: Option<String>,
+) -> Result<DocumentPreviews, PreviewError> {
+    gio::spawn_blocking(move || render_page_previews_blocking(input_file, password))
         .await
         .unwrap_or(Err(PreviewError::WorkerStopped))
 }
 
 pub async fn render_first_page_preview(
     input_file: PathBuf,
+    password: Option<String>,
 ) -> Result<Option<PagePreview>, PreviewError> {
-    gio::spawn_blocking(move || render_first_page_preview_blocking(input_file))
+    gio::spawn_blocking(move || render_first_page_preview_blocking(input_file, password))
         .await
         .unwrap_or(Err(PreviewError::WorkerStopped))
 }
 
 pub async fn render_single_file_preview(
     input_file: PathBuf,
+    password: Option<String>,
 ) -> Result<Option<PagePreview>, PreviewError> {
-    gio::spawn_blocking(move || render_single_file_preview_blocking(input_file))
+    gio::spawn_blocking(move || render_single_file_preview_blocking(input_file, password))
         .await
         .unwrap_or(Err(PreviewError::WorkerStopped))
 }
 
 pub async fn render_first_page_preview_with_count(
     input_file: PathBuf,
+    password: Option<String>,
 ) -> Result<(Option<PagePreview>, usize), PreviewError> {
-    gio::spawn_blocking(move || render_first_page_preview_with_count_blocking(input_file))
+    gio::spawn_blocking(move || render_first_page_preview_with_count_blocking(input_file, password))
         .await
         .unwrap_or(Err(PreviewError::WorkerStopped))
 }
 
-fn render_page_previews_blocking(input_file: PathBuf) -> Result<DocumentPreviews, PreviewError> {
-    let file = gio::File::for_path(input_file);
-    let document = poppler::Document::from_file(file.uri().as_str(), None)
-        .map_err(|error| PreviewError::Load(error.to_string()))?;
-    let page_count = document.n_pages().max(0) as usize;
-    let mut previews = BTreeMap::new();
+fn render_page_previews_blocking(
+    input_file: PathBuf,
+    password: Option<String>,
+) -> Result<DocumentPreviews, PreviewError> {
+    render_with_document(input_file, password, |document| {
+        let page_count = document.n_pages().max(0) as usize;
+        let mut previews = BTreeMap::new();
 
-    for index in 0..page_count as i32 {
-        if let Some(preview) = render_page_preview(&document, index, PAGE_PREVIEW_WIDTH)? {
-            previews.insert(preview.page_number, preview);
+        for index in 0..page_count as i32 {
+            if let Some(preview) = render_page_preview(document, index, PAGE_PREVIEW_WIDTH)? {
+                previews.insert(preview.page_number, preview);
+            }
         }
-    }
 
-    Ok(DocumentPreviews {
-        page_count,
-        previews,
+        Ok(DocumentPreviews {
+            page_count,
+            previews,
+        })
     })
 }
 
 fn render_first_page_preview_blocking(
     input_file: PathBuf,
+    password: Option<String>,
 ) -> Result<Option<PagePreview>, PreviewError> {
-    let file = gio::File::for_path(input_file);
-    let document = poppler::Document::from_file(file.uri().as_str(), None)
-        .map_err(|error| PreviewError::Load(error.to_string()))?;
-
-    render_page_preview(&document, 0, PAGE_PREVIEW_WIDTH)
+    render_with_document(input_file, password, |document| {
+        render_page_preview(document, 0, PAGE_PREVIEW_WIDTH)
+    })
 }
 
 fn render_single_file_preview_blocking(
     input_file: PathBuf,
+    password: Option<String>,
 ) -> Result<Option<PagePreview>, PreviewError> {
-    let file = gio::File::for_path(input_file);
-    let document = poppler::Document::from_file(file.uri().as_str(), None)
-        .map_err(|error| PreviewError::Load(error.to_string()))?;
-
-    render_page_preview(&document, 0, SINGLE_FILE_PREVIEW_WIDTH)
+    render_with_document(input_file, password, |document| {
+        render_page_preview(document, 0, SINGLE_FILE_PREVIEW_WIDTH)
+    })
 }
 
 fn render_first_page_preview_with_count_blocking(
     input_file: PathBuf,
+    password: Option<String>,
 ) -> Result<(Option<PagePreview>, usize), PreviewError> {
-    let file = gio::File::for_path(input_file);
-    let document = poppler::Document::from_file(file.uri().as_str(), None)
-        .map_err(|error| PreviewError::Load(error.to_string()))?;
-    let page_count = document.n_pages().max(0) as usize;
+    render_with_document(input_file, password, |document| {
+        let page_count = document.n_pages().max(0) as usize;
 
-    Ok((
-        render_page_preview(&document, 0, SINGLE_FILE_PREVIEW_WIDTH)?,
-        page_count,
-    ))
+        Ok((
+            render_page_preview(document, 0, SINGLE_FILE_PREVIEW_WIDTH)?,
+            page_count,
+        ))
+    })
+}
+
+fn render_with_document<T, Render>(
+    input_file: PathBuf,
+    password: Option<String>,
+    render: Render,
+) -> Result<T, PreviewError>
+where
+    Render: FnOnce(&poppler::Document) -> Result<T, PreviewError>,
+{
+    let document = load_document(input_file, password.as_deref())?;
+    render(&document)
+}
+
+fn load_document(
+    input_file: PathBuf,
+    password: Option<&str>,
+) -> Result<poppler::Document, PreviewError> {
+    let file = gio::File::for_path(input_file);
+    poppler::Document::from_file(file.uri().as_str(), password)
+        .map_err(|error| document_load_error(error, password.is_some()))
+}
+
+fn document_load_error(error: glib::Error, had_password: bool) -> PreviewError {
+    if error.matches(poppler::Error::Encrypted) {
+        if had_password {
+            PreviewError::InvalidPassword
+        } else {
+            PreviewError::PasswordRequired
+        }
+    } else {
+        PreviewError::Load(error.to_string())
+    }
 }
 
 fn render_page_preview(

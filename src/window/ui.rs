@@ -1,7 +1,7 @@
 use adw::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::gdk_pixbuf::PixbufRotation;
-use gtk::gio;
+use gtk::{gio, glib};
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
@@ -73,6 +73,45 @@ pub(super) async fn select_folder(
         .await
         .ok()
         .and_then(|folder| folder.path())
+}
+
+pub(super) enum PasswordPromptReason {
+    Required,
+    InvalidPassword,
+}
+
+pub(super) async fn ask_pdf_password(
+    parent: &impl IsA<gtk::Widget>,
+    path: &Path,
+    reason: PasswordPromptReason,
+) -> Option<String> {
+    let builder = gtk::Builder::from_resource("/com/fvtronics/folios/password-dialog.ui");
+    let dialog: adw::AlertDialog = builder
+        .object("password_dialog")
+        .expect("password dialog resource should define password_dialog");
+    let entry: gtk::PasswordEntry = builder
+        .object("password_entry")
+        .expect("password dialog resource should define password_entry");
+    let error_message: gtk::Label = builder
+        .object("error_message")
+        .expect("password dialog resource should define error_message");
+
+    let body = gettext("Enter the password for {}.").replace("{}", file_title(path));
+    let body = glib::markup_escape_text(&body);
+    dialog.set_body(&body);
+    error_message.set_visible(matches!(reason, PasswordPromptReason::InvalidPassword));
+
+    let dialog_for_entry = dialog.clone();
+    entry.connect_changed(move |entry| {
+        dialog_for_entry.set_response_enabled("unlock", !entry.text().is_empty());
+    });
+
+    let response = dialog.choose_future(Some(parent)).await;
+    if response.as_str() == "unlock" {
+        Some(entry.text().to_string())
+    } else {
+        None
+    }
 }
 
 pub(super) fn icon_button(icon_name: &str, tooltip: &str) -> gtk::Button {

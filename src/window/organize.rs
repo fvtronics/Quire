@@ -3,8 +3,9 @@ use super::ui::{
     save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    open_output, ordered_item_controls, parent_window, run_output_job, setup_advanced_options_menu,
-    show_preview_error, update_shell_view_mode, OrderedItemControlOptions,
+    load_single_processable_pdf, open_output, ordered_item_controls, parent_window, run_output_job,
+    setup_advanced_options_menu, update_shell_view_mode, OrderedItemControlOptions,
+    SinglePdfLoadHandlers,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -145,7 +146,7 @@ impl OrganizeWorkspace {
         glib::spawn_future_local(async move {
             if let Some(path) = open_pdf_file(&parent, &gettext("Open PDF"), &gettext("Open")).await
             {
-                workspace.load_pdf(path);
+                workspace.load_pdf(path, parent);
             }
         });
     }
@@ -169,28 +170,26 @@ impl OrganizeWorkspace {
         });
     }
 
-    fn load_pdf(&self, path: PathBuf) {
-        let imp = self.imp();
-        imp.organize.job.begin_loading();
-        self.update_view();
-
-        let workspace = self.clone();
-        glib::spawn_future_local(async move {
-            let result = crate::preview::render_page_previews(path.clone()).await;
-            let imp = workspace.imp();
-
-            match result {
-                Ok(previews) => {
-                    imp.organize.load_document(path, previews);
-                }
-                Err(error) => {
-                    imp.organize.job.finish_loading_failed();
-                    show_preview_error(&workspace, &error);
-                }
-            }
-
-            workspace.update_view();
-        });
+    fn load_pdf(&self, path: PathBuf, parent: gtk::Window) {
+        load_single_processable_pdf(
+            self.clone(),
+            parent,
+            path,
+            crate::preview::render_page_previews,
+            SinglePdfLoadHandlers {
+                begin_loading: |workspace: &Self| workspace.imp().organize.job.begin_loading(),
+                store_loaded: |workspace: &Self, path, password, previews| {
+                    workspace
+                        .imp()
+                        .organize
+                        .load_document(path, password, previews);
+                },
+                finish_loading_failed: |workspace: &Self| {
+                    workspace.imp().organize.job.finish_loading_failed();
+                },
+                refresh: Self::update_view,
+            },
+        );
     }
 
     fn reset_pdf(&self) {
@@ -201,14 +200,14 @@ impl OrganizeWorkspace {
 
     fn organize_to(&self, output_file: PathBuf) {
         let imp = self.imp();
-        let Some((input_file, page_order)) = imp.organize.selections() else {
+        let Some((input_file, password, page_order)) = imp.organize.selections() else {
             return;
         };
         let options = imp.organize.options.options();
 
         run_output_job(
             self.clone(),
-            crate::pdf::organize_pdf(input_file, page_order, output_file, options),
+            crate::pdf::organize_pdf(input_file, password, page_order, output_file, options),
             gettext("Organized PDF saved"),
             |workspace, running| workspace.imp().is_running.set(running),
             |workspace| workspace.imp().organize.job.clear_last_output(),

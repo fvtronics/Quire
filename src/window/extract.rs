@@ -4,8 +4,9 @@ use super::ui::{
     tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    open_output, parent_window, run_output_job, setup_advanced_options_menu, show_backend_error,
-    show_preview_error, show_toast, update_shell_view_mode,
+    load_single_processable_pdf, open_output, parent_window, run_output_job,
+    setup_advanced_options_menu, show_backend_error, show_toast, update_shell_view_mode,
+    SinglePdfLoadHandlers,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -164,7 +165,7 @@ impl ExtractWorkspace {
         glib::spawn_future_local(async move {
             if let Some(path) = open_pdf_file(&parent, &gettext("Open PDF"), &gettext("Open")).await
             {
-                workspace.load_pdf(path);
+                workspace.load_pdf(path, parent);
             }
         });
     }
@@ -193,7 +194,8 @@ impl ExtractWorkspace {
                 }
             }
         };
-        let Some((input_file, pages)) = imp.extract.selections_from_pages(page_numbers) else {
+        let Some((input_file, password, pages)) = imp.extract.selections_from_pages(page_numbers)
+        else {
             return;
         };
         let Some(parent) = parent_window(self) else {
@@ -210,39 +212,36 @@ impl ExtractWorkspace {
             )
             .await
             {
-                workspace.extract_to(input_file, pages, path);
+                workspace.extract_to(input_file, password, pages, path);
             }
         });
     }
 
-    fn load_pdf(&self, path: PathBuf) {
-        let imp = self.imp();
-        imp.extract.job.begin_loading();
-        self.update_view();
-
-        let workspace = self.clone();
-        glib::spawn_future_local(async move {
-            let result = crate::preview::render_page_previews(path.clone()).await;
-            let imp = workspace.imp();
-
-            match result {
-                Ok(previews) => {
-                    imp.extract.load_document(path, previews);
+    fn load_pdf(&self, path: PathBuf, parent: gtk::Window) {
+        load_single_processable_pdf(
+            self.clone(),
+            parent,
+            path,
+            crate::preview::render_page_previews,
+            SinglePdfLoadHandlers {
+                begin_loading: |workspace: &Self| workspace.imp().extract.job.begin_loading(),
+                store_loaded: |workspace: &Self, path, password, previews| {
+                    let imp = workspace.imp();
+                    imp.extract.load_document(path, password, previews);
                     imp.extract_ranges_entry.set_text("");
-                }
-                Err(error) => {
-                    imp.extract.job.finish_loading_failed();
-                    show_preview_error(&workspace, &error);
-                }
-            }
-
-            workspace.update_view();
-        });
+                },
+                finish_loading_failed: |workspace: &Self| {
+                    workspace.imp().extract.job.finish_loading_failed();
+                },
+                refresh: Self::update_view,
+            },
+        );
     }
 
     fn extract_to(
         &self,
         input_file: PathBuf,
+        password: Option<String>,
         pages: Vec<crate::pdf::PageSelection>,
         output_file: PathBuf,
     ) {
@@ -250,7 +249,7 @@ impl ExtractWorkspace {
 
         run_output_job(
             self.clone(),
-            crate::pdf::extract_pages(input_file, pages, output_file, options),
+            crate::pdf::extract_pages(input_file, password, pages, output_file, options),
             gettext("Extracted pages saved"),
             |workspace, running| workspace.imp().is_running.set(running),
             |workspace| workspace.imp().extract.job.clear_last_output(),

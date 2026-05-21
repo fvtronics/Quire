@@ -3,7 +3,8 @@ use super::ui::{
     single_file_preview_widget,
 };
 use super::workspace::{
-    open_output, parent_window, run_output_job, show_preview_error, update_shell_view_mode,
+    load_single_processable_pdf, open_output, parent_window, run_output_job,
+    update_shell_view_mode, SinglePdfLoadHandlers,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -113,13 +114,13 @@ impl CompressWorkspace {
         glib::spawn_future_local(async move {
             if let Some(path) = open_pdf_file(&parent, &gettext("Open PDF"), &gettext("Open")).await
             {
-                workspace.load_pdf(path);
+                workspace.load_pdf(path, parent);
             }
         });
     }
 
     fn choose_output_file(&self) {
-        let Some(input_file) = self.imp().compress.input_file() else {
+        let Some((input_file, password)) = self.imp().compress.input_file() else {
             return;
         };
         let Some(parent) = parent_window(self) else {
@@ -136,36 +137,34 @@ impl CompressWorkspace {
             )
             .await
             {
-                workspace.compress_to(input_file, path);
+                workspace.compress_to(input_file, password, path);
             }
         });
     }
 
-    fn load_pdf(&self, path: PathBuf) {
-        let imp = self.imp();
-        imp.compress.job.begin_loading();
-        self.update_view();
-
-        let workspace = self.clone();
-        glib::spawn_future_local(async move {
-            let result = crate::preview::render_single_file_preview(path.clone()).await;
-            let imp = workspace.imp();
-
-            match result {
-                Ok(preview) => {
-                    imp.compress.finish_loading(path, preview);
-                }
-                Err(error) => {
-                    imp.compress.job.finish_loading_failed();
-                    show_preview_error(&workspace, &error);
-                }
-            }
-
-            workspace.update_view();
-        });
+    fn load_pdf(&self, path: PathBuf, parent: gtk::Window) {
+        load_single_processable_pdf(
+            self.clone(),
+            parent,
+            path,
+            crate::preview::render_single_file_preview,
+            SinglePdfLoadHandlers {
+                begin_loading: |workspace: &Self| workspace.imp().compress.job.begin_loading(),
+                store_loaded: |workspace: &Self, path, password, preview| {
+                    workspace
+                        .imp()
+                        .compress
+                        .finish_loading(path, password, preview);
+                },
+                finish_loading_failed: |workspace: &Self| {
+                    workspace.imp().compress.job.finish_loading_failed();
+                },
+                refresh: Self::update_view,
+            },
+        );
     }
 
-    fn compress_to(&self, input_file: PathBuf, output_file: PathBuf) {
+    fn compress_to(&self, input_file: PathBuf, password: Option<String>, output_file: PathBuf) {
         let imp = self.imp();
         let options = crate::pdf::CompressOptions {
             remove_empty_streams: imp.compress_empty_streams_row.is_active(),
@@ -174,7 +173,7 @@ impl CompressWorkspace {
 
         run_output_job(
             self.clone(),
-            crate::pdf::compress_pdf(input_file, output_file, options),
+            crate::pdf::compress_pdf(input_file, password, output_file, options),
             gettext("Compressed PDF saved"),
             |workspace, running| workspace.imp().is_running.set(running),
             |workspace| workspace.imp().compress.job.clear_last_output(),

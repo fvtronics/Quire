@@ -73,6 +73,7 @@ impl OutputOptionsState {
 #[derive(Debug, Default)]
 pub struct MergeState {
     pub files: RefCell<Vec<PathBuf>>,
+    pub passwords: RefCell<BTreeMap<PathBuf, String>>,
     pub rotations: RefCell<BTreeMap<PathBuf, i64>>,
     pub previews: RefCell<BTreeMap<PathBuf, crate::preview::PagePreview>>,
     pub options: OutputOptionsState,
@@ -82,6 +83,7 @@ pub struct MergeState {
 #[derive(Debug, Default)]
 pub struct CompressState {
     pub file: RefCell<Option<PathBuf>>,
+    pub password: RefCell<Option<String>>,
     pub preview: RefCell<Option<crate::preview::PagePreview>>,
     pub job: JobState,
 }
@@ -89,6 +91,7 @@ pub struct CompressState {
 #[derive(Debug, Default)]
 pub struct OrganizeState {
     pub file: RefCell<Option<PathBuf>>,
+    pub password: RefCell<Option<String>>,
     pub page_count: Cell<usize>,
     pub previews: RefCell<BTreeMap<u32, crate::preview::PagePreview>>,
     pub page_order: RefCell<Vec<u32>>,
@@ -100,6 +103,7 @@ pub struct OrganizeState {
 #[derive(Debug, Default)]
 pub struct ExtractState {
     pub file: RefCell<Option<PathBuf>>,
+    pub password: RefCell<Option<String>>,
     pub page_count: Cell<usize>,
     pub previews: RefCell<BTreeMap<u32, crate::preview::PagePreview>>,
     pub selected_pages: RefCell<BTreeSet<u32>>,
@@ -111,6 +115,7 @@ pub struct ExtractState {
 #[derive(Debug, Default)]
 pub struct SplitState {
     pub file: RefCell<Option<PathBuf>>,
+    pub password: RefCell<Option<String>>,
     pub page_count: Cell<usize>,
     pub preview: RefCell<Option<crate::preview::PagePreview>>,
     pub job: JobState,
@@ -119,6 +124,7 @@ pub struct SplitState {
 impl MergeState {
     pub fn clear(&self) {
         self.files.borrow_mut().clear();
+        self.passwords.borrow_mut().clear();
         self.rotations.borrow_mut().clear();
         self.previews.borrow_mut().clear();
         self.job.clear_last_output();
@@ -142,19 +148,27 @@ impl MergeState {
         &self,
         paths: Vec<PathBuf>,
         previews: Vec<(PathBuf, crate::preview::PagePreview)>,
+        passwords: Vec<(PathBuf, Option<String>)>,
     ) {
         self.job.finish_loading();
         self.previews.borrow_mut().extend(previews);
+        self.passwords.borrow_mut().extend(
+            passwords
+                .into_iter()
+                .filter_map(|(path, password)| password.map(|password| (path, password))),
+        );
         self.files.borrow_mut().extend(paths);
     }
 
     pub fn pdf_inputs(&self) -> Vec<crate::pdf::PdfInput> {
         let rotations = self.rotations.borrow();
+        let passwords = self.passwords.borrow();
         self.files
             .borrow()
             .iter()
             .map(|path| crate::pdf::PdfInput {
                 path: path.clone(),
+                password: passwords.get(path).cloned(),
                 rotation: *rotations.get(path).unwrap_or(&0),
             })
             .collect()
@@ -200,6 +214,7 @@ impl MergeState {
     pub fn remove_file(&self, index: usize) {
         let path = self.files.borrow_mut().remove(index);
         if !self.files.borrow().contains(&path) {
+            self.passwords.borrow_mut().remove(&path);
             self.rotations.borrow_mut().remove(&path);
         }
         self.job.clear_last_output();
@@ -207,22 +222,37 @@ impl MergeState {
 }
 
 impl CompressState {
-    pub fn input_file(&self) -> Option<PathBuf> {
-        self.file.borrow().clone()
+    pub fn input_file(&self) -> Option<(PathBuf, Option<String>)> {
+        self.file
+            .borrow()
+            .clone()
+            .map(|path| (path, self.password.borrow().clone()))
     }
 
-    pub fn finish_loading(&self, path: PathBuf, preview: Option<crate::preview::PagePreview>) {
+    pub fn finish_loading(
+        &self,
+        path: PathBuf,
+        password: Option<String>,
+        preview: Option<crate::preview::PagePreview>,
+    ) {
         self.job.finish_loading();
         self.file.borrow_mut().replace(path);
+        *self.password.borrow_mut() = password;
         *self.preview.borrow_mut() = preview;
     }
 }
 
 impl OrganizeState {
-    pub fn load_document(&self, path: PathBuf, previews: crate::preview::DocumentPreviews) {
+    pub fn load_document(
+        &self,
+        path: PathBuf,
+        password: Option<String>,
+        previews: crate::preview::DocumentPreviews,
+    ) {
         let page_count = previews.page_count;
         self.job.finish_loading();
         self.file.borrow_mut().replace(path);
+        *self.password.borrow_mut() = password;
         self.page_count.set(page_count);
         *self.previews.borrow_mut() = previews.previews;
 
@@ -248,8 +278,9 @@ impl OrganizeState {
         true
     }
 
-    pub fn selections(&self) -> Option<(PathBuf, Vec<crate::pdf::PageSelection>)> {
+    pub fn selections(&self) -> Option<(PathBuf, Option<String>, Vec<crate::pdf::PageSelection>)> {
         let input_file = self.file.borrow().clone()?;
+        let password = self.password.borrow().clone();
         let rotations = self.rotations.borrow();
         let pages = self
             .page_order
@@ -261,7 +292,7 @@ impl OrganizeState {
             })
             .collect();
 
-        Some((input_file, pages))
+        Some((input_file, password, pages))
     }
 
     pub fn move_page(&self, from: usize, to: usize) -> bool {
@@ -335,10 +366,16 @@ impl ExtractState {
         *self.selected_pages.borrow_mut() = pages.into_iter().collect();
     }
 
-    pub fn load_document(&self, path: PathBuf, previews: crate::preview::DocumentPreviews) {
+    pub fn load_document(
+        &self,
+        path: PathBuf,
+        password: Option<String>,
+        previews: crate::preview::DocumentPreviews,
+    ) {
         let page_count = previews.page_count;
         self.job.finish_loading();
         self.file.borrow_mut().replace(path);
+        *self.password.borrow_mut() = password;
         self.page_count.set(page_count);
         *self.previews.borrow_mut() = previews.previews;
         self.clear_range_selection();
@@ -348,8 +385,9 @@ impl ExtractState {
     pub fn selections_from_pages(
         &self,
         page_numbers: Vec<u32>,
-    ) -> Option<(PathBuf, Vec<crate::pdf::PageSelection>)> {
+    ) -> Option<(PathBuf, Option<String>, Vec<crate::pdf::PageSelection>)> {
         let input_file = self.file.borrow().clone()?;
+        let password = self.password.borrow().clone();
         let rotations = self.rotations.borrow();
         let pages = page_numbers
             .into_iter()
@@ -359,7 +397,7 @@ impl ExtractState {
             })
             .collect();
 
-        Some((input_file, pages))
+        Some((input_file, password, pages))
     }
 
     pub fn toggle_page(&self, page_number: u32, selected: bool) {
@@ -401,18 +439,23 @@ impl ExtractState {
 }
 
 impl SplitState {
-    pub fn input_file(&self) -> Option<PathBuf> {
-        self.file.borrow().clone()
+    pub fn input_file(&self) -> Option<(PathBuf, Option<String>)> {
+        self.file
+            .borrow()
+            .clone()
+            .map(|path| (path, self.password.borrow().clone()))
     }
 
     pub fn finish_loading(
         &self,
         path: PathBuf,
+        password: Option<String>,
         preview: Option<crate::preview::PagePreview>,
         page_count: usize,
     ) {
         self.job.finish_loading();
         self.file.borrow_mut().replace(path);
+        *self.password.borrow_mut() = password;
         self.page_count.set(page_count);
         *self.preview.borrow_mut() = preview;
     }
@@ -443,7 +486,7 @@ fn move_vec_item<T>(items: &mut Vec<T>, from: usize, to: usize) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{ExtractState, JobState, MergeState, OrganizeState};
+    use super::{CompressState, ExtractState, JobState, MergeState, OrganizeState, SplitState};
     use std::path::PathBuf;
 
     fn document_previews(
@@ -539,6 +582,35 @@ mod tests {
     }
 
     #[test]
+    fn merge_tracks_passwords_in_pdf_inputs_and_clears_unused_passwords() {
+        let state = MergeState::default();
+        let locked = PathBuf::from("locked.pdf");
+        let plain = PathBuf::from("plain.pdf");
+
+        state.finish_loading(
+            vec![locked.clone(), plain.clone()],
+            Vec::new(),
+            vec![
+                (locked.clone(), Some("secret".to_string())),
+                (plain.clone(), None),
+            ],
+        );
+
+        let inputs = state.pdf_inputs();
+        assert_eq!(inputs[0].path, locked);
+        assert_eq!(inputs[0].password.as_deref(), Some("secret"));
+        assert_eq!(inputs[1].path, plain);
+        assert_eq!(inputs[1].password, None);
+
+        state.remove_file(0);
+
+        assert!(!state
+            .passwords
+            .borrow()
+            .contains_key(&PathBuf::from("locked.pdf")));
+    }
+
+    #[test]
     fn organize_move_page_moves_by_index_and_clears_output() {
         let state = OrganizeState::default();
         *state.page_order.borrow_mut() = vec![1, 2, 3];
@@ -571,7 +643,11 @@ mod tests {
     fn organize_uses_document_page_count_even_when_previews_are_missing() {
         let state = OrganizeState::default();
 
-        state.load_document(PathBuf::from("input.pdf"), document_previews(3, &[1, 3]));
+        state.load_document(
+            PathBuf::from("input.pdf"),
+            None,
+            document_previews(3, &[1, 3]),
+        );
 
         assert_eq!(state.page_count.get(), 3);
         assert_eq!(*state.page_order.borrow(), vec![1, 2, 3]);
@@ -579,14 +655,88 @@ mod tests {
     }
 
     #[test]
+    fn organize_stores_password_with_page_selections() {
+        let state = OrganizeState::default();
+
+        state.load_document(
+            PathBuf::from("locked.pdf"),
+            Some("secret".to_string()),
+            document_previews(2, &[1, 2]),
+        );
+
+        let (path, password, pages) = state.selections().unwrap();
+        assert_eq!(path, PathBuf::from("locked.pdf"));
+        assert_eq!(password.as_deref(), Some("secret"));
+        assert_eq!(pages.len(), 2);
+    }
+
+    #[test]
     fn extract_uses_document_page_count_even_when_previews_are_missing() {
         let state = ExtractState::default();
 
-        state.load_document(PathBuf::from("input.pdf"), document_previews(4, &[2, 4]));
+        state.load_document(
+            PathBuf::from("input.pdf"),
+            None,
+            document_previews(4, &[2, 4]),
+        );
 
         assert_eq!(state.page_count.get(), 4);
         assert_eq!(state.previews.borrow().len(), 2);
         assert!(!state.previews.borrow().contains_key(&1));
+    }
+
+    #[test]
+    fn extract_stores_password_with_page_selections() {
+        let state = ExtractState::default();
+
+        state.load_document(
+            PathBuf::from("locked.pdf"),
+            Some("secret".to_string()),
+            document_previews(2, &[1, 2]),
+        );
+
+        let (path, password, pages) = state.selections_from_pages(vec![2]).unwrap();
+        assert_eq!(path, PathBuf::from("locked.pdf"));
+        assert_eq!(password.as_deref(), Some("secret"));
+        assert_eq!(pages[0].page_number, 2);
+    }
+
+    #[test]
+    fn single_file_states_store_and_overwrite_passwords() {
+        let compress = CompressState::default();
+        compress.finish_loading(
+            PathBuf::from("locked.pdf"),
+            Some("secret".to_string()),
+            None,
+        );
+        assert_eq!(
+            compress.input_file().unwrap(),
+            (PathBuf::from("locked.pdf"), Some("secret".to_string()))
+        );
+
+        compress.finish_loading(PathBuf::from("plain.pdf"), None, None);
+        assert_eq!(
+            compress.input_file().unwrap(),
+            (PathBuf::from("plain.pdf"), None)
+        );
+
+        let split = SplitState::default();
+        split.finish_loading(
+            PathBuf::from("locked.pdf"),
+            Some("secret".to_string()),
+            None,
+            3,
+        );
+        assert_eq!(
+            split.input_file().unwrap(),
+            (PathBuf::from("locked.pdf"), Some("secret".to_string()))
+        );
+
+        split.finish_loading(PathBuf::from("plain.pdf"), None, None, 2);
+        assert_eq!(
+            split.input_file().unwrap(),
+            (PathBuf::from("plain.pdf"), None)
+        );
     }
 
     #[test]

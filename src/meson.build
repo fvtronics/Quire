@@ -10,6 +10,7 @@ blueprints = custom_target('blueprints',
     'organize-workspace.blp',
     'extract-workspace.blp',
     'split-workspace.blp',
+    'password-dialog.blp',
   ),
   output: '.',
   command: [

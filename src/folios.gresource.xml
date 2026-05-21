@@ -7,6 +7,7 @@
     <file preprocess="xml-stripblanks">organize-workspace.ui</file>
     <file preprocess="xml-stripblanks">extract-workspace.ui</file>
     <file preprocess="xml-stripblanks">split-workspace.ui</file>
+    <file preprocess="xml-stripblanks">password-dialog.ui</file>
     <file preprocess="xml-stripblanks">shortcuts-dialog.ui</file>
   </gresource>
 </gresources>

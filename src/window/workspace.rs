@@ -1,10 +1,10 @@
-use super::ui::icon_button;
+use super::ui::{ask_pdf_password, icon_button, PasswordPromptReason};
 use super::FoliosWindow;
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use std::future::Future;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub(super) fn parent_window(widget: &impl IsA<gtk::Widget>) -> Option<gtk::Window> {
     widget.root().and_downcast::<gtk::Window>()
@@ -38,6 +38,111 @@ pub(super) fn show_preview_error(
 ) {
     eprintln!("PDF preview error: {error}");
     show_toast(widget, &preview_error_message(error));
+}
+
+pub(super) enum PdfLoadError {
+    Backend(crate::pdf::PdfBackendError),
+    Preview(crate::preview::PreviewError),
+}
+
+pub(super) enum PdfLoadResult<T> {
+    Loaded { output: T, password: Option<String> },
+    Failed(PdfLoadError),
+    Cancelled,
+}
+
+pub(super) fn show_pdf_load_error(widget: &impl IsA<gtk::Widget>, error: &PdfLoadError) {
+    match error {
+        PdfLoadError::Backend(error) => show_backend_error(widget, error),
+        PdfLoadError::Preview(error) => show_preview_error(widget, error),
+    }
+}
+
+pub(super) async fn load_processable_pdf<T, Load, Operation>(
+    parent: &gtk::Window,
+    path: &Path,
+    mut load: Load,
+) -> PdfLoadResult<T>
+where
+    Load: FnMut(Option<String>) -> Operation,
+    Operation: Future<Output = Result<T, crate::preview::PreviewError>>,
+{
+    let mut password = None;
+
+    loop {
+        match load(password.clone()).await {
+            Ok(output) => {
+                if let Err(error) =
+                    crate::pdf::validate_pdf(path.to_path_buf(), password.clone()).await
+                {
+                    return PdfLoadResult::Failed(PdfLoadError::Backend(error));
+                }
+
+                return PdfLoadResult::Loaded { output, password };
+            }
+            Err(crate::preview::PreviewError::PasswordRequired) => {
+                password = ask_pdf_password(parent, path, PasswordPromptReason::Required).await;
+                if password.is_none() {
+                    return PdfLoadResult::Cancelled;
+                }
+            }
+            Err(crate::preview::PreviewError::InvalidPassword) => {
+                password =
+                    ask_pdf_password(parent, path, PasswordPromptReason::InvalidPassword).await;
+                if password.is_none() {
+                    return PdfLoadResult::Cancelled;
+                }
+            }
+            Err(error) => return PdfLoadResult::Failed(PdfLoadError::Preview(error)),
+        }
+    }
+}
+
+pub(super) struct SinglePdfLoadHandlers<Begin, Store, Fail, Refresh> {
+    pub begin_loading: Begin,
+    pub store_loaded: Store,
+    pub finish_loading_failed: Fail,
+    pub refresh: Refresh,
+}
+
+pub(super) fn load_single_processable_pdf<Widget, Load, Operation, Begin, Store, Fail, Refresh, T>(
+    widget: Widget,
+    parent: gtk::Window,
+    path: PathBuf,
+    mut load: Load,
+    handlers: SinglePdfLoadHandlers<Begin, Store, Fail, Refresh>,
+) where
+    Widget: IsA<gtk::Widget> + Clone + 'static,
+    Load: FnMut(PathBuf, Option<String>) -> Operation + 'static,
+    Operation: Future<Output = Result<T, crate::preview::PreviewError>> + 'static,
+    Begin: Fn(&Widget) + 'static,
+    Store: Fn(&Widget, PathBuf, Option<String>, T) + 'static,
+    Fail: Fn(&Widget) + 'static,
+    Refresh: Fn(&Widget) + 'static,
+    T: 'static,
+{
+    (handlers.begin_loading)(&widget);
+    (handlers.refresh)(&widget);
+
+    glib::spawn_future_local(async move {
+        let result =
+            load_processable_pdf(&parent, &path, |password| load(path.clone(), password)).await;
+
+        match result {
+            PdfLoadResult::Loaded { output, password } => {
+                (handlers.store_loaded)(&widget, path, password, output);
+            }
+            PdfLoadResult::Failed(error) => {
+                (handlers.finish_loading_failed)(&widget);
+                show_pdf_load_error(&widget, &error);
+            }
+            PdfLoadResult::Cancelled => {
+                (handlers.finish_loading_failed)(&widget);
+            }
+        }
+
+        (handlers.refresh)(&widget);
+    });
 }
 
 pub(super) fn run_output_job<Widget, Operation, SetRunning, ClearOutput, StoreOutput, Refresh>(
@@ -209,6 +314,8 @@ fn backend_error_message(error: &crate::pdf::PdfBackendError) -> String {
         }
         crate::pdf::PdfBackendError::InvalidPageRange(message) => message.clone(),
         crate::pdf::PdfBackendError::Load { .. } => gettext("Could not open PDF"),
+        crate::pdf::PdfBackendError::PasswordRequired { .. } => gettext("Password required"),
+        crate::pdf::PdfBackendError::InvalidPassword { .. } => gettext("Invalid password"),
         crate::pdf::PdfBackendError::InvalidDocument(_) => gettext("Could not process PDF"),
         crate::pdf::PdfBackendError::Write(_) | crate::pdf::PdfBackendError::Save(_) => {
             gettext("Could not save PDF")
@@ -218,7 +325,11 @@ fn backend_error_message(error: &crate::pdf::PdfBackendError) -> String {
 }
 
 fn preview_error_message(_error: &crate::preview::PreviewError) -> String {
-    gettext("Could not preview PDF")
+    match _error {
+        crate::preview::PreviewError::PasswordRequired => gettext("Password required"),
+        crate::preview::PreviewError::InvalidPassword => gettext("Invalid password"),
+        _ => gettext("Could not preview PDF"),
+    }
 }
 
 #[cfg(test)]
@@ -236,6 +347,18 @@ mod tests {
                 message: "xref table exploded".to_string(),
             }),
             "Could not open PDF"
+        );
+        assert_eq!(
+            backend_error_message(&PdfBackendError::PasswordRequired {
+                path: PathBuf::from("locked.pdf"),
+            }),
+            "Password required"
+        );
+        assert_eq!(
+            backend_error_message(&PdfBackendError::InvalidPassword {
+                path: PathBuf::from("locked.pdf"),
+            }),
+            "Invalid password"
         );
         assert_eq!(
             backend_error_message(&PdfBackendError::InvalidDocument(
@@ -273,6 +396,14 @@ mod tests {
 
     #[test]
     fn preview_errors_use_generic_user_messages() {
+        assert_eq!(
+            preview_error_message(&PreviewError::PasswordRequired),
+            "Password required"
+        );
+        assert_eq!(
+            preview_error_message(&PreviewError::InvalidPassword),
+            "Invalid password"
+        );
         assert_eq!(
             preview_error_message(&PreviewError::Load("poppler detail".to_string())),
             "Could not preview PDF"

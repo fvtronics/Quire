@@ -3,8 +3,8 @@ use super::ui::{
     single_file_preview_widget,
 };
 use super::workspace::{
-    open_output, parent_window, run_output_job, show_backend_error, show_preview_error,
-    update_shell_view_mode,
+    load_single_processable_pdf, open_output, parent_window, run_output_job, show_backend_error,
+    update_shell_view_mode, SinglePdfLoadHandlers,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -190,14 +190,14 @@ impl SplitWorkspace {
         glib::spawn_future_local(async move {
             if let Some(path) = open_pdf_file(&parent, &gettext("Open PDF"), &gettext("Open")).await
             {
-                workspace.load_pdf(path);
+                workspace.load_pdf(path, parent);
             }
         });
     }
 
     fn choose_output_folder(&self) {
         let imp = self.imp();
-        let Some(input_file) = imp.split.input_file() else {
+        let Some((input_file, password)) = imp.split.input_file() else {
             return;
         };
         let rule = match self.split_rule() {
@@ -217,47 +217,45 @@ impl SplitWorkspace {
             if let Some(path) =
                 select_folder(&parent, &gettext("Choose Output Folder"), &gettext("Split")).await
             {
-                workspace.split_to(input_file, path, prefix, rule);
+                workspace.split_to(input_file, password, path, prefix, rule);
             }
         });
     }
 
-    fn load_pdf(&self, path: PathBuf) {
-        let imp = self.imp();
-        imp.split.job.begin_loading();
-        self.update_view();
-
-        let workspace = self.clone();
-        glib::spawn_future_local(async move {
-            let result = crate::preview::render_first_page_preview_with_count(path.clone()).await;
-            let imp = workspace.imp();
-
-            match result {
-                Ok((preview, page_count)) => {
-                    imp.split.finish_loading(path.clone(), preview, page_count);
+    fn load_pdf(&self, path: PathBuf, parent: gtk::Window) {
+        load_single_processable_pdf(
+            self.clone(),
+            parent,
+            path,
+            crate::preview::render_first_page_preview_with_count,
+            SinglePdfLoadHandlers {
+                begin_loading: |workspace: &Self| workspace.imp().split.job.begin_loading(),
+                store_loaded: |workspace: &Self, path: PathBuf, password, (preview, page_count)| {
+                    let imp = workspace.imp();
+                    imp.split
+                        .finish_loading(path.clone(), password, preview, page_count);
                     imp.split_prefix_entry
                         .set_text(&split_default_prefix(&path));
-                }
-                Err(error) => {
-                    imp.split.job.finish_loading_failed();
-                    show_preview_error(&workspace, &error);
-                }
-            }
-
-            workspace.update_view();
-        });
+                },
+                finish_loading_failed: |workspace: &Self| {
+                    workspace.imp().split.job.finish_loading_failed();
+                },
+                refresh: Self::update_view,
+            },
+        );
     }
 
     fn split_to(
         &self,
         input_file: PathBuf,
+        password: Option<String>,
         output_folder: PathBuf,
         prefix: String,
         rule: crate::pdf::SplitRule,
     ) {
         run_output_job(
             self.clone(),
-            crate::pdf::split_pdf(input_file, output_folder, prefix, rule),
+            crate::pdf::split_pdf(input_file, password, output_folder, prefix, rule),
             gettext("Split PDFs saved"),
             |workspace, running| workspace.imp().is_running.set(running),
             |workspace| workspace.imp().split.job.clear_last_output(),
