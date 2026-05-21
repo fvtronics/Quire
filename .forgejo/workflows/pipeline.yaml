@@ -54,7 +54,7 @@ jobs:
         run: meson setup builddir --wrap-mode=forcefallback
 
       - name: Blueprint Check
-	        run: meson compile -C builddir blueprints
+        run: meson compile -C builddir blueprints
 
       - name: Format Check
         run: cargo fmt --all -- --check
