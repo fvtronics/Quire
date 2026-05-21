@@ -4,14 +4,14 @@ version = "0.1.2"
 edition = "2021"
 
 [dependencies]
-cairo-rs = { version = "0.20", features = ["png"] }
+cairo-rs = { version = "0.22", features = ["png"] }
 gettext-rs = { version = "0.7", features = ["gettext-system"] }
-gtk = { version = "0.9", package = "gtk4", features = ["gnome_47"] }
+gtk = { version = "0.11", package = "gtk4", features = ["gnome_50"] }
 lopdf = { version = "0.40.0", default-features = false }
-poppler-rs = "0.24"
+poppler-rs = "0.26"
 tempfile = "3.20"
 
 [dependencies.adw]
 package = "libadwaita"
-version = "0.7"
-features = ["v1_6"]
+version = "0.9"
+features = ["v1_9"]
