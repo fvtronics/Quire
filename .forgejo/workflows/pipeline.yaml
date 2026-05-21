@@ -36,7 +36,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Generate Build Configuration
-        run: meson setup builddir --wrap-mode=forcefallback
+        run: meson setup builddir
 
       - name: Blueprint Check
         run: meson compile -C builddir blueprints
