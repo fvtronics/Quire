@@ -231,3 +231,150 @@ fn embedded_page_thumbnail(
         png_data,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        render_first_page_preview_blocking, render_first_page_preview_with_count_blocking,
+        render_page_previews_blocking, PreviewError,
+    };
+    use lopdf::{
+        dictionary, Document, EncryptionState, EncryptionVersion, Object, Permissions, Stream,
+    };
+    use std::path::Path;
+
+    #[test]
+    fn render_page_previews_returns_page_count_and_pngs() {
+        let dir = tempfile::tempdir().expect("test directory should be created");
+        let input = dir.path().join("input.pdf");
+        write_test_pdf(&input, 3);
+
+        let previews = render_page_previews_blocking(input, None).unwrap();
+
+        assert_eq!(previews.page_count, 3);
+        assert_eq!(
+            previews.previews.keys().copied().collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
+        for preview in previews.previews.values() {
+            assert_png(&preview.png_data);
+        }
+    }
+
+    #[test]
+    fn render_first_page_preview_with_count_keeps_document_page_count() {
+        let dir = tempfile::tempdir().expect("test directory should be created");
+        let input = dir.path().join("input.pdf");
+        write_test_pdf(&input, 2);
+
+        let (preview, page_count) =
+            render_first_page_preview_with_count_blocking(input, None).unwrap();
+
+        assert_eq!(page_count, 2);
+        let preview = preview.expect("first page preview should render");
+        assert_eq!(preview.page_number, 1);
+        assert_png(&preview.png_data);
+    }
+
+    #[test]
+    fn render_first_page_preview_reports_password_errors() {
+        let dir = tempfile::tempdir().expect("test directory should be created");
+        let input = dir.path().join("locked.pdf");
+        write_encrypted_test_pdf(&input, "secret");
+
+        assert!(matches!(
+            render_first_page_preview_blocking(input.clone(), None),
+            Err(PreviewError::PasswordRequired)
+        ));
+        assert!(matches!(
+            render_first_page_preview_blocking(input.clone(), Some("wrong".to_string())),
+            Err(PreviewError::InvalidPassword)
+        ));
+        assert!(
+            render_first_page_preview_blocking(input, Some("secret".to_string()))
+                .unwrap()
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn preview_error_messages_are_actionable() {
+        assert_eq!(
+            PreviewError::PasswordRequired.to_string(),
+            "This PDF is password protected."
+        );
+        assert_eq!(
+            PreviewError::InvalidPassword.to_string(),
+            "The PDF password is incorrect."
+        );
+        assert_eq!(
+            PreviewError::WorkerStopped.to_string(),
+            "The preview operation stopped unexpectedly."
+        );
+    }
+
+    fn write_test_pdf(path: &Path, page_count: usize) {
+        let mut document = Document::with_version("1.5");
+        let pages_id = document.new_object_id();
+        let mut kids = Vec::with_capacity(page_count);
+
+        for _ in 0..page_count {
+            let content_id = document.add_object(Stream::new(dictionary! {}, Vec::new()));
+            let page_id = document.add_object(dictionary! {
+                "Type" => "Page",
+                "Parent" => pages_id,
+                "Contents" => content_id,
+                "Resources" => dictionary! {},
+                "MediaBox" => vec![0.into(), 0.into(), 100.into(), 100.into()],
+            });
+            kids.push(page_id.into());
+        }
+
+        document.objects.insert(
+            pages_id,
+            Object::Dictionary(dictionary! {
+                "Type" => "Pages",
+                "Kids" => kids,
+                "Count" => page_count as i64,
+            }),
+        );
+        let catalog_id = document.add_object(dictionary! {
+            "Type" => "Catalog",
+            "Pages" => pages_id,
+        });
+        document.trailer.set("Root", catalog_id);
+        document.trailer.set(
+            "ID",
+            Object::Array(vec![
+                Object::string_literal(b"folios-test-id-1"),
+                Object::string_literal(b"folios-test-id-2"),
+            ]),
+        );
+        document.compress();
+        document.save(path).expect("test PDF should be saved");
+    }
+
+    fn write_encrypted_test_pdf(path: &Path, password: &str) {
+        write_test_pdf(path, 1);
+
+        let mut document = Document::load(path).expect("test PDF should load");
+        let version = EncryptionVersion::V1 {
+            document: &document,
+            owner_password: password,
+            user_password: password,
+            permissions: Permissions::PRINTABLE,
+        };
+        let state = EncryptionState::try_from(version).expect("encryption state should build");
+        document.encrypt(&state).expect("test PDF should encrypt");
+        document
+            .save(path)
+            .expect("encrypted test PDF should be saved");
+    }
+
+    fn assert_png(data: &[u8]) {
+        assert!(
+            data.starts_with(b"\x89PNG\r\n\x1a\n"),
+            "preview should be PNG data"
+        );
+    }
+}
