@@ -40,22 +40,17 @@ pub(super) fn show_preview_error(
     show_toast(widget, &preview_error_message(error));
 }
 
-pub(super) enum PdfLoadError {
-    Backend(crate::pdf::PdfBackendError),
-    Preview(crate::preview::PreviewError),
-}
-
 pub(super) enum PdfLoadResult<T> {
     Loaded { output: T, password: Option<String> },
-    Failed(PdfLoadError),
+    Failed(crate::preview::PreviewError),
     Cancelled,
 }
 
-pub(super) fn show_pdf_load_error(widget: &impl IsA<gtk::Widget>, error: &PdfLoadError) {
-    match error {
-        PdfLoadError::Backend(error) => show_backend_error(widget, error),
-        PdfLoadError::Preview(error) => show_preview_error(widget, error),
-    }
+pub(super) fn show_pdf_load_error(
+    widget: &impl IsA<gtk::Widget>,
+    error: &crate::preview::PreviewError,
+) {
+    show_preview_error(widget, error);
 }
 
 pub(super) async fn load_processable_pdf<T, Load, Operation>(
@@ -71,15 +66,7 @@ where
 
     loop {
         match load(password.clone()).await {
-            Ok(output) => {
-                if let Err(error) =
-                    crate::pdf::validate_pdf(path.to_path_buf(), password.clone()).await
-                {
-                    return PdfLoadResult::Failed(PdfLoadError::Backend(error));
-                }
-
-                return PdfLoadResult::Loaded { output, password };
-            }
+            Ok(output) => return PdfLoadResult::Loaded { output, password },
             Err(crate::preview::PreviewError::PasswordRequired) => {
                 password = ask_pdf_password(parent, path, PasswordPromptReason::Required).await;
                 if password.is_none() {
@@ -93,7 +80,7 @@ where
                     return PdfLoadResult::Cancelled;
                 }
             }
-            Err(error) => return PdfLoadResult::Failed(PdfLoadError::Preview(error)),
+            Err(error) => return PdfLoadResult::Failed(error),
         }
     }
 }

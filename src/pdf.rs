@@ -163,15 +163,6 @@ pub async fn compress_pdf(
         .unwrap_or(Err(PdfBackendError::WorkerStopped))
 }
 
-pub async fn validate_pdf(
-    input_file: PathBuf,
-    password: Option<String>,
-) -> Result<(), PdfBackendError> {
-    gio::spawn_blocking(move || load_document(&input_file, password.as_deref()).map(|_| ()))
-        .await
-        .unwrap_or(Err(PdfBackendError::WorkerStopped))
-}
-
 pub fn parse_page_ranges(input: &str, page_count: usize) -> Result<Vec<u32>, PdfBackendError> {
     parse_page_list(input, page_count, true, PdfBackendError::NoPagesSelected)
 }
