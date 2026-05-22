@@ -4,7 +4,8 @@ Folios is a simple GNOME utility for working with local PDF files without a
 complex document suite.
 
 It can merge multiple PDFs, organize pages, extract page ranges, split
-documents, and compress files without sending them to an online service.
+documents, compress files, and edit metadata without sending them to an online
+service.
 
 ## Screenshots
 

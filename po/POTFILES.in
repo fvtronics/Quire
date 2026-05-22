@@ -7,6 +7,7 @@ src/application.rs
 src/compress-workspace.blp
 src/extract-workspace.blp
 src/merge-workspace.blp
+src/metadata-workspace.blp
 src/organize-workspace.blp
 src/password-dialog.blp
 src/split-workspace.blp
@@ -16,6 +17,7 @@ src/window.blp
 src/window/compress.rs
 src/window/extract.rs
 src/window/merge.rs
+src/window/metadata.rs
 src/window/organize.rs
 src/window/split.rs
 src/window/workspace.rs

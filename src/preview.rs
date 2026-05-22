@@ -73,6 +73,17 @@ pub async fn render_single_file_preview(
         .unwrap_or(Err(PreviewError::WorkerStopped))
 }
 
+pub async fn render_single_file_preview_with_metadata(
+    input_file: PathBuf,
+    password: Option<String>,
+) -> Result<(Option<PagePreview>, crate::pdf::PdfDocumentMetadata), PreviewError> {
+    gio::spawn_blocking(move || {
+        render_single_file_preview_with_metadata_blocking(input_file, password)
+    })
+    .await
+    .unwrap_or(Err(PreviewError::WorkerStopped))
+}
+
 pub async fn render_first_page_preview_with_count(
     input_file: PathBuf,
     password: Option<String>,
@@ -118,6 +129,18 @@ fn render_single_file_preview_blocking(
 ) -> Result<Option<PagePreview>, PreviewError> {
     render_with_document(input_file, password, |document| {
         render_page_preview(document, 0, SINGLE_FILE_PREVIEW_WIDTH)
+    })
+}
+
+fn render_single_file_preview_with_metadata_blocking(
+    input_file: PathBuf,
+    password: Option<String>,
+) -> Result<(Option<PagePreview>, crate::pdf::PdfDocumentMetadata), PreviewError> {
+    render_with_document(input_file, password, |document| {
+        Ok((
+            render_page_preview(document, 0, SINGLE_FILE_PREVIEW_WIDTH)?,
+            document_metadata(document),
+        ))
     })
 }
 
@@ -211,6 +234,16 @@ fn render_page_preview(
         page_number: index as u32 + 1,
         png_data,
     }))
+}
+
+fn document_metadata(document: &poppler::Document) -> crate::pdf::PdfDocumentMetadata {
+    crate::pdf::PdfDocumentMetadata {
+        title: document.title().map(String::from).unwrap_or_default(),
+        author: document.author().map(String::from).unwrap_or_default(),
+        subject: document.subject().map(String::from).unwrap_or_default(),
+        keywords: document.keywords().map(String::from).unwrap_or_default(),
+        creator: document.creator().map(String::from).unwrap_or_default(),
+    }
 }
 
 fn embedded_page_thumbnail(

@@ -25,6 +25,7 @@ use gtk::{gio, glib};
 mod compress;
 mod extract;
 mod merge;
+mod metadata;
 mod organize;
 mod split;
 mod state;
@@ -39,6 +40,7 @@ pub(super) enum PdfTool {
     Organize,
     Extract,
     Split,
+    Metadata,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -64,6 +66,7 @@ mod imp {
     use super::compress::CompressWorkspace;
     use super::extract::ExtractWorkspace;
     use super::merge::MergeWorkspace;
+    use super::metadata::MetadataWorkspace;
     use super::organize::OrganizeWorkspace;
     use super::split::SplitWorkspace;
     use super::{PdfTool, ViewMode};
@@ -96,6 +99,8 @@ mod imp {
         #[template_child]
         pub split_tool_row: TemplateChild<adw::ActionRow>,
         #[template_child]
+        pub metadata_tool_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
         pub merge_workspace: TemplateChild<MergeWorkspace>,
         #[template_child]
         pub compress_workspace: TemplateChild<CompressWorkspace>,
@@ -105,6 +110,8 @@ mod imp {
         pub extract_workspace: TemplateChild<ExtractWorkspace>,
         #[template_child]
         pub split_workspace: TemplateChild<SplitWorkspace>,
+        #[template_child]
+        pub metadata_workspace: TemplateChild<MetadataWorkspace>,
 
         pub(super) active_tool: Cell<PdfTool>,
         pub(super) view_mode: Cell<ViewMode>,
@@ -122,6 +129,7 @@ mod imp {
             OrganizeWorkspace::static_type();
             ExtractWorkspace::static_type();
             SplitWorkspace::static_type();
+            MetadataWorkspace::static_type();
             klass.bind_template();
         }
 
@@ -195,6 +203,11 @@ impl FoliosWindow {
         imp.split_tool_row.connect_activated(move |_| {
             window.switch_tool(PdfTool::Split);
         });
+
+        let window = self.clone();
+        imp.metadata_tool_row.connect_activated(move |_| {
+            window.switch_tool(PdfTool::Metadata);
+        });
     }
 
     fn switch_tool(&self, tool: PdfTool) {
@@ -207,6 +220,8 @@ impl FoliosWindow {
             .set_visible(tool == PdfTool::Organize);
         imp.extract_workspace.set_visible(tool == PdfTool::Extract);
         imp.split_workspace.set_visible(tool == PdfTool::Split);
+        imp.metadata_workspace
+            .set_visible(tool == PdfTool::Metadata);
 
         let selected_row: &gtk::ListBoxRow = match tool {
             PdfTool::Merge => imp.merge_tool_row.upcast_ref(),
@@ -214,6 +229,7 @@ impl FoliosWindow {
             PdfTool::Organize => imp.organize_tool_row.upcast_ref(),
             PdfTool::Extract => imp.extract_tool_row.upcast_ref(),
             PdfTool::Split => imp.split_tool_row.upcast_ref(),
+            PdfTool::Metadata => imp.metadata_tool_row.upcast_ref(),
         };
         imp.sidebar_list.select_row(Some(selected_row));
         self.update_view_mode();
@@ -240,7 +256,7 @@ impl FoliosWindow {
         let imp = self.imp();
         match imp.active_tool.get() {
             PdfTool::Merge => imp.merge_workspace.has_view_mode_content(),
-            PdfTool::Compress | PdfTool::Split => false,
+            PdfTool::Compress | PdfTool::Split | PdfTool::Metadata => false,
             PdfTool::Organize => imp.organize_workspace.has_view_mode_content(),
             PdfTool::Extract => imp.extract_workspace.has_view_mode_content(),
         }

@@ -1,0 +1,135 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $MetadataWorkspace: Gtk.Box {
+  orientation: vertical;
+  spacing: 18;
+  hexpand: true;
+  visible: false;
+  margin-start: 36;
+  margin-end: 36;
+  margin-top: 30;
+  margin-bottom: 30;
+
+  Gtk.Box {
+    orientation: horizontal;
+    spacing: 12;
+
+    Gtk.Box {
+      orientation: vertical;
+      spacing: 3;
+      hexpand: true;
+
+      Gtk.Label {
+        label: _("Edit Metadata");
+        xalign: 0;
+        styles ["title-2"]
+      }
+
+      Gtk.Label metadata_detail_label {
+        label: _("No PDF selected");
+        xalign: 0;
+        styles ["dim-label"]
+      }
+    }
+
+    Gtk.Button metadata_choose_button {
+      visible: false;
+      valign: center;
+      tooltip-text: _("Open PDF");
+      child: Adw.ButtonContent {
+        icon-name: "document-open-symbolic";
+        label: _("Open PDF");
+      };
+    }
+
+    Gtk.Button metadata_open_output_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Open Output File");
+
+      child: Adw.ButtonContent {
+        icon-name: "document-open-symbolic";
+        label: _("Open Output");
+      };
+    }
+
+    Gtk.Button metadata_save_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Save Metadata");
+      styles ["suggested-action"]
+
+      child: Adw.ButtonContent {
+        icon-name: "document-save-symbolic";
+        label: _("Save");
+      };
+    }
+  }
+
+  Adw.StatusPage metadata_empty_status {
+    icon-name: "document-properties-symbolic";
+    title: _("Open a PDF to Edit Metadata");
+    description: _("View and update the main document metadata fields.");
+
+    child: Gtk.Button metadata_empty_choose_button {
+      halign: center;
+      tooltip-text: _("Open PDF");
+      styles ["suggested-action"]
+
+      child: Adw.ButtonContent {
+        icon-name: "document-open-symbolic";
+        label: _("Open PDF");
+      };
+    };
+  }
+
+  Gtk.Box metadata_content {
+    orientation: horizontal;
+    spacing: 18;
+    vexpand: true;
+    visible: false;
+
+    Gtk.Box metadata_preview_box {
+      width-request: 180;
+    }
+
+    Gtk.Box {
+      orientation: vertical;
+      spacing: 18;
+      hexpand: true;
+
+      Gtk.ListBox metadata_file_list {
+        selection-mode: none;
+        styles ["boxed-list"]
+      }
+
+      Gtk.ListBox {
+        selection-mode: none;
+        styles ["boxed-list"]
+
+        Adw.EntryRow metadata_title_entry {
+          title: _("Title");
+        }
+
+        Adw.EntryRow metadata_author_entry {
+          title: _("Author");
+        }
+
+        Adw.EntryRow metadata_subject_entry {
+          title: _("Subject");
+        }
+
+        Adw.EntryRow metadata_keywords_entry {
+          title: _("Keywords");
+        }
+
+        Adw.EntryRow metadata_creator_entry {
+          title: _("Creator");
+        }
+      }
+    }
+  }
+}

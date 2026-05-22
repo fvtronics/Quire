@@ -1,0 +1,284 @@
+use super::ui::{
+    clear_box, file_subtitle, open_pdf_file, pdf_file_row, save_pdf_file,
+    single_file_preview_widget,
+};
+use super::workspace::{
+    load_single_processable_pdf, open_output, parent_window, run_output_job,
+    update_shell_view_mode, SinglePdfLoadHandlers,
+};
+use adw::prelude::*;
+use adw::subclass::prelude::*;
+use gettextrs::gettext;
+use gtk::glib;
+use std::path::PathBuf;
+
+mod imp {
+    use super::super::state::MetadataState;
+    use adw::subclass::prelude::*;
+    use gtk::{glib, TemplateChild};
+    use std::cell::Cell;
+
+    #[derive(Debug, Default, gtk::CompositeTemplate)]
+    #[template(resource = "/com/fvtronics/folios/metadata-workspace.ui")]
+    pub struct MetadataWorkspace {
+        #[template_child]
+        pub metadata_choose_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub metadata_empty_choose_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub metadata_detail_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub metadata_empty_status: TemplateChild<adw::StatusPage>,
+        #[template_child]
+        pub metadata_content: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub metadata_preview_box: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub metadata_file_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub metadata_title_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub metadata_author_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub metadata_subject_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub metadata_keywords_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub metadata_creator_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub metadata_save_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub metadata_open_output_button: TemplateChild<gtk::Button>,
+
+        pub metadata: MetadataState,
+        pub is_running: Cell<bool>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for MetadataWorkspace {
+        const NAME: &'static str = "MetadataWorkspace";
+        type Type = super::MetadataWorkspace;
+        type ParentType = gtk::Box;
+
+        fn class_init(klass: &mut Self::Class) {
+            klass.bind_template();
+        }
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
+    }
+
+    impl ObjectImpl for MetadataWorkspace {
+        fn constructed(&self) {
+            self.parent_constructed();
+            let obj = self.obj();
+            obj.setup_callbacks();
+            obj.update_view();
+        }
+    }
+    impl WidgetImpl for MetadataWorkspace {}
+    impl BoxImpl for MetadataWorkspace {}
+}
+
+glib::wrapper! {
+    pub struct MetadataWorkspace(ObjectSubclass<imp::MetadataWorkspace>)
+        @extends gtk::Widget, gtk::Box,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
+}
+
+impl MetadataWorkspace {
+    fn setup_callbacks(&self) {
+        let imp = self.imp();
+
+        let workspace = self.clone();
+        imp.metadata_choose_button.connect_clicked(move |_| {
+            workspace.choose_file();
+        });
+
+        let workspace = self.clone();
+        imp.metadata_empty_choose_button.connect_clicked(move |_| {
+            workspace.choose_file();
+        });
+
+        let workspace = self.clone();
+        imp.metadata_save_button.connect_clicked(move |_| {
+            workspace.choose_output_file();
+        });
+
+        let workspace = self.clone();
+        imp.metadata_open_output_button.connect_clicked(move |_| {
+            workspace.open_last_output();
+        });
+
+        self.connect_metadata_changed(&imp.metadata_title_entry);
+        self.connect_metadata_changed(&imp.metadata_author_entry);
+        self.connect_metadata_changed(&imp.metadata_subject_entry);
+        self.connect_metadata_changed(&imp.metadata_keywords_entry);
+        self.connect_metadata_changed(&imp.metadata_creator_entry);
+    }
+
+    fn connect_metadata_changed(&self, entry: &adw::EntryRow) {
+        let workspace = self.clone();
+        entry.connect_changed(move |_| {
+            workspace.imp().metadata.job.clear_last_output();
+            workspace.update_view();
+        });
+    }
+
+    fn choose_file(&self) {
+        let Some(parent) = parent_window(self) else {
+            return;
+        };
+        let workspace = self.clone();
+        glib::spawn_future_local(async move {
+            if let Some(path) = open_pdf_file(&parent, &gettext("Open PDF"), &gettext("Open")).await
+            {
+                workspace.load_pdf(path, parent);
+            }
+        });
+    }
+
+    fn choose_output_file(&self) {
+        let Some((input_file, password)) = self.imp().metadata.input_file() else {
+            return;
+        };
+        let Some(parent) = parent_window(self) else {
+            return;
+        };
+        let metadata = self.metadata_from_entries();
+
+        let workspace = self.clone();
+        glib::spawn_future_local(async move {
+            if let Some(path) = save_pdf_file(
+                &parent,
+                &gettext("Save PDF Metadata"),
+                &gettext("Save"),
+                "Metadata.pdf",
+            )
+            .await
+            {
+                workspace.save_metadata_to(input_file, password, path, metadata);
+            }
+        });
+    }
+
+    fn load_pdf(&self, path: PathBuf, parent: gtk::Window) {
+        load_single_processable_pdf(
+            self.clone(),
+            parent,
+            path,
+            crate::preview::render_single_file_preview_with_metadata,
+            SinglePdfLoadHandlers {
+                begin_loading: |workspace: &Self| workspace.imp().metadata.job.begin_loading(),
+                store_loaded: |workspace: &Self, path, password, (preview, metadata)| {
+                    workspace
+                        .imp()
+                        .metadata
+                        .finish_loading(path, password, preview);
+                    workspace.set_metadata_entries(&metadata);
+                },
+                finish_loading_failed: |workspace: &Self| {
+                    workspace.imp().metadata.job.finish_loading_failed();
+                },
+                refresh: Self::update_view,
+            },
+        );
+    }
+
+    fn save_metadata_to(
+        &self,
+        input_file: PathBuf,
+        password: Option<String>,
+        output_file: PathBuf,
+        metadata: crate::pdf::PdfDocumentMetadata,
+    ) {
+        run_output_job(
+            self.clone(),
+            crate::pdf::edit_pdf_metadata(input_file, password, output_file, metadata),
+            gettext("PDF metadata saved"),
+            |workspace, running| workspace.imp().is_running.set(running),
+            |workspace| workspace.imp().metadata.job.clear_last_output(),
+            |workspace, path| workspace.imp().metadata.job.set_last_output(path),
+            Self::update_view,
+        );
+    }
+
+    pub(super) fn update_view(&self) {
+        let imp = self.imp();
+        let file = imp.metadata.file.borrow();
+        let has_file = file.is_some();
+        let is_busy = imp.metadata.job.is_busy(imp.is_running.get());
+        let preview = imp.metadata.preview.borrow();
+
+        imp.metadata_file_list.remove_all();
+        clear_box(&imp.metadata_preview_box);
+        if let Some(path) = file.as_ref() {
+            imp.metadata_file_list
+                .append(&pdf_file_row(path, file_subtitle(path)));
+            imp.metadata_preview_box
+                .append(&single_file_preview_widget(preview.as_ref()));
+        }
+
+        imp.metadata_empty_status.set_visible(!has_file);
+        imp.metadata_content.set_visible(has_file);
+        imp.metadata_choose_button.set_visible(has_file);
+        imp.metadata_save_button.set_visible(has_file);
+        imp.metadata_open_output_button
+            .set_visible(imp.metadata.job.has_last_output());
+
+        imp.metadata_choose_button.set_sensitive(!is_busy);
+        imp.metadata_empty_choose_button.set_sensitive(!is_busy);
+        imp.metadata_save_button.set_sensitive(has_file && !is_busy);
+        imp.metadata_open_output_button
+            .set_sensitive(imp.metadata.job.has_last_output() && !is_busy);
+        self.set_entries_sensitive(has_file && !is_busy);
+
+        let detail = if imp.is_running.get() {
+            gettext("Saving metadata...")
+        } else if imp.metadata.job.is_loading() {
+            gettext("Loading PDF...")
+        } else if let Some(path) = file.as_ref() {
+            file_subtitle(path)
+        } else {
+            gettext("No PDF selected")
+        };
+        imp.metadata_detail_label.set_label(&detail);
+        update_shell_view_mode(self);
+    }
+
+    fn set_entries_sensitive(&self, sensitive: bool) {
+        let imp = self.imp();
+        imp.metadata_title_entry.set_sensitive(sensitive);
+        imp.metadata_author_entry.set_sensitive(sensitive);
+        imp.metadata_subject_entry.set_sensitive(sensitive);
+        imp.metadata_keywords_entry.set_sensitive(sensitive);
+        imp.metadata_creator_entry.set_sensitive(sensitive);
+    }
+
+    fn set_metadata_entries(&self, metadata: &crate::pdf::PdfDocumentMetadata) {
+        let imp = self.imp();
+        imp.metadata_title_entry.set_text(&metadata.title);
+        imp.metadata_author_entry.set_text(&metadata.author);
+        imp.metadata_subject_entry.set_text(&metadata.subject);
+        imp.metadata_keywords_entry.set_text(&metadata.keywords);
+        imp.metadata_creator_entry.set_text(&metadata.creator);
+    }
+
+    fn metadata_from_entries(&self) -> crate::pdf::PdfDocumentMetadata {
+        let imp = self.imp();
+        crate::pdf::PdfDocumentMetadata {
+            title: imp.metadata_title_entry.text().to_string(),
+            author: imp.metadata_author_entry.text().to_string(),
+            subject: imp.metadata_subject_entry.text().to_string(),
+            keywords: imp.metadata_keywords_entry.text().to_string(),
+            creator: imp.metadata_creator_entry.text().to_string(),
+        }
+    }
+
+    fn open_last_output(&self) {
+        if let Some(path) = self.imp().metadata.job.last_output() {
+            open_output(self, &path);
+        }
+    }
+}

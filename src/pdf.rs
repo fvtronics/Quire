@@ -6,7 +6,7 @@
  */
 
 use gtk::gio;
-use lopdf::{Document, Object, ObjectId};
+use lopdf::{dictionary, text_string, Dictionary, Document, Object, ObjectId};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -36,6 +36,15 @@ pub struct PdfSaveOptions {
 pub struct PdfOutputOptions {
     pub normalize_page_size: bool,
     pub save: PdfSaveOptions,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct PdfDocumentMetadata {
+    pub title: String,
+    pub author: String,
+    pub subject: String,
+    pub keywords: String,
+    pub creator: String,
 }
 
 #[derive(Debug)]
@@ -169,6 +178,19 @@ pub async fn compress_pdf(
     gio::spawn_blocking(move || compress_pdf_blocking(input_file, password, output_file, options))
         .await
         .unwrap_or(Err(PdfBackendError::WorkerStopped))
+}
+
+pub async fn edit_pdf_metadata(
+    input_file: PathBuf,
+    password: Option<String>,
+    output_file: PathBuf,
+    metadata: PdfDocumentMetadata,
+) -> Result<PathBuf, PdfBackendError> {
+    gio::spawn_blocking(move || {
+        edit_pdf_metadata_blocking(input_file, password, output_file, metadata)
+    })
+    .await
+    .unwrap_or(Err(PdfBackendError::WorkerStopped))
 }
 
 pub fn parse_page_ranges(input: &str, page_count: usize) -> Result<Vec<u32>, PdfBackendError> {
@@ -508,6 +530,105 @@ fn compress_pdf_blocking(
     document.compress();
 
     save_document(document, catalog_id, &output_file, options.save)
+}
+
+fn edit_pdf_metadata_blocking(
+    input_file: PathBuf,
+    password: Option<String>,
+    output_file: PathBuf,
+    metadata: PdfDocumentMetadata,
+) -> Result<PathBuf, PdfBackendError> {
+    if input_file == output_file {
+        return Err(PdfBackendError::OutputMatchesInput);
+    }
+
+    let mut document = load_document(&input_file, password.as_deref())?;
+    let catalog_id = document
+        .trailer
+        .get(b"Root")
+        .and_then(Object::as_reference)
+        .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?;
+
+    apply_document_metadata(&mut document, metadata);
+    save_document(
+        document,
+        catalog_id,
+        &output_file,
+        PdfSaveOptions::default(),
+    )
+}
+
+fn apply_document_metadata(document: &mut Document, metadata: PdfDocumentMetadata) {
+    let info_id = document
+        .trailer
+        .get(b"Info")
+        .ok()
+        .and_then(|object| object.as_reference().ok());
+    let mut dictionary = document
+        .trailer
+        .get(b"Info")
+        .ok()
+        .and_then(|object| document.dereference(object).ok())
+        .and_then(|(_, object)| object.as_dict().ok())
+        .cloned()
+        .unwrap_or_default();
+
+    set_metadata_field(&mut dictionary, b"Title", &metadata.title);
+    set_metadata_field(&mut dictionary, b"Author", &metadata.author);
+    set_metadata_field(&mut dictionary, b"Subject", &metadata.subject);
+    set_metadata_field(&mut dictionary, b"Keywords", &metadata.keywords);
+    set_metadata_field(&mut dictionary, b"Creator", &metadata.creator);
+
+    if dictionary.is_empty() {
+        document.trailer.remove(b"Info");
+        if let Some(info_id) = info_id {
+            document.delete_object(info_id);
+        }
+    } else if let Some(info_id) = info_id {
+        document
+            .objects
+            .insert(info_id, Object::Dictionary(dictionary));
+    } else {
+        let info_id = document.add_object(dictionary);
+        document.trailer.set("Info", info_id);
+    }
+}
+
+fn set_metadata_field(dictionary: &mut Dictionary, key: &[u8], value: &str) {
+    let value = value.trim();
+    if value.is_empty() {
+        dictionary.remove(key);
+    } else {
+        dictionary.set(key, text_string(value));
+    }
+}
+
+fn set_app_producer_metadata(document: &mut Document) {
+    let producer = app_producer_metadata();
+    let info_id = document
+        .trailer
+        .get(b"Info")
+        .ok()
+        .and_then(|object| object.as_reference().ok());
+
+    if let Some(info_id) = info_id {
+        if let Ok(dictionary) = document
+            .get_object_mut(info_id)
+            .and_then(Object::as_dict_mut)
+        {
+            dictionary.set("Producer", text_string(&producer));
+            return;
+        }
+    }
+
+    let info_id = document.add_object(dictionary! {
+        "Producer" => text_string(&producer),
+    });
+    document.trailer.set("Info", info_id);
+}
+
+fn app_producer_metadata() -> String {
+    format!("Folios {}", crate::config::VERSION)
 }
 
 struct OutputPages {
@@ -915,6 +1036,9 @@ fn save_document(
         .map(|(id, _)| *id)
         .max()
         .unwrap_or(1);
+    if !options.remove_metadata {
+        set_app_producer_metadata(&mut document);
+    }
     document.renumber_objects();
     document.adjust_zero_pages();
 
@@ -984,9 +1108,10 @@ fn split_output_prefix(input_file: &Path, prefix: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        compress_pdf_blocking, load_document, merge_pdfs_blocking, parse_page_numbers,
-        parse_page_ranges, split_breaks, split_pdf_blocking, write_selected_pages, CompressOptions,
-        PageSelection, PdfBackendError, PdfInput, PdfOutputOptions, PdfSaveOptions, SplitRule,
+        app_producer_metadata, compress_pdf_blocking, edit_pdf_metadata_blocking, load_document,
+        merge_pdfs_blocking, parse_page_numbers, parse_page_ranges, split_breaks,
+        split_pdf_blocking, write_selected_pages, CompressOptions, PageSelection, PdfBackendError,
+        PdfDocumentMetadata, PdfInput, PdfOutputOptions, PdfSaveOptions, SplitRule,
     };
     use lopdf::{
         dictionary, Document, EncryptionState, EncryptionVersion, Object, Permissions, Stream,
@@ -1651,6 +1776,84 @@ mod tests {
     }
 
     #[test]
+    fn edit_pdf_metadata_writes_document_info_fields() {
+        let dir = TestDir::new("metadata-edit");
+        let input = dir.join("input.pdf");
+        let output = dir.join("output.pdf");
+        write_test_pdf(&input, &[10, 20]);
+
+        edit_pdf_metadata_blocking(
+            input,
+            None,
+            output.clone(),
+            PdfDocumentMetadata {
+                title: "Edited Title".to_string(),
+                author: "Edited Author".to_string(),
+                subject: "Edited Subject".to_string(),
+                keywords: "alpha, beta".to_string(),
+                creator: "Folios".to_string(),
+            },
+        )
+        .unwrap();
+
+        assert_eq!(page_markers(&output), vec![10, 20]);
+        assert_eq!(metadata_field(&output, b"Title"), "Edited Title");
+        assert_eq!(metadata_field(&output, b"Author"), "Edited Author");
+        assert_eq!(metadata_field(&output, b"Subject"), "Edited Subject");
+        assert_eq!(metadata_field(&output, b"Keywords"), "alpha, beta");
+        assert_eq!(metadata_field(&output, b"Creator"), "Folios");
+        assert_eq!(
+            metadata_field(&output, b"Producer"),
+            app_producer_metadata()
+        );
+    }
+
+    #[test]
+    fn edit_pdf_metadata_removes_empty_known_fields() {
+        let dir = TestDir::new("metadata-empty");
+        let input = dir.join("input.pdf");
+        let output = dir.join("output.pdf");
+        write_test_pdf(&input, &[1]);
+        set_test_info_metadata(
+            &input,
+            PdfDocumentMetadata {
+                title: "Old Title".to_string(),
+                author: "Old Author".to_string(),
+                ..Default::default()
+            },
+        );
+
+        edit_pdf_metadata_blocking(
+            input,
+            None,
+            output.clone(),
+            PdfDocumentMetadata {
+                title: "New Title".to_string(),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        assert_eq!(metadata_field(&output, b"Title"), "New Title");
+        assert!(!has_metadata_field(&output, b"Author"));
+    }
+
+    #[test]
+    fn edit_pdf_metadata_rejects_input_overwrite() {
+        let dir = TestDir::new("metadata-overwrite");
+        let input = dir.join("input.pdf");
+        write_test_pdf(&input, &[1]);
+
+        let result =
+            edit_pdf_metadata_blocking(input.clone(), None, input, PdfDocumentMetadata::default());
+
+        assert_error(
+            result,
+            "Save the PDF as a new file, not over the input file.",
+        );
+    }
+
+    #[test]
     fn save_options_control_modern_pdf_output() {
         let dir = TestDir::new("save-options");
         let first = dir.join("first.pdf");
@@ -1871,6 +2074,19 @@ mod tests {
         document.save(path).expect("test PDF should be saved");
     }
 
+    fn set_test_info_metadata(path: &Path, metadata: PdfDocumentMetadata) {
+        let mut document = Document::load(path).expect("test PDF should load");
+        let info_id = document.add_object(dictionary! {
+            "Title" => lopdf::text_string(&metadata.title),
+            "Author" => lopdf::text_string(&metadata.author),
+            "Subject" => lopdf::text_string(&metadata.subject),
+            "Keywords" => lopdf::text_string(&metadata.keywords),
+            "Creator" => lopdf::text_string(&metadata.creator),
+        });
+        document.trailer.set("Info", info_id);
+        document.save(path).expect("test PDF should be saved");
+    }
+
     fn pdf_input(path: PathBuf, rotation: i64) -> PdfInput {
         PdfInput {
             path,
@@ -1926,6 +2142,32 @@ mod tests {
                     .unwrap_or(0)
             })
             .collect()
+    }
+
+    fn metadata_field(path: &Path, key: &[u8]) -> String {
+        let document = Document::load(path).expect("test PDF should load");
+        let info = document
+            .trailer
+            .get(b"Info")
+            .expect("metadata should have an info dictionary");
+        let (_, info) = document
+            .dereference(info)
+            .expect("info dictionary should dereference");
+        let info = info.as_dict().expect("info should be a dictionary");
+        lopdf::decode_text_string(info.get(key).expect("field should exist"))
+            .expect("field should decode")
+    }
+
+    fn has_metadata_field(path: &Path, key: &[u8]) -> bool {
+        let document = Document::load(path).expect("test PDF should load");
+        let Ok(info) = document.trailer.get(b"Info") else {
+            return false;
+        };
+        let Ok((_, info)) = document.dereference(info) else {
+            return false;
+        };
+        info.as_dict()
+            .is_ok_and(|dictionary| dictionary.get(key).is_ok())
     }
 
     fn page_boxes(path: &Path) -> Vec<[i64; 4]> {

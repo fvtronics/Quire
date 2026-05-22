@@ -194,6 +194,14 @@ pub struct SplitState {
     pub job: JobState,
 }
 
+#[derive(Debug, Default)]
+pub struct MetadataState {
+    pub file: RefCell<Option<PathBuf>>,
+    pub password: RefCell<Option<String>>,
+    pub preview: RefCell<Option<crate::preview::PagePreview>>,
+    pub job: JobState,
+}
+
 impl MergeState {
     pub fn clear(&self) {
         self.files.borrow_mut().clear();
@@ -534,6 +542,27 @@ impl SplitState {
     }
 }
 
+impl MetadataState {
+    pub fn input_file(&self) -> Option<(PathBuf, Option<String>)> {
+        self.file
+            .borrow()
+            .clone()
+            .map(|path| (path, self.password.borrow().clone()))
+    }
+
+    pub fn finish_loading(
+        &self,
+        path: PathBuf,
+        password: Option<String>,
+        preview: Option<crate::preview::PagePreview>,
+    ) {
+        self.job.finish_loading();
+        self.file.borrow_mut().replace(path);
+        *self.password.borrow_mut() = password;
+        *self.preview.borrow_mut() = preview;
+    }
+}
+
 fn rotate_entry<Key>(rotations: &RefCell<BTreeMap<Key, i64>>, key: Key)
 where
     Key: Ord,
@@ -560,8 +589,8 @@ fn move_vec_item<T>(items: &mut Vec<T>, from: usize, to: usize) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        CompressState, ExtractState, JobState, MergeState, OrganizeState, OutputOptionsState,
-        SaveOptionsState, SplitState,
+        CompressState, ExtractState, JobState, MergeState, MetadataState, OrganizeState,
+        OutputOptionsState, SaveOptionsState, SplitState,
     };
     use std::path::PathBuf;
 
@@ -851,6 +880,23 @@ mod tests {
         split.finish_loading(PathBuf::from("plain.pdf"), None, None, 2);
         assert_eq!(
             split.input_file().unwrap(),
+            (PathBuf::from("plain.pdf"), None)
+        );
+
+        let metadata = MetadataState::default();
+        metadata.finish_loading(
+            PathBuf::from("locked.pdf"),
+            Some("secret".to_string()),
+            None,
+        );
+        assert_eq!(
+            metadata.input_file().unwrap(),
+            (PathBuf::from("locked.pdf"), Some("secret".to_string()))
+        );
+
+        metadata.finish_loading(PathBuf::from("plain.pdf"), None, None);
+        assert_eq!(
+            metadata.input_file().unwrap(),
             (PathBuf::from("plain.pdf"), None)
         );
     }

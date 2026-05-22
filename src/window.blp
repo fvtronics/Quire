@@ -99,6 +99,13 @@ template $FoliosWindow: Adw.ApplicationWindow {
               icon-name: "package-x-generic-symbolic";
               activatable: true;
             }
+
+            Adw.ActionRow metadata_tool_row {
+              title: _("Metadata");
+              subtitle: _("View and edit details");
+              icon-name: "document-properties-symbolic";
+              activatable: true;
+            }
           }
         }
 
@@ -111,6 +118,7 @@ template $FoliosWindow: Adw.ApplicationWindow {
         $OrganizeWorkspace organize_workspace {}
         $ExtractWorkspace extract_workspace {}
         $SplitWorkspace split_workspace {}
+        $MetadataWorkspace metadata_workspace {}
       };
     };
   };
