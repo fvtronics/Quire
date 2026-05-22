@@ -27,9 +27,15 @@ pub struct PageSelection {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
+pub struct PdfSaveOptions {
+    pub remove_metadata: bool,
+    pub modern_pdf: bool,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PdfOutputOptions {
     pub normalize_page_size: bool,
-    pub remove_metadata: bool,
+    pub save: PdfSaveOptions,
 }
 
 #[derive(Debug)]
@@ -51,6 +57,7 @@ pub enum PdfBackendError {
 pub struct CompressOptions {
     pub remove_empty_streams: bool,
     pub prune_objects: bool,
+    pub save: PdfSaveOptions,
 }
 
 #[derive(Clone, Debug)]
@@ -144,9 +151,10 @@ pub async fn split_pdf(
     output_folder: PathBuf,
     prefix: String,
     rule: SplitRule,
+    options: PdfOutputOptions,
 ) -> Result<PathBuf, PdfBackendError> {
     gio::spawn_blocking(move || {
-        split_pdf_blocking(input_file, password, output_folder, prefix, rule)
+        split_pdf_blocking(input_file, password, output_folder, prefix, rule, options)
     })
     .await
     .unwrap_or(Err(PdfBackendError::WorkerStopped))
@@ -292,6 +300,7 @@ fn split_pdf_blocking(
     output_folder: PathBuf,
     prefix: String,
     rule: SplitRule,
+    options: PdfOutputOptions,
 ) -> Result<PathBuf, PdfBackendError> {
     let document = load_document(&input_file, password.as_deref())?;
     let page_count = document.get_pages().len() as u32;
@@ -314,7 +323,7 @@ fn split_pdf_blocking(
             &document,
             page_numbers,
             &output_file,
-            PdfOutputOptions::default(),
+            options,
         )?;
         start = end + 1;
         index += 1;
@@ -328,7 +337,7 @@ fn split_pdf_blocking(
             &document,
             page_numbers,
             &output_file,
-            PdfOutputOptions::default(),
+            options,
         )?;
     }
 
@@ -493,9 +502,12 @@ fn compress_pdf_blocking(
     if options.prune_objects {
         document.prune_objects();
     }
+    if options.save.remove_metadata {
+        remove_metadata(&mut document);
+    }
     document.compress();
 
-    save_document(document, catalog_id, &output_file)
+    save_document(document, catalog_id, &output_file, options.save)
 }
 
 struct OutputPages {
@@ -545,7 +557,7 @@ fn build_and_save_document(
     output.trailer.set("Root", catalog_id);
     apply_output_options(&mut output, &output_pages.ordered_ids, options)?;
 
-    save_document(output, catalog_id, output_file)
+    save_document(output, catalog_id, output_file, options.save)
 }
 
 fn insert_output_pages(
@@ -637,7 +649,7 @@ fn apply_output_options(
     page_ids: &[ObjectId],
     options: PdfOutputOptions,
 ) -> Result<(), PdfBackendError> {
-    if options.remove_metadata {
+    if options.save.remove_metadata {
         remove_metadata(document);
     }
 
@@ -896,6 +908,7 @@ fn save_document(
     mut document: Document,
     catalog_id: ObjectId,
     output_file: &Path,
+    options: PdfSaveOptions,
 ) -> Result<PathBuf, PdfBackendError> {
     document.trailer.set("Root", catalog_id);
     document.max_id = document
@@ -909,9 +922,21 @@ fn save_document(
 
     let temp_file = temporary_output_file(output_file)?;
 
-    if let Err(error) = document.save(temp_file.path()) {
-        return Err(PdfBackendError::Write(error.to_string()));
-    }
+    let write_result = if options.modern_pdf {
+        std::fs::File::create(temp_file.path())
+            .map_err(PdfBackendError::Save)
+            .and_then(|mut file| {
+                document
+                    .save_modern(&mut file)
+                    .map_err(|error| PdfBackendError::Write(error.to_string()))
+            })
+    } else {
+        document
+            .save(temp_file.path())
+            .map(|_| ())
+            .map_err(|error| PdfBackendError::Write(error.to_string()))
+    };
+    write_result?;
 
     std::fs::copy(temp_file.path(), output_file).map_err(PdfBackendError::Save)?;
     Ok(output_file.to_path_buf())
@@ -963,7 +988,7 @@ mod tests {
     use super::{
         compress_pdf_blocking, load_document, merge_pdfs_blocking, parse_page_numbers,
         parse_page_ranges, split_breaks, split_pdf_blocking, write_selected_pages, CompressOptions,
-        PageSelection, PdfBackendError, PdfInput, PdfOutputOptions, SplitRule,
+        PageSelection, PdfBackendError, PdfInput, PdfOutputOptions, PdfSaveOptions, SplitRule,
     };
     use lopdf::{
         dictionary, Document, EncryptionState, EncryptionVersion, Object, Permissions, Stream,
@@ -1115,7 +1140,10 @@ mod tests {
             vec![pdf_input(first, 0), pdf_input(second, 0)],
             output.clone(),
             PdfOutputOptions {
-                remove_metadata: true,
+                save: PdfSaveOptions {
+                    remove_metadata: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
         );
@@ -1233,7 +1261,10 @@ mod tests {
             vec![page_selection(1, 0), page_selection(2, 0)],
             output.clone(),
             PdfOutputOptions {
-                remove_metadata: true,
+                save: PdfSaveOptions {
+                    remove_metadata: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
         );
@@ -1341,6 +1372,7 @@ mod tests {
             output_folder.clone(),
             "Chapter".to_string(),
             SplitRule::EveryNPages(2),
+            PdfOutputOptions::default(),
         );
 
         assert_eq!(result.unwrap(), output_folder);
@@ -1368,6 +1400,7 @@ mod tests {
             output_folder.clone(),
             "Page".to_string(),
             SplitRule::EveryPage,
+            PdfOutputOptions::default(),
         );
 
         assert_eq!(result.unwrap(), output_folder);
@@ -1395,6 +1428,7 @@ mod tests {
             output_folder.clone(),
             "Even".to_string(),
             SplitRule::EvenPages,
+            PdfOutputOptions::default(),
         );
 
         assert_eq!(result.unwrap(), output_folder);
@@ -1422,6 +1456,7 @@ mod tests {
             output_folder.clone(),
             "Odd".to_string(),
             SplitRule::OddPages,
+            PdfOutputOptions::default(),
         );
 
         assert_eq!(result.unwrap(), output_folder);
@@ -1449,6 +1484,7 @@ mod tests {
             output_folder.clone(),
             "Specific".to_string(),
             SplitRule::SpecificPages(vec![4, 2, 2]),
+            PdfOutputOptions::default(),
         );
 
         assert_eq!(result.unwrap(), output_folder);
@@ -1476,6 +1512,7 @@ mod tests {
             output_folder.clone(),
             "   ".to_string(),
             SplitRule::EveryPage,
+            PdfOutputOptions::default(),
         );
 
         assert_eq!(result.unwrap(), output_folder);
@@ -1503,6 +1540,7 @@ mod tests {
                 output_folder,
                 "Empty".to_string(),
                 SplitRule::EveryPage,
+                PdfOutputOptions::default(),
             ),
             "Choose at least one page to save.",
         );
@@ -1522,6 +1560,7 @@ mod tests {
             output_folder,
             "Broken".to_string(),
             SplitRule::EveryPage,
+            PdfOutputOptions::default(),
         )
         .unwrap_err()
         .to_string();
@@ -1543,6 +1582,7 @@ mod tests {
             missing_output_folder,
             "Split".to_string(),
             SplitRule::EveryPage,
+            PdfOutputOptions::default(),
         );
 
         assert!(matches!(result, Err(PdfBackendError::Save(_))));
@@ -1590,11 +1630,13 @@ mod tests {
             CompressOptions {
                 remove_empty_streams: true,
                 prune_objects: true,
+                save: PdfSaveOptions::default(),
             },
         );
 
         assert_eq!(result.unwrap(), output);
         assert_eq!(page_markers(&output), vec![10, 20]);
+        assert_does_not_use_object_streams(&output);
         assert_error(
             compress_pdf_blocking(
                 input.clone(),
@@ -1603,14 +1645,131 @@ mod tests {
                 CompressOptions {
                     remove_empty_streams: false,
                     prune_objects: false,
+                    save: PdfSaveOptions::default(),
                 },
             ),
             "Save the PDF as a new file, not over the input file.",
         );
     }
 
+    #[test]
+    fn save_options_control_modern_pdf_output() {
+        let dir = TestDir::new("save-options");
+        let first = dir.join("first.pdf");
+        let second = dir.join("second.pdf");
+        let modern_output = dir.join("modern.pdf");
+        let traditional_output = dir.join("traditional.pdf");
+        write_test_pdf(&first, &[10]);
+        write_test_pdf(&second, &[20]);
+
+        merge_pdfs_blocking(
+            vec![pdf_input(first.clone(), 0), pdf_input(second.clone(), 0)],
+            modern_output.clone(),
+            PdfOutputOptions {
+                save: PdfSaveOptions {
+                    modern_pdf: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        merge_pdfs_blocking(
+            vec![pdf_input(first, 0), pdf_input(second, 0)],
+            traditional_output.clone(),
+            PdfOutputOptions {
+                save: PdfSaveOptions {
+                    modern_pdf: false,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        assert_eq!(page_markers(&modern_output), vec![10, 20]);
+        assert_uses_modern_pdf(&modern_output);
+        assert_eq!(page_markers(&traditional_output), vec![10, 20]);
+        assert_does_not_use_object_streams(&traditional_output);
+    }
+
+    #[test]
+    fn split_pdf_applies_save_options_to_each_output() {
+        let dir = TestDir::new("split-save-options");
+        let input = dir.join("input.pdf");
+        let modern_folder = dir.join("modern");
+        let traditional_folder = dir.join("traditional");
+        fs::create_dir(&modern_folder).expect("modern output folder should be created");
+        fs::create_dir(&traditional_folder).expect("traditional output folder should be created");
+        write_test_pdf(&input, &[10, 20]);
+
+        split_pdf_blocking(
+            input.clone(),
+            None,
+            modern_folder.clone(),
+            "Modern".to_string(),
+            SplitRule::EveryPage,
+            PdfOutputOptions {
+                save: PdfSaveOptions {
+                    modern_pdf: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        split_pdf_blocking(
+            input,
+            None,
+            traditional_folder.clone(),
+            "Traditional".to_string(),
+            SplitRule::EveryPage,
+            PdfOutputOptions {
+                save: PdfSaveOptions {
+                    modern_pdf: false,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        for path in sorted_pdf_files(&modern_folder) {
+            assert_uses_modern_pdf(&path);
+        }
+        for path in sorted_pdf_files(&traditional_folder) {
+            assert_does_not_use_object_streams(&path);
+        }
+    }
+
     fn assert_error<T: std::fmt::Debug>(result: Result<T, PdfBackendError>, message: &str) {
         assert_eq!(result.unwrap_err().to_string(), message);
+    }
+
+    fn assert_uses_modern_pdf(path: &Path) {
+        let bytes = fs::read(path).expect("PDF output should be readable");
+        assert!(
+            contains_bytes(&bytes, b"/ObjStm"),
+            "modern PDF output should include object streams"
+        );
+        assert!(
+            contains_bytes(&bytes, b"/XRef"),
+            "modern PDF output should include a cross-reference stream"
+        );
+    }
+
+    fn assert_does_not_use_object_streams(path: &Path) {
+        let bytes = fs::read(path).expect("PDF output should be readable");
+        assert!(
+            !contains_bytes(&bytes, b"/ObjStm"),
+            "normal save output should not include generated object streams"
+        );
+    }
+
+    fn contains_bytes(haystack: &[u8], needle: &[u8]) -> bool {
+        haystack
+            .windows(needle.len())
+            .any(|window| window == needle)
     }
 
     fn assert_split_outputs(folder: &Path, expected: &[(&str, &[i64])]) {

@@ -3,9 +3,9 @@ use super::ui::{
     save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    load_single_processable_pdf, open_output, ordered_item_controls, parent_window, run_output_job,
-    setup_advanced_options_menu, update_shell_view_mode, OrderedItemControlOptions,
-    SinglePdfLoadHandlers,
+    load_single_processable_pdf, open_output, ordered_item_controls, output_option_callback,
+    parent_window, run_output_job, setup_advanced_options_menu, update_shell_view_mode,
+    AdvancedOptionsMenu, OrderedItemControlOptions, SinglePdfLoadHandlers,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -88,28 +88,39 @@ impl OrganizeWorkspace {
 
         let workspace = self.clone();
         let rotate_all = move || workspace.rotate_all_pages();
-        let workspace = self.clone();
-        let normalize_page_size = move |active| {
-            workspace
-                .imp()
-                .organize
-                .options
-                .set_normalize_page_size(active);
-            workspace.imp().organize.job.clear_last_output();
-            workspace.update_view();
-        };
-        let workspace = self.clone();
-        let remove_metadata = move |active| {
-            workspace.imp().organize.options.set_remove_metadata(active);
-            workspace.imp().organize.job.clear_last_output();
-            workspace.update_view();
-        };
+        let modern_pdf = output_option_callback(
+            self.clone(),
+            |workspace, active| workspace.imp().organize.options.set_modern_pdf(active),
+            |workspace| workspace.imp().organize.job.clear_last_output(),
+            Self::update_view,
+        );
+        let normalize_page_size = output_option_callback(
+            self.clone(),
+            |workspace, active| {
+                workspace
+                    .imp()
+                    .organize
+                    .options
+                    .set_normalize_page_size(active);
+            },
+            |workspace| workspace.imp().organize.job.clear_last_output(),
+            Self::update_view,
+        );
+        let remove_metadata = output_option_callback(
+            self.clone(),
+            |workspace, active| workspace.imp().organize.options.set_remove_metadata(active),
+            |workspace| workspace.imp().organize.job.clear_last_output(),
+            Self::update_view,
+        );
         setup_advanced_options_menu(
             &imp.organize_advanced_options_button,
-            gettext("Rotate All Pages"),
-            rotate_all,
-            normalize_page_size,
-            remove_metadata,
+            imp.organize.options.save_state(),
+            AdvancedOptionsMenu::new(modern_pdf, remove_metadata)
+                .with_rotate(gettext("Rotate All Pages"), rotate_all)
+                .with_normalize_page_size(
+                    imp.organize.options.normalize_page_size(),
+                    normalize_page_size,
+                ),
         );
 
         let workspace = self.clone();

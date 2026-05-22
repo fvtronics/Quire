@@ -47,25 +47,96 @@ impl JobState {
     }
 }
 
-#[derive(Debug, Default)]
-pub struct OutputOptionsState {
-    normalize_page_size: Cell<bool>,
+#[derive(Debug)]
+pub struct SaveOptionsState {
+    modern_pdf: Cell<bool>,
     remove_metadata: Cell<bool>,
 }
 
-impl OutputOptionsState {
-    pub fn set_normalize_page_size(&self, active: bool) {
-        self.normalize_page_size.set(active);
+impl Default for SaveOptionsState {
+    fn default() -> Self {
+        let options = crate::pdf::PdfSaveOptions::default();
+        Self {
+            modern_pdf: Cell::new(options.modern_pdf),
+            remove_metadata: Cell::new(options.remove_metadata),
+        }
+    }
+}
+
+impl SaveOptionsState {
+    pub fn modern_pdf(&self) -> bool {
+        self.modern_pdf.get()
+    }
+
+    pub fn set_modern_pdf(&self, active: bool) {
+        self.modern_pdf.set(active);
+    }
+
+    pub fn remove_metadata(&self) -> bool {
+        self.remove_metadata.get()
     }
 
     pub fn set_remove_metadata(&self, active: bool) {
         self.remove_metadata.set(active);
     }
 
+    pub fn options(&self) -> crate::pdf::PdfSaveOptions {
+        crate::pdf::PdfSaveOptions {
+            remove_metadata: self.remove_metadata.get(),
+            modern_pdf: self.modern_pdf.get(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct OutputOptionsState {
+    save: SaveOptionsState,
+    normalize_page_size: Cell<bool>,
+}
+
+impl Default for OutputOptionsState {
+    fn default() -> Self {
+        let options = crate::pdf::PdfOutputOptions::default();
+        Self {
+            save: SaveOptionsState::default(),
+            normalize_page_size: Cell::new(options.normalize_page_size),
+        }
+    }
+}
+
+impl OutputOptionsState {
+    pub fn save_state(&self) -> &SaveOptionsState {
+        &self.save
+    }
+
+    pub fn modern_pdf(&self) -> bool {
+        self.save.modern_pdf()
+    }
+
+    pub fn set_modern_pdf(&self, active: bool) {
+        self.save.set_modern_pdf(active);
+    }
+
+    pub fn normalize_page_size(&self) -> bool {
+        self.normalize_page_size.get()
+    }
+
+    pub fn set_normalize_page_size(&self, active: bool) {
+        self.normalize_page_size.set(active);
+    }
+
+    pub fn remove_metadata(&self) -> bool {
+        self.save.remove_metadata()
+    }
+
+    pub fn set_remove_metadata(&self, active: bool) {
+        self.save.set_remove_metadata(active);
+    }
+
     pub fn options(&self) -> crate::pdf::PdfOutputOptions {
         crate::pdf::PdfOutputOptions {
             normalize_page_size: self.normalize_page_size.get(),
-            remove_metadata: self.remove_metadata.get(),
+            save: self.save.options(),
         }
     }
 }
@@ -85,6 +156,7 @@ pub struct CompressState {
     pub file: RefCell<Option<PathBuf>>,
     pub password: RefCell<Option<String>>,
     pub preview: RefCell<Option<crate::preview::PagePreview>>,
+    pub options: SaveOptionsState,
     pub job: JobState,
 }
 
@@ -118,6 +190,7 @@ pub struct SplitState {
     pub password: RefCell<Option<String>>,
     pub page_count: Cell<usize>,
     pub preview: RefCell<Option<crate::preview::PagePreview>>,
+    pub options: SaveOptionsState,
     pub job: JobState,
 }
 
@@ -486,7 +559,10 @@ fn move_vec_item<T>(items: &mut Vec<T>, from: usize, to: usize) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{CompressState, ExtractState, JobState, MergeState, OrganizeState, SplitState};
+    use super::{
+        CompressState, ExtractState, JobState, MergeState, OrganizeState, OutputOptionsState,
+        SaveOptionsState, SplitState,
+    };
     use std::path::PathBuf;
 
     fn document_previews(
@@ -539,6 +615,46 @@ mod tests {
 
         assert!(!state.is_loading());
         assert_eq!(state.last_output(), None);
+    }
+
+    #[test]
+    fn output_options_state_builds_save_and_page_rewrite_options() {
+        let state = OutputOptionsState::default();
+
+        assert!(!state.modern_pdf());
+        assert!(!state.normalize_page_size());
+        assert!(!state.remove_metadata());
+
+        state.set_modern_pdf(true);
+        state.set_normalize_page_size(true);
+        state.set_remove_metadata(true);
+
+        let save_options = state.save_state().options();
+        assert!(save_options.modern_pdf);
+        assert!(save_options.remove_metadata);
+
+        let output_options = state.options();
+        assert!(output_options.normalize_page_size);
+        assert_eq!(output_options.save.modern_pdf, save_options.modern_pdf);
+        assert_eq!(
+            output_options.save.remove_metadata,
+            save_options.remove_metadata
+        );
+    }
+
+    #[test]
+    fn save_options_state_builds_save_options_only() {
+        let state = SaveOptionsState::default();
+
+        assert!(!state.modern_pdf());
+        assert!(!state.remove_metadata());
+
+        state.set_modern_pdf(true);
+        state.set_remove_metadata(true);
+
+        let options = state.options();
+        assert!(options.modern_pdf);
+        assert!(options.remove_metadata);
     }
 
     #[test]

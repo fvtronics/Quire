@@ -3,8 +3,9 @@ use super::ui::{
     single_file_preview_widget,
 };
 use super::workspace::{
-    load_single_processable_pdf, open_output, parent_window, run_output_job,
-    update_shell_view_mode, SinglePdfLoadHandlers,
+    load_single_processable_pdf, open_output, output_option_callback, parent_window,
+    run_output_job, setup_advanced_options_menu, update_shell_view_mode, AdvancedOptionsMenu,
+    SinglePdfLoadHandlers,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -39,6 +40,8 @@ mod imp {
         pub compress_save_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub compress_open_output_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub compress_advanced_options_button: TemplateChild<gtk::MenuButton>,
         #[template_child]
         pub compress_prune_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
@@ -84,6 +87,24 @@ glib::wrapper! {
 impl CompressWorkspace {
     fn setup_callbacks(&self) {
         let imp = self.imp();
+
+        let modern_pdf = output_option_callback(
+            self.clone(),
+            |workspace, active| workspace.imp().compress.options.set_modern_pdf(active),
+            |workspace| workspace.imp().compress.job.clear_last_output(),
+            Self::update_view,
+        );
+        let remove_metadata = output_option_callback(
+            self.clone(),
+            |workspace, active| workspace.imp().compress.options.set_remove_metadata(active),
+            |workspace| workspace.imp().compress.job.clear_last_output(),
+            Self::update_view,
+        );
+        setup_advanced_options_menu(
+            &imp.compress_advanced_options_button,
+            &imp.compress.options,
+            AdvancedOptionsMenu::new(modern_pdf, remove_metadata),
+        );
 
         let workspace = self.clone();
         imp.compress_choose_button.connect_clicked(move |_| {
@@ -169,6 +190,7 @@ impl CompressWorkspace {
         let options = crate::pdf::CompressOptions {
             remove_empty_streams: imp.compress_empty_streams_row.is_active(),
             prune_objects: imp.compress_prune_row.is_active(),
+            save: imp.compress.options.options(),
         };
 
         run_output_job(
@@ -202,6 +224,7 @@ impl CompressWorkspace {
         imp.compress_content.set_visible(has_file);
         imp.compress_choose_button.set_visible(has_file);
         imp.compress_save_button.set_visible(has_file);
+        imp.compress_advanced_options_button.set_visible(has_file);
         imp.compress_open_output_button
             .set_visible(imp.compress.job.has_last_output());
 
@@ -210,6 +233,8 @@ impl CompressWorkspace {
         imp.compress_save_button.set_sensitive(has_file && !is_busy);
         imp.compress_open_output_button
             .set_sensitive(imp.compress.job.has_last_output() && !is_busy);
+        imp.compress_advanced_options_button
+            .set_sensitive(has_file && !is_busy);
         imp.compress_prune_row.set_sensitive(has_file && !is_busy);
         imp.compress_empty_streams_row
             .set_sensitive(has_file && !is_busy);

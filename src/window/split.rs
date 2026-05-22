@@ -3,8 +3,9 @@ use super::ui::{
     single_file_preview_widget,
 };
 use super::workspace::{
-    load_single_processable_pdf, open_output, parent_window, run_output_job, show_backend_error,
-    update_shell_view_mode, SinglePdfLoadHandlers,
+    load_single_processable_pdf, open_output, output_option_callback, parent_window,
+    run_output_job, setup_advanced_options_menu, show_backend_error, update_shell_view_mode,
+    AdvancedOptionsMenu, SinglePdfLoadHandlers,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -75,6 +76,8 @@ mod imp {
         pub split_save_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub split_open_output_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub split_advanced_options_button: TemplateChild<gtk::MenuButton>,
 
         pub split: SplitState,
         pub is_running: Cell<bool>,
@@ -136,6 +139,24 @@ impl SplitWorkspace {
                 gtk::Expression::NONE,
                 "string",
             )));
+
+        let modern_pdf = output_option_callback(
+            self.clone(),
+            |workspace, active| workspace.imp().split.options.set_modern_pdf(active),
+            |workspace| workspace.imp().split.job.clear_last_output(),
+            Self::update_view,
+        );
+        let remove_metadata = output_option_callback(
+            self.clone(),
+            |workspace, active| workspace.imp().split.options.set_remove_metadata(active),
+            |workspace| workspace.imp().split.job.clear_last_output(),
+            Self::update_view,
+        );
+        setup_advanced_options_menu(
+            &imp.split_advanced_options_button,
+            &imp.split.options,
+            AdvancedOptionsMenu::new(modern_pdf, remove_metadata),
+        );
 
         let workspace = self.clone();
         imp.split_choose_button.connect_clicked(move |_| {
@@ -253,9 +274,13 @@ impl SplitWorkspace {
         prefix: String,
         rule: crate::pdf::SplitRule,
     ) {
+        let options = crate::pdf::PdfOutputOptions {
+            save: self.imp().split.options.options(),
+            ..Default::default()
+        };
         run_output_job(
             self.clone(),
-            crate::pdf::split_pdf(input_file, password, output_folder, prefix, rule),
+            crate::pdf::split_pdf(input_file, password, output_folder, prefix, rule, options),
             gettext("Split PDFs saved"),
             |workspace, running| workspace.imp().is_running.set(running),
             |workspace| workspace.imp().split.job.clear_last_output(),
@@ -286,6 +311,7 @@ impl SplitWorkspace {
         imp.split_content.set_visible(has_file);
         imp.split_choose_button.set_visible(has_file);
         imp.split_save_button.set_visible(has_file);
+        imp.split_advanced_options_button.set_visible(has_file);
         imp.split_open_output_button
             .set_visible(imp.split.job.has_last_output());
 
@@ -295,6 +321,8 @@ impl SplitWorkspace {
             .set_sensitive(has_file && has_split_rule && !is_busy);
         imp.split_open_output_button
             .set_sensitive(imp.split.job.has_last_output() && !is_busy);
+        imp.split_advanced_options_button
+            .set_sensitive(has_file && !is_busy);
         imp.split_after_row.set_sensitive(has_file && !is_busy);
         imp.split_specific_pages_entry
             .set_visible(split_mode == Some(SplitMode::SpecificPages));

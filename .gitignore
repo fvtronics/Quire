@@ -1,6 +1,9 @@
 # Rust / Cargo
 /target/
 
+# Local Git hooks
+/.githooks/
+
 # Backups
 *~
 *.swp

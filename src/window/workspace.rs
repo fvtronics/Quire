@@ -182,12 +182,80 @@ pub(super) fn update_shell_view_mode(widget: &impl IsA<gtk::Widget>) {
     window.update_view_mode();
 }
 
+struct ActionOptionRow {
+    title: String,
+    on_activate: Box<dyn Fn() + 'static>,
+}
+
+struct SwitchOptionRow {
+    active: bool,
+    on_active_changed: Box<dyn Fn(bool) + 'static>,
+}
+
+pub(super) struct AdvancedOptionsMenu {
+    rotate: Option<ActionOptionRow>,
+    normalize_page_size: Option<SwitchOptionRow>,
+    modern_pdf: Box<dyn Fn(bool) + 'static>,
+    remove_metadata: Box<dyn Fn(bool) + 'static>,
+}
+
+impl AdvancedOptionsMenu {
+    pub(super) fn new(
+        on_modern_pdf: impl Fn(bool) + 'static,
+        on_remove_metadata: impl Fn(bool) + 'static,
+    ) -> Self {
+        Self {
+            rotate: None,
+            normalize_page_size: None,
+            modern_pdf: Box::new(on_modern_pdf),
+            remove_metadata: Box::new(on_remove_metadata),
+        }
+    }
+
+    pub(super) fn with_rotate(mut self, title: String, on_rotate: impl Fn() + 'static) -> Self {
+        self.rotate = Some(ActionOptionRow {
+            title,
+            on_activate: Box::new(on_rotate),
+        });
+        self
+    }
+
+    pub(super) fn with_normalize_page_size(
+        mut self,
+        active: bool,
+        on_normalize_page_size: impl Fn(bool) + 'static,
+    ) -> Self {
+        self.normalize_page_size = Some(SwitchOptionRow {
+            active,
+            on_active_changed: Box::new(on_normalize_page_size),
+        });
+        self
+    }
+}
+
+pub(super) fn output_option_callback<Widget, Update, ClearOutput, Refresh>(
+    widget: Widget,
+    update: Update,
+    clear_output: ClearOutput,
+    refresh: Refresh,
+) -> impl Fn(bool) + 'static
+where
+    Widget: IsA<gtk::Widget> + Clone + 'static,
+    Update: Fn(&Widget, bool) + 'static,
+    ClearOutput: Fn(&Widget) + 'static,
+    Refresh: Fn(&Widget) + 'static,
+{
+    move |active| {
+        update(&widget, active);
+        clear_output(&widget);
+        refresh(&widget);
+    }
+}
+
 pub(super) fn setup_advanced_options_menu(
     button: &gtk::MenuButton,
-    rotate_title: String,
-    on_rotate_all: impl Fn() + 'static,
-    on_normalize_page_size: impl Fn(bool) + 'static,
-    on_remove_metadata: impl Fn(bool) + 'static,
+    options: &super::state::SaveOptionsState,
+    menu: AdvancedOptionsMenu,
 ) {
     let popover = gtk::Popover::new();
     let list = gtk::ListBox::new();
@@ -198,23 +266,42 @@ pub(super) fn setup_advanced_options_menu(
     list.set_margin_start(6);
     list.set_margin_end(6);
 
-    let rotate_row = adw::ActionRow::builder()
-        .title(rotate_title)
-        .activatable(true)
-        .build();
-    rotate_row.connect_activated(move |_| on_rotate_all());
-    list.append(&rotate_row);
+    if let Some(rotate) = menu.rotate {
+        let rotate_row = adw::ActionRow::builder()
+            .title(rotate.title)
+            .activatable(true)
+            .build();
+        rotate_row.connect_activated(move |_| (rotate.on_activate)());
+        list.append(&rotate_row);
+    }
 
-    let normalize_page_size = adw::SwitchRow::builder()
-        .title(gettext("Normalize Page Size"))
+    let modern_pdf = adw::SwitchRow::builder()
+        .title(gettext("Modern PDF Format"))
+        .tooltip_text(gettext("Save with PDF 1.5 object streams"))
+        .active(options.modern_pdf())
         .build();
-    normalize_page_size.connect_active_notify(move |row| on_normalize_page_size(row.is_active()));
+    modern_pdf.connect_active_notify(move |row| (menu.modern_pdf)(row.is_active()));
     let remove_metadata = adw::SwitchRow::builder()
         .title(gettext("Remove Metadata"))
+        .tooltip_text(gettext("Remove document info and embedded metadata"))
+        .active(options.remove_metadata())
         .build();
-    remove_metadata.connect_active_notify(move |row| on_remove_metadata(row.is_active()));
+    remove_metadata.connect_active_notify(move |row| (menu.remove_metadata)(row.is_active()));
 
-    list.append(&normalize_page_size);
+    list.append(&modern_pdf);
+
+    if let Some(normalize_page_size_option) = menu.normalize_page_size {
+        let normalize_page_size = adw::SwitchRow::builder()
+            .title(gettext("Normalize Page Size"))
+            .tooltip_text(gettext("Resize output pages to the largest page size"))
+            .active(normalize_page_size_option.active)
+            .build();
+        normalize_page_size.connect_active_notify(move |row| {
+            (normalize_page_size_option.on_active_changed)(row.is_active());
+        });
+        list.append(&normalize_page_size);
+    }
+
     list.append(&remove_metadata);
 
     popover.set_child(Some(&list));
