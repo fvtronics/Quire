@@ -1,0 +1,31 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v/'
+    - when: never
+
+stages:
+  - release
+
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/cli:latest
+  before_script:
+    - apk add --no-cache appstream desktop-file-utils python3
+  script:
+    - |
+      VERSION="${CI_COMMIT_TAG#v}"
+      CARGO_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
+      MESON_VERSION="$(sed -n "s/^ *version: '\(.*\)',/\1/p" meson.build | head -n 1)"
+
+      test "$VERSION" = "$CARGO_VERSION"
+      test "$VERSION" = "$MESON_VERSION"
+      grep -q "<release version=\"$VERSION\"" data/com.fvtronics.folios.metainfo.xml.in
+    - |
+      python3 -m json.tool com.fvtronics.folios.json >/dev/null
+      python3 -m json.tool cargo-sources.json >/dev/null
+      appstreamcli validate --no-net --explain data/com.fvtronics.folios.metainfo.xml.in
+      cp data/com.fvtronics.folios.desktop.in /tmp/com.fvtronics.folios.desktop
+      desktop-file-validate /tmp/com.fvtronics.folios.desktop
+  release:
+    tag_name: $CI_COMMIT_TAG
+    description: './CHANGELOG.md'
