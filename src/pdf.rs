@@ -668,11 +668,7 @@ fn apply_output_options(
 fn remove_metadata(document: &mut Document) {
     let mut object_ids = BTreeSet::new();
 
-    if let Some(info) = document.trailer.remove(b"Info") {
-        if let Ok(object_id) = info.as_reference() {
-            object_ids.insert(object_id);
-        }
-    }
+    remember_reference(&mut object_ids, document.trailer.remove(b"Info"));
 
     for (object_id, object) in document.objects.iter_mut() {
         if object.type_name().ok() == Some(b"Metadata") {
@@ -684,11 +680,7 @@ fn remove_metadata(document: &mut Document) {
         };
 
         if dictionary.has_type(b"Catalog") {
-            if let Some(metadata) = dictionary.remove(b"Metadata") {
-                if let Ok(object_id) = metadata.as_reference() {
-                    object_ids.insert(object_id);
-                }
-            }
+            remember_reference(&mut object_ids, dictionary.remove(b"Metadata"));
         }
     }
 
@@ -696,6 +688,12 @@ fn remove_metadata(document: &mut Document) {
         document.delete_object(object_id);
     }
     document.prune_objects();
+}
+
+fn remember_reference(object_ids: &mut BTreeSet<ObjectId>, object: Option<Object>) {
+    if let Some(object_id) = object.and_then(|object| object.as_reference().ok()) {
+        object_ids.insert(object_id);
+    }
 }
 
 fn normalize_page_sizes(
