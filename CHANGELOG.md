@@ -1,12 +1,10 @@
-# v0.1.4
+# v0.1.5
 
 <p>New</p>
 <ul>
-  <li>Added an advanced option to save PDFs using a newer, more compact format</li>
-  <li>Added more advanced save options to the split and compress tools</li>
+  <li>Added a metadata tool for viewing and editing PDF details</li>
 </ul>
 <p>Optimizations</p>
 <ul>
-  <li>Made PDFs open more quickly by avoiding an extra processing step</li>
-  <li>Improved save option handling across the PDF tools</li>
+  <li>Added more preview checks for PDF loading reliability</li>
 </ul>

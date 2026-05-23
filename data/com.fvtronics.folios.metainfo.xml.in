@@ -8,7 +8,7 @@
   <summary>Combine and edit PDF files</summary>
   <description>
     <p>Folios is a simple GNOME utility for working with local PDF files without a complex document suite.</p>
-    <p>Merge multiple PDFs, organize pages, extract page ranges, split documents, and compress files without sending them to an online service.</p>
+    <p>Merge multiple PDFs, organize pages, extract page ranges, split documents, compress files, and edit metadata without sending them to an online service.</p>
   </description>
 
   <developer id="com.fvtronics">
@@ -54,6 +54,18 @@
   </branding>
 
   <releases>
+    <release version="0.1.5" date="2026-05-23">
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>Added a metadata tool for viewing and editing PDF details</li>
+        </ul>
+        <p>Optimizations</p>
+        <ul>
+          <li>Added more preview checks for PDF loading reliability</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.4" date="2026-05-22">
       <description translate="no">
         <p>New</p>
