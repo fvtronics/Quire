@@ -40,7 +40,7 @@ msgstr ""
 #: data/com.fvtronics.folios.metainfo.xml.in:11
 msgid ""
 "Merge multiple PDFs, organize pages, extract page ranges, split documents, "
-"and compress files without sending them to an online service."
+"compress files, and edit metadata without sending them to an online service."
 msgstr ""
 
 #: data/com.fvtronics.folios.metainfo.xml.in:15
@@ -73,8 +73,9 @@ msgid "Compress PDF"
 msgstr ""
 
 #: src/compress-workspace.blp:30 src/extract-workspace.blp:30
-#: src/organize-workspace.blp:30 src/split-workspace.blp:30
-#: src/window/compress.rs:249 src/window/extract.rs:345
+#: src/metadata-workspace.blp:30 src/organize-workspace.blp:30
+#: src/split-workspace.blp:30 src/window/compress.rs:249
+#: src/window/extract.rs:345 src/window/metadata.rs:274
 #: src/window/organize.rs:297 src/window/split.rs:344
 msgid "No PDF selected"
 msgstr ""
@@ -83,22 +84,27 @@ msgstr ""
 #: src/compress-workspace.blp:87 src/compress-workspace.blp:92
 #: src/extract-workspace.blp:39 src/extract-workspace.blp:42
 #: src/extract-workspace.blp:87 src/extract-workspace.blp:92
+#: src/metadata-workspace.blp:39 src/metadata-workspace.blp:42
+#: src/metadata-workspace.blp:87 src/metadata-workspace.blp:92
 #: src/organize-workspace.blp:39 src/organize-workspace.blp:42
 #: src/organize-workspace.blp:99 src/organize-workspace.blp:104
 #: src/split-workspace.blp:39 src/split-workspace.blp:42
 #: src/split-workspace.blp:87 src/split-workspace.blp:92
 #: src/window/compress.rs:136 src/window/extract.rs:177
-#: src/window/organize.rs:158 src/window/split.rs:212
+#: src/window/metadata.rs:160 src/window/organize.rs:158
+#: src/window/split.rs:212
 msgid "Open PDF"
 msgstr ""
 
 #: src/compress-workspace.blp:50 src/extract-workspace.blp:50
-#: src/merge-workspace.blp:49 src/organize-workspace.blp:50
+#: src/merge-workspace.blp:49 src/metadata-workspace.blp:50
+#: src/organize-workspace.blp:50
 msgid "Open Output File"
 msgstr ""
 
 #: src/compress-workspace.blp:54 src/extract-workspace.blp:54
-#: src/merge-workspace.blp:53 src/organize-workspace.blp:54
+#: src/merge-workspace.blp:53 src/metadata-workspace.blp:54
+#: src/organize-workspace.blp:54
 msgid "Open Output"
 msgstr ""
 
@@ -107,8 +113,8 @@ msgid "Compress"
 msgstr ""
 
 #: src/compress-workspace.blp:75 src/extract-workspace.blp:75
-#: src/merge-workspace.blp:86 src/organize-workspace.blp:87
-#: src/split-workspace.blp:75
+#: src/merge-workspace.blp:86 src/metadata-workspace.blp:75
+#: src/organize-workspace.blp:87 src/split-workspace.blp:75
 msgid "Advanced Options"
 msgstr ""
 
@@ -209,6 +215,51 @@ msgstr ""
 msgid "Choose two or more PDF files to combine into a new document."
 msgstr ""
 
+#: src/metadata-workspace.blp:24
+msgid "Edit Metadata"
+msgstr ""
+
+#: src/metadata-workspace.blp:62
+msgid "Save Metadata"
+msgstr ""
+
+#: src/metadata-workspace.blp:67 src/organize-workspace.blp:79
+#: src/window/metadata.rs:182 src/window/organize.rs:174
+msgid "Save"
+msgstr ""
+
+#: src/metadata-workspace.blp:82
+msgid "Open a PDF to Edit Metadata"
+msgstr ""
+
+#: src/metadata-workspace.blp:83
+msgid "View and update the main document metadata fields."
+msgstr ""
+
+#: src/metadata-workspace.blp:122
+msgid "Title"
+msgstr ""
+
+#: src/metadata-workspace.blp:126
+msgid "Author"
+msgstr ""
+
+#: src/metadata-workspace.blp:130
+msgid "Subject"
+msgstr ""
+
+#: src/metadata-workspace.blp:134
+msgid "Keywords"
+msgstr ""
+
+#: src/metadata-workspace.blp:138
+msgid "Creator"
+msgstr ""
+
+#: src/metadata-workspace.blp:142
+msgid "Producer"
+msgstr ""
+
 #: src/organize-workspace.blp:24 src/window.blp:76
 msgid "Organize Pages"
 msgstr ""
@@ -223,10 +274,6 @@ msgstr ""
 
 #: src/organize-workspace.blp:74 src/window/organize.rs:173
 msgid "Save Organized PDF"
-msgstr ""
-
-#: src/organize-workspace.blp:79 src/window/organize.rs:174
-msgid "Save"
 msgstr ""
 
 #: src/organize-workspace.blp:94
@@ -348,12 +395,21 @@ msgstr ""
 msgid "Reduce PDF size"
 msgstr ""
 
-#: src/window.blp:121
+#: src/window.blp:104
+msgid "Metadata"
+msgstr ""
+
+#: src/window.blp:105
+msgid "View and edit details"
+msgstr ""
+
+#: src/window.blp:129
 msgid "_About Folios"
 msgstr ""
 
 #: src/window/compress.rs:136 src/window/extract.rs:177
-#: src/window/organize.rs:158 src/window/split.rs:212
+#: src/window/metadata.rs:160 src/window/organize.rs:158
+#: src/window/split.rs:212
 msgid "Open"
 msgstr ""
 
@@ -370,7 +426,8 @@ msgid "Compressing PDF..."
 msgstr ""
 
 #: src/window/compress.rs:245 src/window/extract.rs:341
-#: src/window/organize.rs:293 src/window/split.rs:340
+#: src/window/metadata.rs:270 src/window/organize.rs:293
+#: src/window/split.rs:340
 msgid "Loading PDF..."
 msgstr ""
 
@@ -439,6 +496,26 @@ msgid_plural "{} PDFs selected"
 msgstr[0] ""
 msgstr[1] ""
 
+#: src/window/metadata.rs:117
+msgid "Producer will be replaced when saving"
+msgstr ""
+
+#: src/window/metadata.rs:181
+msgid "Save PDF Metadata"
+msgstr ""
+
+#: src/window/metadata.rs:226
+msgid "PDF metadata saved"
+msgstr ""
+
+#: src/window/metadata.rs:268
+msgid "Saving metadata..."
+msgstr ""
+
+#: src/window/metadata.rs:319
+msgid "N/A"
+msgstr ""
+
 #: src/window/organize.rs:119
 msgid "Rotate All Pages"
 msgstr ""
@@ -496,7 +573,7 @@ msgid "Remove Metadata"
 msgstr ""
 
 #: src/window/workspace.rs:286
-msgid "Remove document info and embedded metadata"
+msgid "Remove existing metadata before saving"
 msgstr ""
 
 #: src/window/workspace.rs:295
