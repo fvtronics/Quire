@@ -217,7 +217,7 @@ impl MetadataWorkspace {
         input_file: PathBuf,
         password: Option<String>,
         output_file: PathBuf,
-        metadata: crate::pdf::PdfDocumentMetadata,
+        metadata: crate::pdf::PdfEditableMetadata,
         options: crate::pdf::PdfSaveOptions,
     ) {
         run_output_job(
@@ -295,23 +295,13 @@ impl MetadataWorkspace {
         imp.metadata_producer_row.set_subtitle(&metadata.producer);
     }
 
-    fn metadata_from_entries(&self) -> crate::pdf::PdfDocumentMetadata {
+    fn metadata_from_entries(&self) -> crate::pdf::PdfEditableMetadata {
         let imp = self.imp();
-        crate::pdf::PdfDocumentMetadata {
+        crate::pdf::PdfEditableMetadata {
             title: imp.metadata_title_entry.text().to_string(),
             author: imp.metadata_author_entry.text().to_string(),
             subject: imp.metadata_subject_entry.text().to_string(),
             keywords: imp.metadata_keywords_entry.text().to_string(),
-            creator: imp
-                .metadata_creator_row
-                .subtitle()
-                .map(String::from)
-                .unwrap_or_default(),
-            producer: imp
-                .metadata_producer_row
-                .subtitle()
-                .map(String::from)
-                .unwrap_or_default(),
         }
     }
 

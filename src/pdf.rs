@@ -48,6 +48,14 @@ pub struct PdfDocumentMetadata {
     pub producer: String,
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct PdfEditableMetadata {
+    pub title: String,
+    pub author: String,
+    pub subject: String,
+    pub keywords: String,
+}
+
 #[derive(Debug)]
 pub enum PdfBackendError {
     NotEnoughInputs,
@@ -185,7 +193,7 @@ pub async fn edit_pdf_metadata(
     input_file: PathBuf,
     password: Option<String>,
     output_file: PathBuf,
-    metadata: PdfDocumentMetadata,
+    metadata: PdfEditableMetadata,
     options: PdfSaveOptions,
 ) -> Result<PathBuf, PdfBackendError> {
     gio::spawn_blocking(move || {
@@ -538,7 +546,7 @@ fn edit_pdf_metadata_blocking(
     input_file: PathBuf,
     password: Option<String>,
     output_file: PathBuf,
-    metadata: PdfDocumentMetadata,
+    metadata: PdfEditableMetadata,
     options: PdfSaveOptions,
 ) -> Result<PathBuf, PdfBackendError> {
     if input_file == output_file {
@@ -574,7 +582,7 @@ fn edit_pdf_metadata_blocking(
 fn edit_pdf_metadata_incremental(
     input_file: PathBuf,
     output_file: PathBuf,
-    metadata: PdfDocumentMetadata,
+    metadata: PdfEditableMetadata,
 ) -> Result<PathBuf, PdfBackendError> {
     let mut document =
         IncrementalDocument::load(&input_file).map_err(|error| PdfBackendError::Load {
@@ -605,7 +613,7 @@ fn edit_pdf_metadata_incremental(
     Ok(output_file)
 }
 
-fn apply_document_metadata(document: &mut Document, metadata: PdfDocumentMetadata) {
+fn apply_document_metadata(document: &mut Document, metadata: PdfEditableMetadata) {
     let info_id = document
         .trailer
         .get(b"Info")
@@ -624,7 +632,6 @@ fn apply_document_metadata(document: &mut Document, metadata: PdfDocumentMetadat
     set_metadata_field(&mut dictionary, b"Author", &metadata.author);
     set_metadata_field(&mut dictionary, b"Subject", &metadata.subject);
     set_metadata_field(&mut dictionary, b"Keywords", &metadata.keywords);
-    set_metadata_field(&mut dictionary, b"Creator", &metadata.creator);
 
     if dictionary.is_empty() {
         document.trailer.remove(b"Info");
@@ -1158,7 +1165,8 @@ mod tests {
         app_producer_metadata, compress_pdf_blocking, edit_pdf_metadata_blocking, load_document,
         merge_pdfs_blocking, parse_page_numbers, parse_page_ranges, split_breaks,
         split_pdf_blocking, write_selected_pages, CompressOptions, PageSelection, PdfBackendError,
-        PdfDocumentMetadata, PdfInput, PdfOutputOptions, PdfSaveOptions, SplitRule,
+        PdfDocumentMetadata, PdfEditableMetadata, PdfInput, PdfOutputOptions, PdfSaveOptions,
+        SplitRule,
     };
     use lopdf::{
         dictionary, Document, EncryptionState, EncryptionVersion, Object, Permissions, Stream,
@@ -1833,13 +1841,11 @@ mod tests {
             input.clone(),
             None,
             output.clone(),
-            PdfDocumentMetadata {
+            PdfEditableMetadata {
                 title: "Edited Title".to_string(),
                 author: "Edited Author".to_string(),
                 subject: "Edited Subject".to_string(),
                 keywords: "alpha, beta".to_string(),
-                creator: "Folios".to_string(),
-                producer: "Original Producer".to_string(),
             },
             PdfSaveOptions::default(),
         )
@@ -1852,7 +1858,7 @@ mod tests {
         assert_eq!(metadata_field(&output, b"Author"), "Edited Author");
         assert_eq!(metadata_field(&output, b"Subject"), "Edited Subject");
         assert_eq!(metadata_field(&output, b"Keywords"), "alpha, beta");
-        assert_eq!(metadata_field(&output, b"Creator"), "Folios");
+        assert!(!has_metadata_field(&output, b"Creator"));
         assert_eq!(
             metadata_field(&output, b"Producer"),
             app_producer_metadata()
@@ -1870,6 +1876,7 @@ mod tests {
             PdfDocumentMetadata {
                 title: "Old Title".to_string(),
                 author: "Old Author".to_string(),
+                creator: "Original Creator".to_string(),
                 ..Default::default()
             },
         );
@@ -1878,7 +1885,7 @@ mod tests {
             input,
             None,
             output.clone(),
-            PdfDocumentMetadata {
+            PdfEditableMetadata {
                 title: "New Title".to_string(),
                 ..Default::default()
             },
@@ -1888,6 +1895,7 @@ mod tests {
 
         assert_eq!(metadata_field(&output, b"Title"), "New Title");
         assert!(!has_metadata_field(&output, b"Author"));
+        assert_eq!(metadata_field(&output, b"Creator"), "Original Creator");
     }
 
     #[test]
@@ -1900,7 +1908,7 @@ mod tests {
             input.clone(),
             None,
             input,
-            PdfDocumentMetadata::default(),
+            PdfEditableMetadata::default(),
             PdfSaveOptions::default(),
         );
 
@@ -1922,7 +1930,7 @@ mod tests {
             input,
             None,
             output.clone(),
-            PdfDocumentMetadata {
+            PdfEditableMetadata {
                 title: "Public Title".to_string(),
                 ..Default::default()
             },
@@ -1953,7 +1961,7 @@ mod tests {
             input,
             None,
             output.clone(),
-            PdfDocumentMetadata {
+            PdfEditableMetadata {
                 title: "Modern Title".to_string(),
                 ..Default::default()
             },
