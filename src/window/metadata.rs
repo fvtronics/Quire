@@ -3,8 +3,9 @@ use super::ui::{
     single_file_preview_widget,
 };
 use super::workspace::{
-    load_single_processable_pdf, open_output, parent_window, run_output_job,
-    update_shell_view_mode, SinglePdfLoadHandlers,
+    load_single_processable_pdf, open_output, output_option_callback, parent_window,
+    run_output_job, setup_advanced_options_menu, update_shell_view_mode, AdvancedOptionsMenu,
+    SinglePdfLoadHandlers,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -44,11 +45,15 @@ mod imp {
         #[template_child]
         pub metadata_keywords_entry: TemplateChild<adw::EntryRow>,
         #[template_child]
-        pub metadata_creator_entry: TemplateChild<adw::EntryRow>,
+        pub metadata_creator_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub metadata_producer_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub metadata_save_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub metadata_open_output_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub metadata_advanced_options_button: TemplateChild<gtk::MenuButton>,
 
         pub metadata: MetadataState,
         pub is_running: Cell<bool>,
@@ -91,6 +96,27 @@ impl MetadataWorkspace {
     fn setup_callbacks(&self) {
         let imp = self.imp();
 
+        let modern_pdf = output_option_callback(
+            self.clone(),
+            |workspace, active| workspace.imp().metadata.options.set_modern_pdf(active),
+            |workspace| workspace.imp().metadata.job.clear_last_output(),
+            Self::update_view,
+        );
+        let remove_metadata = output_option_callback(
+            self.clone(),
+            |workspace, active| workspace.imp().metadata.options.set_remove_metadata(active),
+            |workspace| workspace.imp().metadata.job.clear_last_output(),
+            Self::update_view,
+        );
+        setup_advanced_options_menu(
+            &imp.metadata_advanced_options_button,
+            &imp.metadata.options,
+            AdvancedOptionsMenu::new(modern_pdf, remove_metadata),
+        );
+        let producer_warning = gtk::Image::from_icon_name("dialog-warning-symbolic");
+        producer_warning.set_tooltip_text(Some(&gettext("Producer will be replaced when saving")));
+        imp.metadata_producer_row.add_suffix(&producer_warning);
+
         let workspace = self.clone();
         imp.metadata_choose_button.connect_clicked(move |_| {
             workspace.choose_file();
@@ -115,7 +141,6 @@ impl MetadataWorkspace {
         self.connect_metadata_changed(&imp.metadata_author_entry);
         self.connect_metadata_changed(&imp.metadata_subject_entry);
         self.connect_metadata_changed(&imp.metadata_keywords_entry);
-        self.connect_metadata_changed(&imp.metadata_creator_entry);
     }
 
     fn connect_metadata_changed(&self, entry: &adw::EntryRow) {
@@ -147,6 +172,7 @@ impl MetadataWorkspace {
             return;
         };
         let metadata = self.metadata_from_entries();
+        let options = self.imp().metadata.options.options();
 
         let workspace = self.clone();
         glib::spawn_future_local(async move {
@@ -158,7 +184,7 @@ impl MetadataWorkspace {
             )
             .await
             {
-                workspace.save_metadata_to(input_file, password, path, metadata);
+                workspace.save_metadata_to(input_file, password, path, metadata, options);
             }
         });
     }
@@ -192,10 +218,11 @@ impl MetadataWorkspace {
         password: Option<String>,
         output_file: PathBuf,
         metadata: crate::pdf::PdfDocumentMetadata,
+        options: crate::pdf::PdfSaveOptions,
     ) {
         run_output_job(
             self.clone(),
-            crate::pdf::edit_pdf_metadata(input_file, password, output_file, metadata),
+            crate::pdf::edit_pdf_metadata(input_file, password, output_file, metadata, options),
             gettext("PDF metadata saved"),
             |workspace, running| workspace.imp().is_running.set(running),
             |workspace| workspace.imp().metadata.job.clear_last_output(),
@@ -224,6 +251,7 @@ impl MetadataWorkspace {
         imp.metadata_content.set_visible(has_file);
         imp.metadata_choose_button.set_visible(has_file);
         imp.metadata_save_button.set_visible(has_file);
+        imp.metadata_advanced_options_button.set_visible(has_file);
         imp.metadata_open_output_button
             .set_visible(imp.metadata.job.has_last_output());
 
@@ -232,6 +260,8 @@ impl MetadataWorkspace {
         imp.metadata_save_button.set_sensitive(has_file && !is_busy);
         imp.metadata_open_output_button
             .set_sensitive(imp.metadata.job.has_last_output() && !is_busy);
+        imp.metadata_advanced_options_button
+            .set_sensitive(has_file && !is_busy);
         self.set_entries_sensitive(has_file && !is_busy);
 
         let detail = if imp.is_running.get() {
@@ -253,7 +283,6 @@ impl MetadataWorkspace {
         imp.metadata_author_entry.set_sensitive(sensitive);
         imp.metadata_subject_entry.set_sensitive(sensitive);
         imp.metadata_keywords_entry.set_sensitive(sensitive);
-        imp.metadata_creator_entry.set_sensitive(sensitive);
     }
 
     fn set_metadata_entries(&self, metadata: &crate::pdf::PdfDocumentMetadata) {
@@ -262,7 +291,8 @@ impl MetadataWorkspace {
         imp.metadata_author_entry.set_text(&metadata.author);
         imp.metadata_subject_entry.set_text(&metadata.subject);
         imp.metadata_keywords_entry.set_text(&metadata.keywords);
-        imp.metadata_creator_entry.set_text(&metadata.creator);
+        imp.metadata_creator_row.set_subtitle(&metadata.creator);
+        imp.metadata_producer_row.set_subtitle(&metadata.producer);
     }
 
     fn metadata_from_entries(&self) -> crate::pdf::PdfDocumentMetadata {
@@ -272,7 +302,16 @@ impl MetadataWorkspace {
             author: imp.metadata_author_entry.text().to_string(),
             subject: imp.metadata_subject_entry.text().to_string(),
             keywords: imp.metadata_keywords_entry.text().to_string(),
-            creator: imp.metadata_creator_entry.text().to_string(),
+            creator: imp
+                .metadata_creator_row
+                .subtitle()
+                .map(String::from)
+                .unwrap_or_default(),
+            producer: imp
+                .metadata_producer_row
+                .subtitle()
+                .map(String::from)
+                .unwrap_or_default(),
         }
     }
 

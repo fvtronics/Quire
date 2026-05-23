@@ -199,6 +199,7 @@ pub struct MetadataState {
     pub file: RefCell<Option<PathBuf>>,
     pub password: RefCell<Option<String>>,
     pub preview: RefCell<Option<crate::preview::PagePreview>>,
+    pub options: SaveOptionsState,
     pub job: JobState,
 }
 

@@ -243,6 +243,7 @@ fn document_metadata(document: &poppler::Document) -> crate::pdf::PdfDocumentMet
         subject: document.subject().map(String::from).unwrap_or_default(),
         keywords: document.keywords().map(String::from).unwrap_or_default(),
         creator: document.creator().map(String::from).unwrap_or_default(),
+        producer: document.producer().map(String::from).unwrap_or_default(),
     }
 }
 

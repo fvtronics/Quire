@@ -67,6 +67,14 @@ template $MetadataWorkspace: Gtk.Box {
         label: _("Save");
       };
     }
+
+    Gtk.MenuButton metadata_advanced_options_button {
+      visible: false;
+      valign: center;
+      icon-name: "view-more-symbolic";
+      tooltip-text: _("Advanced Options");
+      styles ["flat"]
+    }
   }
 
   Adw.StatusPage metadata_empty_status {
@@ -126,8 +134,12 @@ template $MetadataWorkspace: Gtk.Box {
           title: _("Keywords");
         }
 
-        Adw.EntryRow metadata_creator_entry {
+        Adw.ActionRow metadata_creator_row {
           title: _("Creator");
+        }
+
+        Adw.ActionRow metadata_producer_row {
+          title: _("Producer");
         }
       }
     }

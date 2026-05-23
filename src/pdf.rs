@@ -6,7 +6,7 @@
  */
 
 use gtk::gio;
-use lopdf::{dictionary, text_string, Dictionary, Document, Object, ObjectId};
+use lopdf::{dictionary, text_string, Dictionary, Document, IncrementalDocument, Object, ObjectId};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -45,6 +45,7 @@ pub struct PdfDocumentMetadata {
     pub subject: String,
     pub keywords: String,
     pub creator: String,
+    pub producer: String,
 }
 
 #[derive(Debug)]
@@ -185,9 +186,10 @@ pub async fn edit_pdf_metadata(
     password: Option<String>,
     output_file: PathBuf,
     metadata: PdfDocumentMetadata,
+    options: PdfSaveOptions,
 ) -> Result<PathBuf, PdfBackendError> {
     gio::spawn_blocking(move || {
-        edit_pdf_metadata_blocking(input_file, password, output_file, metadata)
+        edit_pdf_metadata_blocking(input_file, password, output_file, metadata, options)
     })
     .await
     .unwrap_or(Err(PdfBackendError::WorkerStopped))
@@ -537,9 +539,14 @@ fn edit_pdf_metadata_blocking(
     password: Option<String>,
     output_file: PathBuf,
     metadata: PdfDocumentMetadata,
+    options: PdfSaveOptions,
 ) -> Result<PathBuf, PdfBackendError> {
     if input_file == output_file {
         return Err(PdfBackendError::OutputMatchesInput);
+    }
+
+    if !options.remove_metadata && !options.modern_pdf && password.is_none() {
+        return edit_pdf_metadata_incremental(input_file, output_file, metadata);
     }
 
     let mut document = load_document(&input_file, password.as_deref())?;
@@ -549,13 +556,53 @@ fn edit_pdf_metadata_blocking(
         .and_then(Object::as_reference)
         .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?;
 
+    if options.remove_metadata {
+        remove_metadata(&mut document);
+    }
     apply_document_metadata(&mut document, metadata);
     save_document(
         document,
         catalog_id,
         &output_file,
-        PdfSaveOptions::default(),
+        PdfSaveOptions {
+            remove_metadata: false,
+            modern_pdf: options.modern_pdf,
+        },
     )
+}
+
+fn edit_pdf_metadata_incremental(
+    input_file: PathBuf,
+    output_file: PathBuf,
+    metadata: PdfDocumentMetadata,
+) -> Result<PathBuf, PdfBackendError> {
+    let mut document =
+        IncrementalDocument::load(&input_file).map_err(|error| PdfBackendError::Load {
+            path: input_file.clone(),
+            message: error.to_string(),
+        })?;
+
+    if let Some(info_id) = document
+        .get_prev_documents()
+        .trailer
+        .get(b"Info")
+        .ok()
+        .and_then(|object| object.as_reference().ok())
+    {
+        document
+            .opt_clone_object_to_new_document(info_id)
+            .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?;
+    }
+
+    apply_document_metadata(&mut document.new_document, metadata);
+    set_app_producer_metadata(&mut document.new_document);
+
+    let temp_file = temporary_output_file(&output_file)?;
+    document
+        .save(temp_file.path())
+        .map_err(|error| PdfBackendError::Write(error.to_string()))?;
+    std::fs::copy(temp_file.path(), &output_file).map_err(PdfBackendError::Save)?;
+    Ok(output_file)
 }
 
 fn apply_document_metadata(document: &mut Document, metadata: PdfDocumentMetadata) {
@@ -1783,7 +1830,7 @@ mod tests {
         write_test_pdf(&input, &[10, 20]);
 
         edit_pdf_metadata_blocking(
-            input,
+            input.clone(),
             None,
             output.clone(),
             PdfDocumentMetadata {
@@ -1792,11 +1839,15 @@ mod tests {
                 subject: "Edited Subject".to_string(),
                 keywords: "alpha, beta".to_string(),
                 creator: "Folios".to_string(),
+                producer: "Original Producer".to_string(),
             },
+            PdfSaveOptions::default(),
         )
         .unwrap();
 
         assert_eq!(page_markers(&output), vec![10, 20]);
+        assert!(uses_incremental_update(&output));
+        assert!(fs::metadata(&output).unwrap().len() > fs::metadata(&input).unwrap().len());
         assert_eq!(metadata_field(&output, b"Title"), "Edited Title");
         assert_eq!(metadata_field(&output, b"Author"), "Edited Author");
         assert_eq!(metadata_field(&output, b"Subject"), "Edited Subject");
@@ -1831,6 +1882,7 @@ mod tests {
                 title: "New Title".to_string(),
                 ..Default::default()
             },
+            PdfSaveOptions::default(),
         )
         .unwrap();
 
@@ -1844,13 +1896,76 @@ mod tests {
         let input = dir.join("input.pdf");
         write_test_pdf(&input, &[1]);
 
-        let result =
-            edit_pdf_metadata_blocking(input.clone(), None, input, PdfDocumentMetadata::default());
+        let result = edit_pdf_metadata_blocking(
+            input.clone(),
+            None,
+            input,
+            PdfDocumentMetadata::default(),
+            PdfSaveOptions::default(),
+        );
 
         assert_error(
             result,
             "Save the PDF as a new file, not over the input file.",
         );
+    }
+
+    #[test]
+    fn edit_pdf_metadata_remove_metadata_uses_full_clean_save() {
+        let dir = TestDir::new("metadata-clean");
+        let input = dir.join("input.pdf");
+        let output = dir.join("output.pdf");
+        write_test_pdf(&input, &[1]);
+        add_test_metadata(&input);
+
+        edit_pdf_metadata_blocking(
+            input,
+            None,
+            output.clone(),
+            PdfDocumentMetadata {
+                title: "Public Title".to_string(),
+                ..Default::default()
+            },
+            PdfSaveOptions {
+                remove_metadata: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        assert!(!uses_incremental_update(&output));
+        assert!(!contains_private_metadata(&output));
+        assert_eq!(metadata_field(&output, b"Title"), "Public Title");
+        assert_eq!(
+            metadata_field(&output, b"Producer"),
+            app_producer_metadata()
+        );
+    }
+
+    #[test]
+    fn edit_pdf_metadata_modern_pdf_uses_full_modern_save() {
+        let dir = TestDir::new("metadata-modern");
+        let input = dir.join("input.pdf");
+        let output = dir.join("output.pdf");
+        write_test_pdf(&input, &[1]);
+
+        edit_pdf_metadata_blocking(
+            input,
+            None,
+            output.clone(),
+            PdfDocumentMetadata {
+                title: "Modern Title".to_string(),
+                ..Default::default()
+            },
+            PdfSaveOptions {
+                modern_pdf: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        assert_uses_modern_pdf(&output);
+        assert_eq!(metadata_field(&output, b"Title"), "Modern Title");
     }
 
     #[test]
@@ -1971,6 +2086,15 @@ mod tests {
         haystack
             .windows(needle.len())
             .any(|window| window == needle)
+    }
+
+    fn uses_incremental_update(path: &Path) -> bool {
+        let bytes = fs::read(path).expect("PDF output should be readable");
+        bytes
+            .windows(b"%%EOF".len())
+            .filter(|window| *window == b"%%EOF")
+            .count()
+            > 1
     }
 
     fn assert_split_outputs(folder: &Path, expected: &[(&str, &[i64])]) {
