@@ -291,8 +291,10 @@ impl MetadataWorkspace {
         imp.metadata_author_entry.set_text(&metadata.author);
         imp.metadata_subject_entry.set_text(&metadata.subject);
         imp.metadata_keywords_entry.set_text(&metadata.keywords);
-        imp.metadata_creator_row.set_subtitle(&metadata.creator);
-        imp.metadata_producer_row.set_subtitle(&metadata.producer);
+        imp.metadata_creator_row
+            .set_subtitle(&metadata_subtitle(&metadata.creator));
+        imp.metadata_producer_row
+            .set_subtitle(&metadata_subtitle(&metadata.producer));
     }
 
     fn metadata_from_entries(&self) -> crate::pdf::PdfEditableMetadata {
@@ -309,5 +311,13 @@ impl MetadataWorkspace {
         if let Some(path) = self.imp().metadata.job.last_output() {
             open_output(self, &path);
         }
+    }
+}
+
+fn metadata_subtitle(value: &str) -> String {
+    if value.trim().is_empty() {
+        gettext("N/A")
+    } else {
+        value.to_string()
     }
 }
