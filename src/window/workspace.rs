@@ -283,7 +283,7 @@ pub(super) fn setup_advanced_options_menu(
     modern_pdf.connect_active_notify(move |row| (menu.modern_pdf)(row.is_active()));
     let remove_metadata = adw::SwitchRow::builder()
         .title(gettext("Remove Metadata"))
-        .tooltip_text(gettext("Remove document info and embedded metadata"))
+        .tooltip_text(gettext("Remove existing metadata before saving"))
         .active(options.remove_metadata())
         .build();
     remove_metadata.connect_active_notify(move |row| (menu.remove_metadata)(row.is_active()));
