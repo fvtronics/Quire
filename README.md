@@ -9,9 +9,9 @@ service.
 
 ## Screenshots
 
-Merge PDFs | Organize pages | Extract pages | Split documents | Compress files
-:------------------:|:-----------------:|:----------------:|:---------------------------:|:----------------:
-![Merge PDFs](data/screenshots/merge.png?raw=true "Merge multiple PDF files") | ![Organize pages](data/screenshots/organize.png?raw=true "Organize PDF pages") | ![Extract pages](data/screenshots/extract.png?raw=true "Extract PDF pages") | ![Split documents](data/screenshots/split.png?raw=true "Split PDF documents") | ![Compress files](data/screenshots/compress.png?raw=true "Compress PDF files")
+Merge PDFs | Organize pages | Extract pages | Split documents | Compress files | Edit metadata
+:------------------:|:-----------------:|:----------------:|:---------------------------:|:----------------:|:----------------:
+![Merge PDFs](data/screenshots/merge.png?raw=true "Merge multiple PDF files") | ![Organize pages](data/screenshots/organize.png?raw=true "Organize PDF pages") | ![Extract pages](data/screenshots/extract.png?raw=true "Extract PDF pages") | ![Split documents](data/screenshots/split.png?raw=true "Split PDF documents") | ![Compress files](data/screenshots/compress.png?raw=true "Compress PDF files") | ![Edit metadata](data/screenshots/metadata.png?raw=true "Edit PDF metadata")
 
 ## How to install
 
