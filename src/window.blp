@@ -5,6 +5,7 @@ template $FoliosWindow: Adw.ApplicationWindow {
   title: _("Folios");
   default-width: 1200;
   default-height: 840;
+  width-request: 580;
 
   content: Adw.ToastOverlay toast_overlay {
     child: Adw.NavigationSplitView navigation_split_view {
@@ -32,14 +33,13 @@ template $FoliosWindow: Adw.ApplicationWindow {
 
           content: Gtk.Box {
             orientation: vertical;
-            styles ["navigation-sidebar"]
 
             Gtk.ListBox sidebar_list {
               selection-mode: single;
               margin-start: 12;
               margin-end: 12;
               margin-top: 12;
-              styles ["boxed-list"]
+              styles ["navigation-sidebar"]
 
               Adw.ActionRow merge_tool_row {
                 title: _("Merge");
