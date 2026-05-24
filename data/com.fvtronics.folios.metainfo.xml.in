@@ -54,6 +54,15 @@
   </branding>
 
   <releases>
+    <release version="0.1.6" date="2026-05-24">
+      <description translate="no">
+        <p>Changes</p>
+        <ul>
+          <li>Improved the sidebar layout and navigation on smaller windows</li>
+          <li>Centered the empty state shown before a file is selected</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.5" date="2026-05-23">
       <description translate="no">
         <p>New</p>

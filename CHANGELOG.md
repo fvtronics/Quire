@@ -1,10 +1,7 @@
-# v0.1.5
+# v0.1.6
 
-<p>New</p>
+<p>Changes</p>
 <ul>
-  <li>Added a metadata tool for viewing and editing PDF details</li>
-</ul>
-<p>Optimizations</p>
-<ul>
-  <li>Added more preview checks for PDF loading reliability</li>
+  <li>Improved the sidebar layout and navigation on smaller windows</li>
+  <li>Centered the empty state shown before a file is selected</li>
 </ul>
