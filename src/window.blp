@@ -12,11 +12,15 @@ template $FoliosWindow: Adw.ApplicationWindow {
       max-sidebar-width: 280;
 
       sidebar: Adw.NavigationPage {
-        title: _("PDF Tools");
+        title: _("Folios");
 
         child: Adw.ToolbarView {
           [top]
           Adw.HeaderBar {
+            title-widget: Adw.WindowTitle {
+              title: _("Folios");
+            };
+
             [end]
             Gtk.MenuButton {
               primary: true;
@@ -30,20 +34,11 @@ template $FoliosWindow: Adw.ApplicationWindow {
             orientation: vertical;
             styles ["navigation-sidebar"]
 
-            Gtk.Label {
-              label: _("PDF Tools");
-              xalign: 0;
-              margin-start: 18;
-              margin-end: 18;
-              margin-top: 18;
-              margin-bottom: 6;
-              styles ["heading"]
-            }
-
             Gtk.ListBox sidebar_list {
               selection-mode: single;
               margin-start: 12;
               margin-end: 12;
+              margin-top: 12;
               styles ["boxed-list"]
 
               Adw.ActionRow merge_tool_row {
@@ -98,6 +93,11 @@ template $FoliosWindow: Adw.ApplicationWindow {
         child: Adw.ToolbarView {
           [top]
           Adw.HeaderBar {
+            title-widget: Adw.WindowTitle content_title {
+              title: _("Merge PDFs");
+              subtitle: _("No files selected");
+            };
+
             [end]
             Gtk.Box view_mode_box {
               styles ["linked"]

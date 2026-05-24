@@ -5,7 +5,8 @@ use super::ui::{
 use super::workspace::{
     load_processable_pdf, open_output, ordered_item_controls, output_option_callback,
     parent_window, run_output_job, setup_advanced_options_menu, show_pdf_load_error,
-    update_shell_view_mode, AdvancedOptionsMenu, OrderedItemControlOptions, PdfLoadResult,
+    update_shell_title, update_shell_view_mode, AdvancedOptionsMenu, OrderedItemControlOptions,
+    PdfLoadResult,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -26,8 +27,6 @@ mod imp {
         pub add_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub empty_add_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub file_count_label: TemplateChild<gtk::Label>,
         #[template_child]
         pub empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
@@ -339,7 +338,7 @@ impl MergeWorkspace {
                     .replace("{}", &count.to_string()),
             }
         };
-        imp.file_count_label.set_label(&count_text);
+        update_shell_title(self, &gettext("Merge PDFs"), &count_text);
         update_shell_view_mode(self);
     }
 

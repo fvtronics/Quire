@@ -62,6 +62,28 @@ impl ViewMode {
     }
 }
 
+impl PdfTool {
+    fn title(self) -> String {
+        match self {
+            Self::Merge => gettextrs::gettext("Merge PDFs"),
+            Self::Compress => gettextrs::gettext("Compress PDF"),
+            Self::Organize => gettextrs::gettext("Organize Pages"),
+            Self::Extract => gettextrs::gettext("Extract Pages"),
+            Self::Split => gettextrs::gettext("Split PDF"),
+            Self::Metadata => gettextrs::gettext("Edit Metadata"),
+        }
+    }
+
+    fn default_subtitle(self) -> String {
+        match self {
+            Self::Merge => gettextrs::gettext("No files selected"),
+            Self::Compress | Self::Organize | Self::Extract | Self::Split | Self::Metadata => {
+                gettextrs::gettext("No PDF selected")
+            }
+        }
+    }
+}
+
 mod imp {
     use super::compress::CompressWorkspace;
     use super::extract::ExtractWorkspace;
@@ -86,6 +108,8 @@ mod imp {
         pub sidebar_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub view_mode_box: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub content_title: TemplateChild<adw::WindowTitle>,
         #[template_child]
         pub list_view_button: TemplateChild<gtk::ToggleButton>,
         #[template_child]
@@ -251,7 +275,27 @@ impl FoliosWindow {
         };
         imp.sidebar_list.select_row(Some(selected_row));
         imp.navigation_split_view.set_show_content(true);
+        self.set_content_title(&tool.title(), &tool.default_subtitle());
+        self.update_active_workspace();
         self.update_view_mode();
+    }
+
+    pub(super) fn set_content_title(&self, title: &str, subtitle: &str) {
+        let imp = self.imp();
+        imp.content_title.set_title(title);
+        imp.content_title.set_subtitle(subtitle);
+    }
+
+    fn update_active_workspace(&self) {
+        let imp = self.imp();
+        match imp.active_tool.get() {
+            PdfTool::Merge => imp.merge_workspace.update_view(),
+            PdfTool::Compress => imp.compress_workspace.update_view(),
+            PdfTool::Organize => imp.organize_workspace.update_view(),
+            PdfTool::Extract => imp.extract_workspace.update_view(),
+            PdfTool::Split => imp.split_workspace.update_view(),
+            PdfTool::Metadata => imp.metadata_workspace.update_view(),
+        }
     }
 
     fn set_view_mode(&self, view_mode: ViewMode) {

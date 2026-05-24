@@ -15,21 +15,7 @@ template $MergeWorkspace: Gtk.Box {
     spacing: 12;
 
     Gtk.Box {
-      orientation: vertical;
-      spacing: 3;
       hexpand: true;
-
-      Gtk.Label {
-        label: _("Merge PDFs");
-        xalign: 0;
-        styles ["title-2"]
-      }
-
-      Gtk.Label file_count_label {
-        label: _("No files selected");
-        xalign: 0;
-        styles ["dim-label"]
-      }
     }
 
     Gtk.Button add_button {

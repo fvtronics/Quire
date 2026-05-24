@@ -4,8 +4,8 @@ use super::ui::{
 };
 use super::workspace::{
     load_single_processable_pdf, open_output, ordered_item_controls, output_option_callback,
-    parent_window, run_output_job, setup_advanced_options_menu, update_shell_view_mode,
-    AdvancedOptionsMenu, OrderedItemControlOptions, SinglePdfLoadHandlers,
+    parent_window, run_output_job, setup_advanced_options_menu, update_shell_title,
+    update_shell_view_mode, AdvancedOptionsMenu, OrderedItemControlOptions, SinglePdfLoadHandlers,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -26,8 +26,6 @@ mod imp {
         pub organize_choose_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub organize_empty_choose_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub organize_detail_label: TemplateChild<gtk::Label>,
         #[template_child]
         pub organize_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
@@ -296,7 +294,7 @@ impl OrganizeWorkspace {
         } else {
             gettext("No PDF selected")
         };
-        imp.organize_detail_label.set_label(&detail);
+        update_shell_title(self, &gettext("Organize Pages"), &detail);
         update_shell_view_mode(self);
     }
 

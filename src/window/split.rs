@@ -4,8 +4,8 @@ use super::ui::{
 };
 use super::workspace::{
     load_single_processable_pdf, open_output, output_option_callback, parent_window,
-    run_output_job, setup_advanced_options_menu, show_backend_error, update_shell_view_mode,
-    AdvancedOptionsMenu, SinglePdfLoadHandlers,
+    run_output_job, setup_advanced_options_menu, show_backend_error, update_shell_title,
+    update_shell_view_mode, AdvancedOptionsMenu, SinglePdfLoadHandlers,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -54,8 +54,6 @@ mod imp {
         pub split_choose_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub split_empty_choose_button: TemplateChild<gtk::Button>,
-        #[template_child]
-        pub split_detail_label: TemplateChild<gtk::Label>,
         #[template_child]
         pub split_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
@@ -343,7 +341,7 @@ impl SplitWorkspace {
         } else {
             gettext("No PDF selected")
         };
-        imp.split_detail_label.set_label(&detail);
+        update_shell_title(self, &gettext("Split PDF"), &detail);
         update_shell_view_mode(self);
     }
 

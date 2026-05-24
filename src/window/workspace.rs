@@ -24,6 +24,18 @@ pub(super) fn show_toast(widget: &impl IsA<gtk::Widget>, message: &str) {
     }
 }
 
+pub(super) fn update_shell_title(widget: &impl IsA<gtk::Widget>, title: &str, subtitle: &str) {
+    let Some(window) = widget
+        .root()
+        .and_downcast::<gtk::Window>()
+        .and_then(|window| window.downcast::<FoliosWindow>().ok())
+    else {
+        return;
+    };
+
+    window.set_content_title(title, subtitle);
+}
+
 pub(super) fn show_backend_error(
     widget: &impl IsA<gtk::Widget>,
     error: &crate::pdf::PdfBackendError,

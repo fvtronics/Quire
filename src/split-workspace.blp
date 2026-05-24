@@ -16,21 +16,7 @@ template $SplitWorkspace: Gtk.Box {
     spacing: 12;
 
     Gtk.Box {
-      orientation: vertical;
-      spacing: 3;
       hexpand: true;
-
-      Gtk.Label {
-        label: _("Split PDF");
-        xalign: 0;
-        styles ["title-2"]
-      }
-
-      Gtk.Label split_detail_label {
-        label: _("No PDF selected");
-        xalign: 0;
-        styles ["dim-label"]
-      }
     }
 
     Gtk.Button split_choose_button {

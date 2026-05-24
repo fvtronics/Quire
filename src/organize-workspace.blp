@@ -16,21 +16,7 @@ template $OrganizeWorkspace: Gtk.Box {
     spacing: 12;
 
     Gtk.Box {
-      orientation: vertical;
-      spacing: 3;
       hexpand: true;
-
-      Gtk.Label {
-        label: _("Organize Pages");
-        xalign: 0;
-        styles ["title-2"]
-      }
-
-      Gtk.Label organize_detail_label {
-        label: _("No PDF selected");
-        xalign: 0;
-        styles ["dim-label"]
-      }
     }
 
     Gtk.Button organize_choose_button {
