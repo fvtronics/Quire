@@ -11,7 +11,7 @@ template $SplitWorkspace: Gtk.Box {
   margin-top: 30;
   margin-bottom: 30;
 
-  Gtk.Box {
+  Gtk.Box split_actions {
     orientation: horizontal;
     spacing: 12;
 
@@ -64,6 +64,7 @@ template $SplitWorkspace: Gtk.Box {
   }
 
   Adw.StatusPage split_empty_status {
+    vexpand: true;
     icon-name: "edit-cut-symbolic";
     title: _("Open a PDF to Split");
     description: _("Choose where the PDF should be split by page.");

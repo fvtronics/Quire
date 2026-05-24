@@ -11,7 +11,7 @@ template $MetadataWorkspace: Gtk.Box {
   margin-top: 30;
   margin-bottom: 30;
 
-  Gtk.Box {
+  Gtk.Box metadata_actions {
     orientation: horizontal;
     spacing: 12;
 
@@ -64,6 +64,7 @@ template $MetadataWorkspace: Gtk.Box {
   }
 
   Adw.StatusPage metadata_empty_status {
+    vexpand: true;
     icon-name: "document-properties-symbolic";
     title: _("Open a PDF to Edit Metadata");
     description: _("View and update the main document metadata fields.");

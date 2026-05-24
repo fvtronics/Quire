@@ -27,6 +27,8 @@ mod imp {
         #[template_child]
         pub compress_empty_choose_button: TemplateChild<gtk::Button>,
         #[template_child]
+        pub compress_actions: TemplateChild<gtk::Box>,
+        #[template_child]
         pub compress_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub compress_content: TemplateChild<gtk::Box>,
@@ -219,6 +221,7 @@ impl CompressWorkspace {
         }
 
         imp.compress_empty_status.set_visible(!has_file);
+        imp.compress_actions.set_visible(has_file);
         imp.compress_content.set_visible(has_file);
         imp.compress_choose_button.set_visible(has_file);
         imp.compress_save_button.set_visible(has_file);

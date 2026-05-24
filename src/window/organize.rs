@@ -27,6 +27,8 @@ mod imp {
         #[template_child]
         pub organize_empty_choose_button: TemplateChild<gtk::Button>,
         #[template_child]
+        pub organize_actions: TemplateChild<gtk::Box>,
+        #[template_child]
         pub organize_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub organize_view_stack: TemplateChild<adw::ViewStack>,
@@ -266,6 +268,7 @@ impl OrganizeWorkspace {
         }
 
         imp.organize_empty_status.set_visible(!has_file);
+        imp.organize_actions.set_visible(has_file);
         imp.organize_view_stack.set_visible(has_file);
         imp.organize_choose_button.set_visible(has_file);
         imp.organize_advanced_options_button.set_visible(has_file);

@@ -28,6 +28,8 @@ mod imp {
         #[template_child]
         pub empty_add_button: TemplateChild<gtk::Button>,
         #[template_child]
+        pub merge_actions: TemplateChild<gtk::Box>,
+        #[template_child]
         pub empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub merge_view_stack: TemplateChild<adw::ViewStack>,
@@ -310,6 +312,7 @@ impl MergeWorkspace {
         }
 
         imp.empty_status.set_visible(!has_files);
+        imp.merge_actions.set_visible(has_files);
         imp.merge_view_stack.set_visible(has_files);
         imp.add_button.set_visible(has_files);
         imp.advanced_options_button.set_visible(has_files);

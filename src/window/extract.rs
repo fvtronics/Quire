@@ -28,6 +28,8 @@ mod imp {
         #[template_child]
         pub extract_empty_choose_button: TemplateChild<gtk::Button>,
         #[template_child]
+        pub extract_actions: TemplateChild<gtk::Box>,
+        #[template_child]
         pub extract_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub extract_content: TemplateChild<gtk::Box>,
@@ -315,6 +317,7 @@ impl ExtractWorkspace {
         }
 
         imp.extract_empty_status.set_visible(!has_file);
+        imp.extract_actions.set_visible(has_file);
         imp.extract_content.set_visible(has_file);
         imp.extract_choose_button.set_visible(has_file);
         imp.extract_advanced_options_button.set_visible(has_file);

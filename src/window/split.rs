@@ -55,6 +55,8 @@ mod imp {
         #[template_child]
         pub split_empty_choose_button: TemplateChild<gtk::Button>,
         #[template_child]
+        pub split_actions: TemplateChild<gtk::Box>,
+        #[template_child]
         pub split_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub split_content: TemplateChild<gtk::Box>,
@@ -306,6 +308,7 @@ impl SplitWorkspace {
         }
 
         imp.split_empty_status.set_visible(!has_file);
+        imp.split_actions.set_visible(has_file);
         imp.split_content.set_visible(has_file);
         imp.split_choose_button.set_visible(has_file);
         imp.split_save_button.set_visible(has_file);

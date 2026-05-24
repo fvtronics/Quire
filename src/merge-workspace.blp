@@ -10,7 +10,7 @@ template $MergeWorkspace: Gtk.Box {
   margin-top: 30;
   margin-bottom: 30;
 
-  Gtk.Box {
+  Gtk.Box merge_actions {
     orientation: horizontal;
     spacing: 12;
 
@@ -75,6 +75,7 @@ template $MergeWorkspace: Gtk.Box {
   }
 
   Adw.StatusPage empty_status {
+    vexpand: true;
     icon-name: "view-paged-symbolic";
     title: _("Add PDFs to Begin");
     description: _("Choose two or more PDF files to combine into a new document.");

@@ -11,7 +11,7 @@ template $CompressWorkspace: Gtk.Box {
   margin-top: 30;
   margin-bottom: 30;
 
-  Gtk.Box {
+  Gtk.Box compress_actions {
     orientation: horizontal;
     spacing: 12;
 
@@ -64,6 +64,7 @@ template $CompressWorkspace: Gtk.Box {
   }
 
   Adw.StatusPage compress_empty_status {
+    vexpand: true;
     icon-name: "package-x-generic-symbolic";
     title: _("Open a PDF to Compress");
     description: _("Choose a PDF, then save a smaller copy.");

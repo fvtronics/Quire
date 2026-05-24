@@ -27,6 +27,8 @@ mod imp {
         #[template_child]
         pub metadata_empty_choose_button: TemplateChild<gtk::Button>,
         #[template_child]
+        pub metadata_actions: TemplateChild<gtk::Box>,
+        #[template_child]
         pub metadata_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub metadata_content: TemplateChild<gtk::Box>,
@@ -246,6 +248,7 @@ impl MetadataWorkspace {
         }
 
         imp.metadata_empty_status.set_visible(!has_file);
+        imp.metadata_actions.set_visible(has_file);
         imp.metadata_content.set_visible(has_file);
         imp.metadata_choose_button.set_visible(has_file);
         imp.metadata_save_button.set_visible(has_file);
