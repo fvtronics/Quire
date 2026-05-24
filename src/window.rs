@@ -81,6 +81,8 @@ mod imp {
         #[template_child]
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
         #[template_child]
+        pub navigation_split_view: TemplateChild<adw::NavigationSplitView>,
+        #[template_child]
         pub sidebar_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub view_mode_box: TemplateChild<gtk::Box>,
@@ -143,6 +145,7 @@ mod imp {
             self.parent_constructed();
             let obj = self.obj();
             obj.setup_callbacks();
+            obj.setup_responsive_navigation();
             obj.switch_tool(PdfTool::Merge);
         }
     }
@@ -210,6 +213,21 @@ impl FoliosWindow {
         });
     }
 
+    fn setup_responsive_navigation(&self) {
+        let imp = self.imp();
+        let breakpoint = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+            adw::BreakpointConditionLengthType::MaxWidth,
+            800.0,
+            adw::LengthUnit::Sp,
+        ));
+        breakpoint.add_setter(
+            &imp.navigation_split_view.get(),
+            "collapsed",
+            Some(&true.to_value()),
+        );
+        self.add_breakpoint(breakpoint);
+    }
+
     fn switch_tool(&self, tool: PdfTool) {
         let imp = self.imp();
         imp.active_tool.set(tool);
@@ -232,6 +250,7 @@ impl FoliosWindow {
             PdfTool::Metadata => imp.metadata_tool_row.upcast_ref(),
         };
         imp.sidebar_list.select_row(Some(selected_row));
+        imp.navigation_split_view.set_show_content(true);
         self.update_view_mode();
     }
 
