@@ -8,6 +8,7 @@ use super::workspace::{
     run_output_job, setup_advanced_options_menu, show_backend_error, show_toast,
     update_shell_title, update_shell_view_mode, AdvancedOptionsMenu, SinglePdfLoadHandlers,
 };
+use super::PdfTool;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
@@ -345,7 +346,7 @@ impl ExtractWorkspace {
         } else {
             gettext("No PDF selected")
         };
-        update_shell_title(self, &gettext("Extract Pages"), &detail);
+        update_shell_title(self, PdfTool::Extract, &detail);
         update_shell_view_mode(self);
     }
 

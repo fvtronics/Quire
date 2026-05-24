@@ -1,5 +1,5 @@
 use super::ui::{ask_pdf_password, icon_button, PasswordPromptReason};
-use super::FoliosWindow;
+use super::{FoliosWindow, PdfTool};
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
@@ -24,7 +24,7 @@ pub(super) fn show_toast(widget: &impl IsA<gtk::Widget>, message: &str) {
     }
 }
 
-pub(super) fn update_shell_title(widget: &impl IsA<gtk::Widget>, title: &str, subtitle: &str) {
+pub(super) fn update_shell_title(widget: &impl IsA<gtk::Widget>, tool: PdfTool, subtitle: &str) {
     let Some(window) = widget
         .root()
         .and_downcast::<gtk::Window>()
@@ -33,7 +33,7 @@ pub(super) fn update_shell_title(widget: &impl IsA<gtk::Widget>, title: &str, su
         return;
     };
 
-    window.set_content_title(title, subtitle);
+    window.set_tool_content_subtitle(tool, subtitle);
 }
 
 pub(super) fn show_backend_error(

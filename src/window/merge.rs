@@ -8,6 +8,7 @@ use super::workspace::{
     update_shell_title, update_shell_view_mode, AdvancedOptionsMenu, OrderedItemControlOptions,
     PdfLoadResult,
 };
+use super::PdfTool;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
@@ -341,7 +342,7 @@ impl MergeWorkspace {
                     .replace("{}", &count.to_string()),
             }
         };
-        update_shell_title(self, &gettext("Merge PDFs"), &count_text);
+        update_shell_title(self, PdfTool::Merge, &count_text);
         update_shell_view_mode(self);
     }
 

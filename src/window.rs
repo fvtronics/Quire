@@ -280,10 +280,16 @@ impl FoliosWindow {
         self.update_view_mode();
     }
 
-    pub(super) fn set_content_title(&self, title: &str, subtitle: &str) {
+    fn set_content_title(&self, title: &str, subtitle: &str) {
         let imp = self.imp();
         imp.content_title.set_title(title);
         imp.content_title.set_subtitle(subtitle);
+    }
+
+    pub(super) fn set_tool_content_subtitle(&self, tool: PdfTool, subtitle: &str) {
+        if self.imp().active_tool.get() == tool {
+            self.set_content_title(&tool.title(), subtitle);
+        }
     }
 
     fn update_active_workspace(&self) {

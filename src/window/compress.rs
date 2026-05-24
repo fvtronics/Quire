@@ -7,6 +7,7 @@ use super::workspace::{
     run_output_job, setup_advanced_options_menu, update_shell_title, update_shell_view_mode,
     AdvancedOptionsMenu, SinglePdfLoadHandlers,
 };
+use super::PdfTool;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
@@ -249,7 +250,7 @@ impl CompressWorkspace {
         } else {
             gettext("No PDF selected")
         };
-        update_shell_title(self, &gettext("Compress PDF"), &detail);
+        update_shell_title(self, PdfTool::Compress, &detail);
         update_shell_view_mode(self);
     }
 
