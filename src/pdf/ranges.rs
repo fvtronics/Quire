@@ -59,8 +59,7 @@ pub(super) fn split_breaks(rule: SplitRule, page_count: u32) -> Result<Vec<u32>,
         }
     }
 
-    breaks.sort_unstable();
-    breaks.dedup();
+    normalize_page_list(&mut breaks);
     Ok(breaks)
 }
 
@@ -91,7 +90,13 @@ fn parse_page_list(
         }
     }
 
+    normalize_page_list(&mut pages);
     Ok(pages)
+}
+
+fn normalize_page_list(pages: &mut Vec<u32>) {
+    pages.sort_unstable();
+    pages.dedup();
 }
 
 fn parse_page_range_part(input: &str, page_count: usize) -> Result<Vec<u32>, PdfBackendError> {

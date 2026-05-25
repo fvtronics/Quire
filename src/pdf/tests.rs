@@ -54,6 +54,10 @@ fn parse_page_ranges_accepts_single_pages_and_ranges() {
         parse_page_ranges("2, 4-8, 10", 10).unwrap(),
         vec![2, 4, 5, 6, 7, 8, 10]
     );
+    assert_eq!(
+        parse_page_ranges("1-3,3,4,1,2", 10).unwrap(),
+        vec![1, 2, 3, 4]
+    );
 }
 
 #[test]
@@ -75,6 +79,10 @@ fn parse_page_ranges_rejects_invalid_input() {
 #[test]
 fn parse_page_numbers_accepts_comma_only_pages() {
     assert_eq!(parse_page_numbers("2,4,8", 10).unwrap(), vec![2, 4, 8]);
+    assert_eq!(
+        parse_page_numbers("1,2,2,3,4,5,5", 10).unwrap(),
+        vec![1, 2, 3, 4, 5]
+    );
 
     assert_error(parse_page_numbers("", 10), "Enter pages like 2,4,7.");
     assert_error(parse_page_numbers("2-4", 10), "2-4 is not a page number.");
