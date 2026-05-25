@@ -1,5 +1,6 @@
 use super::ui::{
-    clear_box, file_subtitle, open_pdf_file, page_count_label, pdf_file_row, select_folder,
+    clear_box, file_subtitle, open_pdf_file, page_count_error_message, page_count_label,
+    page_numbers_error_message, pdf_file_row, select_folder, set_entry_validation_error,
     single_file_preview_widget,
 };
 use super::workspace::{
@@ -294,9 +295,20 @@ impl SplitWorkspace {
         let imp = self.imp();
         let file = imp.split.file.borrow();
         let has_file = file.is_some();
-        let has_split_rule = self.split_rule().is_ok();
         let is_busy = imp.split.job.is_busy(imp.is_running.get());
         let split_mode = SplitMode::from_index(imp.split_after_row.selected());
+        let split_rule = self.split_rule();
+        let has_split_rule = split_rule.is_ok();
+        let has_specific_pages_input = !imp.split_specific_pages_entry.text().trim().is_empty();
+        let has_every_n_pages_input = !imp.split_pages_entry.text().trim().is_empty();
+        let specific_pages_error = has_file
+            && split_mode == Some(SplitMode::SpecificPages)
+            && has_specific_pages_input
+            && split_rule.is_err();
+        let every_n_pages_error = has_file
+            && split_mode == Some(SplitMode::EveryNPages)
+            && has_every_n_pages_input
+            && split_rule.is_err();
         let preview = imp.split.preview.borrow();
 
         imp.split_file_list.remove_all();
@@ -335,6 +347,16 @@ impl SplitWorkspace {
         imp.split_pages_entry
             .set_sensitive(has_file && split_mode == Some(SplitMode::EveryNPages) && !is_busy);
         imp.split_prefix_entry.set_sensitive(has_file && !is_busy);
+        set_entry_validation_error(
+            &imp.split_specific_pages_entry,
+            specific_pages_error,
+            &page_numbers_error_message(),
+        );
+        set_entry_validation_error(
+            &imp.split_pages_entry,
+            every_n_pages_error,
+            &page_count_error_message(),
+        );
 
         let detail = if imp.is_running.get() {
             gettext("Splitting PDF...")
@@ -355,36 +377,45 @@ impl SplitWorkspace {
             Some(SplitMode::EveryPage) => Ok(crate::pdf::SplitRule::EveryPage),
             Some(SplitMode::EvenPages) => Ok(crate::pdf::SplitRule::EvenPages),
             Some(SplitMode::OddPages) => Ok(crate::pdf::SplitRule::OddPages),
-            Some(SplitMode::SpecificPages) => {
-                let pages = crate::pdf::parse_page_numbers(
-                    imp.split_specific_pages_entry.text().as_str(),
-                    imp.split.page_count.get(),
-                )?;
-                Ok(crate::pdf::SplitRule::SpecificPages(pages))
-            }
-            Some(SplitMode::EveryNPages) => {
-                let pages = imp
-                    .split_pages_entry
-                    .text()
-                    .trim()
-                    .parse::<u32>()
-                    .map_err(|_| {
-                        crate::pdf::PdfBackendError::InvalidPageRange(
-                            "Enter a page count of 1 or more.".to_string(),
-                        )
-                    })?;
-
-                if pages == 0 {
-                    Err(crate::pdf::PdfBackendError::InvalidPageRange(
-                        "Enter a page count of 1 or more.".to_string(),
-                    ))
-                } else {
-                    Ok(crate::pdf::SplitRule::EveryNPages(pages))
-                }
-            }
+            Some(SplitMode::SpecificPages) => Ok(crate::pdf::SplitRule::SpecificPages(
+                self.split_specific_pages()?,
+            )),
+            Some(SplitMode::EveryNPages) => Ok(crate::pdf::SplitRule::EveryNPages(
+                self.split_every_n_pages()?,
+            )),
             None => Err(crate::pdf::PdfBackendError::InvalidPageRange(
                 "Choose how to split this PDF.".to_string(),
             )),
+        }
+    }
+
+    fn split_specific_pages(&self) -> Result<Vec<u32>, crate::pdf::PdfBackendError> {
+        let imp = self.imp();
+        crate::pdf::parse_page_numbers(
+            imp.split_specific_pages_entry.text().as_str(),
+            imp.split.page_count.get(),
+        )
+    }
+
+    fn split_every_n_pages(&self) -> Result<u32, crate::pdf::PdfBackendError> {
+        let pages = self
+            .imp()
+            .split_pages_entry
+            .text()
+            .trim()
+            .parse::<u32>()
+            .map_err(|_| {
+                crate::pdf::PdfBackendError::InvalidPageRange(
+                    crate::pdf::SPLIT_PAGE_COUNT_HINT.to_string(),
+                )
+            })?;
+
+        if pages == 0 {
+            Err(crate::pdf::PdfBackendError::InvalidPageRange(
+                crate::pdf::SPLIT_PAGE_COUNT_HINT.to_string(),
+            ))
+        } else {
+            Ok(pages)
         }
     }
 

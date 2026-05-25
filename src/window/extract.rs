@@ -1,7 +1,7 @@
 use super::ui::{
     format_page_ranges, icon_button, normalize_pages, open_pdf_file, page_count_label,
-    pdf_file_row, preview_tile, rotated_list_preview_prefix, save_pdf_file, tile_controls,
-    tile_label, tile_preview_widget,
+    page_ranges_error_message, pdf_file_row, preview_tile, rotated_list_preview_prefix,
+    save_pdf_file, set_entry_validation_error, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
     load_single_processable_pdf, open_output, output_option_callback, parent_window,
@@ -284,7 +284,8 @@ impl ExtractWorkspace {
         let imp = self.imp();
         let has_file = imp.extract.file.borrow().is_some();
         let has_ranges = !imp.extract_ranges_entry.text().trim().is_empty();
-        let has_valid_ranges = has_ranges && self.extract_pages_from_ranges().is_ok();
+        let has_range_error = has_file && has_ranges && self.extract_pages_from_ranges().is_err();
+        let has_valid_ranges = has_ranges && !has_range_error;
         let has_selected_pages = !imp.extract.selected_pages.borrow().is_empty();
         let is_busy = imp.extract.job.is_busy(imp.is_running.get());
 
@@ -336,6 +337,11 @@ impl ExtractWorkspace {
         imp.extract_open_output_button
             .set_sensitive(imp.extract.job.has_last_output() && !is_busy);
         imp.extract_ranges_entry.set_sensitive(has_file && !is_busy);
+        set_entry_validation_error(
+            &imp.extract_ranges_entry,
+            has_range_error,
+            &page_ranges_error_message(),
+        );
 
         let detail = if imp.is_running.get() {
             gettext("Extracting pages...")

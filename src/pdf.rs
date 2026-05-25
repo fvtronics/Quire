@@ -15,6 +15,7 @@ mod types;
 pub use operations::{
     compress_pdf, edit_pdf_metadata, extract_pages, merge_pdfs, organize_pdf, split_pdf,
 };
+pub(crate) use ranges::SPLIT_PAGE_COUNT_HINT;
 pub use ranges::{parse_page_numbers, parse_page_ranges};
 pub use types::{
     CompressOptions, PageSelection, PdfBackendError, PdfDocumentMetadata, PdfEditableMetadata,

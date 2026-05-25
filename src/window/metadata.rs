@@ -1,6 +1,6 @@
 use super::ui::{
     clear_box, file_subtitle, open_pdf_file, pdf_file_row, save_pdf_file,
-    single_file_preview_widget,
+    set_entry_validation_error, single_file_preview_widget,
 };
 use super::workspace::{
     load_single_processable_pdf, open_output, output_option_callback, parent_window,
@@ -13,6 +13,10 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
 use std::path::PathBuf;
+
+fn keywords_error_message() -> String {
+    gettext("Enter keywords separated by commas.")
+}
 
 mod imp {
     use super::super::state::MetadataState;
@@ -238,6 +242,9 @@ impl MetadataWorkspace {
         let imp = self.imp();
         let file = imp.metadata.file.borrow();
         let has_file = file.is_some();
+        let has_keywords_error =
+            has_file && normalize_keywords(imp.metadata_keywords_entry.text().as_str()).is_err();
+        let has_valid_metadata = !has_keywords_error;
         let is_busy = imp.metadata.job.is_busy(imp.is_running.get());
         let preview = imp.metadata.preview.borrow();
 
@@ -262,12 +269,13 @@ impl MetadataWorkspace {
         imp.metadata_choose_button.set_sensitive(!is_busy);
         imp.metadata_empty_choose_button.set_sensitive(!is_busy);
         imp.metadata_save_button
-            .set_sensitive(has_file && self.metadata_from_entries().is_ok() && !is_busy);
+            .set_sensitive(has_file && has_valid_metadata && !is_busy);
         imp.metadata_open_output_button
             .set_sensitive(imp.metadata.job.has_last_output() && !is_busy);
         imp.metadata_advanced_options_button
             .set_sensitive(has_file && !is_busy);
         self.set_entries_sensitive(has_file && !is_busy);
+        self.update_keywords_entry_state(has_keywords_error);
 
         let detail = if imp.is_running.get() {
             gettext("Saving metadata...")
@@ -310,6 +318,12 @@ impl MetadataWorkspace {
             subject: imp.metadata_subject_entry.text().to_string(),
             keywords: normalize_keywords(imp.metadata_keywords_entry.text().as_str())?,
         })
+    }
+
+    fn update_keywords_entry_state(&self, has_error: bool) {
+        let entry = &self.imp().metadata_keywords_entry;
+
+        set_entry_validation_error(entry, has_error, &keywords_error_message());
     }
 
     fn open_last_output(&self) {

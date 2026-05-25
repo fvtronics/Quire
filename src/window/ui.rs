@@ -124,6 +124,28 @@ pub(super) fn icon_button(icon_name: &str, tooltip: &str) -> gtk::Button {
     button
 }
 
+pub(super) fn set_entry_validation_error(entry: &adw::EntryRow, has_error: bool, message: &str) {
+    if has_error {
+        entry.add_css_class("error");
+        entry.set_tooltip_text(Some(message));
+    } else {
+        entry.remove_css_class("error");
+        entry.set_tooltip_text(None);
+    }
+}
+
+pub(super) fn page_ranges_error_message() -> String {
+    gettext("Enter page ranges like 1,3-5,8.")
+}
+
+pub(super) fn page_numbers_error_message() -> String {
+    gettext("Enter pages like 2,4,7.")
+}
+
+pub(super) fn page_count_error_message() -> String {
+    gettext("Enter a page count of 1 or more.")
+}
+
 pub(super) fn pdf_file_row(path: &Path, subtitle: String) -> adw::ActionRow {
     let row = adw::ActionRow::builder()
         .title(file_title(path))

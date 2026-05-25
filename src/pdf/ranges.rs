@@ -11,6 +11,7 @@ use super::types::{PdfBackendError, SplitRule};
 
 const PAGE_RANGE_HINT: &str = "Enter page ranges like 1,3-5,8.";
 const PAGE_LIST_HINT: &str = "Enter pages like 2,4,7.";
+pub(crate) const SPLIT_PAGE_COUNT_HINT: &str = "Enter a page count of 1 or more.";
 
 pub fn parse_page_ranges(input: &str, page_count: usize) -> Result<Vec<u32>, PdfBackendError> {
     parse_page_list(input, page_count, true, PdfBackendError::NoPagesSelected)
@@ -42,7 +43,7 @@ pub(super) fn split_breaks(rule: SplitRule, page_count: u32) -> Result<Vec<u32>,
         SplitRule::EveryNPages(pages) => {
             if pages == 0 {
                 return Err(PdfBackendError::InvalidPageRange(
-                    "Enter a page count of 1 or more.".to_string(),
+                    SPLIT_PAGE_COUNT_HINT.to_string(),
                 ));
             }
             (pages..=page_count).step_by(pages as usize).collect()
