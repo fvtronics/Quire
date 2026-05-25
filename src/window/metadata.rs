@@ -172,7 +172,9 @@ impl MetadataWorkspace {
         let Some(parent) = parent_window(self) else {
             return;
         };
-        let metadata = self.metadata_from_entries();
+        let Ok(metadata) = self.metadata_from_entries() else {
+            return;
+        };
         let options = self.imp().metadata.options.options();
 
         let workspace = self.clone();
@@ -259,7 +261,8 @@ impl MetadataWorkspace {
 
         imp.metadata_choose_button.set_sensitive(!is_busy);
         imp.metadata_empty_choose_button.set_sensitive(!is_busy);
-        imp.metadata_save_button.set_sensitive(has_file && !is_busy);
+        imp.metadata_save_button
+            .set_sensitive(has_file && self.metadata_from_entries().is_ok() && !is_busy);
         imp.metadata_open_output_button
             .set_sensitive(imp.metadata.job.has_last_output() && !is_busy);
         imp.metadata_advanced_options_button
@@ -299,14 +302,14 @@ impl MetadataWorkspace {
             .set_subtitle(&metadata_subtitle(&metadata.producer));
     }
 
-    fn metadata_from_entries(&self) -> crate::pdf::PdfEditableMetadata {
+    fn metadata_from_entries(&self) -> Result<crate::pdf::PdfEditableMetadata, ()> {
         let imp = self.imp();
-        crate::pdf::PdfEditableMetadata {
+        Ok(crate::pdf::PdfEditableMetadata {
             title: imp.metadata_title_entry.text().to_string(),
             author: imp.metadata_author_entry.text().to_string(),
             subject: imp.metadata_subject_entry.text().to_string(),
-            keywords: imp.metadata_keywords_entry.text().to_string(),
-        }
+            keywords: normalize_keywords(imp.metadata_keywords_entry.text().as_str())?,
+        })
     }
 
     fn open_last_output(&self) {
@@ -321,5 +324,41 @@ fn metadata_subtitle(value: &str) -> String {
         gettext("N/A")
     } else {
         value.to_string()
+    }
+}
+
+fn normalize_keywords(value: &str) -> Result<String, ()> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Ok(String::new());
+    }
+
+    let keywords = value.split(',').map(str::trim).collect::<Vec<_>>();
+    if keywords.iter().any(|keyword| keyword.is_empty()) {
+        return Err(());
+    }
+
+    Ok(keywords.join(", "))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_keywords;
+
+    #[test]
+    fn normalize_keywords_trims_comma_separated_values() {
+        assert_eq!(normalize_keywords("").unwrap(), "");
+        assert_eq!(normalize_keywords("  ").unwrap(), "");
+        assert_eq!(
+            normalize_keywords("alpha,beta, gamma ").unwrap(),
+            "alpha, beta, gamma"
+        );
+    }
+
+    #[test]
+    fn normalize_keywords_rejects_empty_keywords() {
+        assert!(normalize_keywords(",alpha").is_err());
+        assert!(normalize_keywords("alpha,,beta").is_err());
+        assert!(normalize_keywords("alpha, ").is_err());
     }
 }
