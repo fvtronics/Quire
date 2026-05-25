@@ -20,6 +20,7 @@
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
+use gettextrs::gettext;
 use gtk::{gio, glib};
 
 mod compress;
@@ -65,20 +66,20 @@ impl ViewMode {
 impl PdfTool {
     fn title(self) -> String {
         match self {
-            Self::Merge => gettextrs::gettext("Merge PDFs"),
-            Self::Compress => gettextrs::gettext("Compress PDF"),
-            Self::Organize => gettextrs::gettext("Organize Pages"),
-            Self::Extract => gettextrs::gettext("Extract Pages"),
-            Self::Split => gettextrs::gettext("Split PDF"),
-            Self::Metadata => gettextrs::gettext("Edit Metadata"),
+            Self::Merge => gettext("Merge PDFs"),
+            Self::Compress => gettext("Compress PDF"),
+            Self::Organize => gettext("Organize Pages"),
+            Self::Extract => gettext("Extract Pages"),
+            Self::Split => gettext("Split PDF"),
+            Self::Metadata => gettext("Edit Metadata"),
         }
     }
 
     fn default_subtitle(self) -> String {
         match self {
-            Self::Merge => gettextrs::gettext("No files selected"),
+            Self::Merge => gettext("No files selected"),
             Self::Compress | Self::Organize | Self::Extract | Self::Split | Self::Metadata => {
-                gettextrs::gettext("No PDF selected")
+                gettext("No PDF selected")
             }
         }
     }
