@@ -1,7 +1,8 @@
-# v0.1.6
+# v0.1.7
 
 <p>Changes</p>
 <ul>
-  <li>Improved the sidebar layout and navigation on smaller windows</li>
-  <li>Centered the empty state shown before a file is selected</li>
+  <li>Added clearer hints and error feedback when a field needs attention</li>
+  <li>Improved validation when editing PDF keywords</li>
+  <li>Fixed page ranges so repeated pages are handled correctly</li>
 </ul>

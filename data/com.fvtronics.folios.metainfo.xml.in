@@ -62,6 +62,16 @@
   </branding>
 
   <releases>
+    <release version="0.1.7" date="2026-05-25">
+      <description translate="no">
+        <p>Changes</p>
+        <ul>
+          <li>Added clearer hints and error feedback when a field needs attention</li>
+          <li>Improved validation when editing PDF keywords</li>
+          <li>Fixed page ranges so repeated pages are handled correctly</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.6" date="2026-05-24">
       <description translate="no">
         <p>Changes</p>
