@@ -270,13 +270,10 @@ pub(super) fn setup_advanced_options_menu(
     menu: AdvancedOptionsMenu,
 ) {
     let popover = gtk::Popover::new();
+    popover.add_css_class("menu");
+
     let list = gtk::ListBox::new();
     list.set_selection_mode(gtk::SelectionMode::None);
-    list.add_css_class("boxed-list");
-    list.set_margin_top(6);
-    list.set_margin_bottom(6);
-    list.set_margin_start(6);
-    list.set_margin_end(6);
 
     if let Some(rotate) = menu.rotate {
         let rotate_row = adw::ActionRow::builder()
@@ -337,6 +334,7 @@ pub(super) struct OrderedItemControls {
     pub remove: gtk::Button,
 }
 
+#[derive(Clone, Copy)]
 pub(super) struct OrderedItemControlOptions {
     pub controls_sensitive: bool,
     pub can_move_up: bool,
@@ -389,6 +387,77 @@ pub(super) fn ordered_item_controls(
         rotate,
         remove,
     }
+}
+
+pub(super) fn add_ordered_item_context_menu(
+    widget: &impl IsA<gtk::Widget>,
+    options: OrderedItemControlOptions,
+    on_move_up: impl Fn() + 'static,
+    on_move_down: impl Fn() + 'static,
+    on_rotate: impl Fn() + 'static,
+    on_remove: impl Fn() + 'static,
+) {
+    let menu = gio::Menu::new();
+    menu.append(Some(&gettext("Move Up")), Some("item.move-up"));
+    menu.append(Some(&gettext("Move Down")), Some("item.move-down"));
+    menu.append(Some(&gettext("Rotate Clockwise")), Some("item.rotate"));
+    menu.append(Some(&gettext("Remove")), Some("item.remove"));
+
+    let actions = gio::SimpleActionGroup::new();
+    add_context_menu_action(
+        &actions,
+        "move-up",
+        options.controls_sensitive && options.can_move_up,
+        on_move_up,
+    );
+    add_context_menu_action(
+        &actions,
+        "move-down",
+        options.controls_sensitive && options.can_move_down,
+        on_move_down,
+    );
+    add_context_menu_action(&actions, "rotate", options.controls_sensitive, on_rotate);
+    add_context_menu_action(
+        &actions,
+        "remove",
+        options.controls_sensitive && options.can_remove,
+        on_remove,
+    );
+    widget.insert_action_group("item", Some(&actions));
+
+    let popover = gtk::PopoverMenu::from_model(Some(&menu));
+    popover.set_has_arrow(false);
+    popover.set_position(gtk::PositionType::Right);
+    popover.set_parent(widget);
+
+    let gesture = gtk::GestureClick::new();
+    gesture.set_button(gtk::gdk::BUTTON_SECONDARY);
+    let popover_for_click = popover.clone();
+    gesture.connect_pressed(move |gesture, _, x, y| {
+        let bounds = gtk::gdk::Rectangle::new(x as i32, y as i32, 1, 1);
+        popover_for_click.set_pointing_to(Some(&bounds));
+        popover_for_click.popup();
+        gesture.set_state(gtk::EventSequenceState::Claimed);
+    });
+    widget.add_controller(gesture);
+
+    widget.connect_unrealize(move |_| {
+        popover.unparent();
+    });
+}
+
+fn add_context_menu_action(
+    actions: &gio::SimpleActionGroup,
+    name: &str,
+    sensitive: bool,
+    on_activate: impl Fn() + 'static,
+) {
+    let action = gio::SimpleAction::new(name, None);
+    action.set_enabled(sensitive);
+    action.connect_activate(move |_, _| {
+        on_activate();
+    });
+    actions.add_action(&action);
 }
 
 fn backend_error_message(error: &crate::pdf::PdfBackendError) -> String {

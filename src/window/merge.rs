@@ -3,10 +3,10 @@ use super::ui::{
     rotated_list_preview_prefix, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    load_processable_pdf, open_output, ordered_item_controls, output_option_callback,
-    parent_window, run_output_job, setup_advanced_options_menu, show_pdf_load_error,
-    update_shell_title, update_shell_view_mode, AdvancedOptionsMenu, OrderedItemControlOptions,
-    PdfLoadResult,
+    add_ordered_item_context_menu, load_processable_pdf, open_output, ordered_item_controls,
+    output_option_callback, parent_window, run_output_job, setup_advanced_options_menu,
+    show_pdf_load_error, update_shell_title, update_shell_view_mode, AdvancedOptionsMenu,
+    OrderedItemControlOptions, PdfLoadResult,
 };
 use super::PdfTool;
 use adw::prelude::*;
@@ -363,7 +363,12 @@ impl MergeWorkspace {
         row.add_prefix(&rotated_list_preview_prefix(preview, rotation));
 
         let imp = self.imp();
-        let controls_sensitive = !imp.merge.job.is_busy(imp.is_running.get());
+        let options = OrderedItemControlOptions {
+            controls_sensitive: !imp.merge.job.is_busy(imp.is_running.get()),
+            can_move_up: index > 0,
+            can_move_down: index + 1 < count,
+            can_remove: true,
+        };
         let workspace = self.clone();
         let move_up = move || workspace.move_file(index, index.saturating_sub(1));
         let workspace = self.clone();
@@ -372,19 +377,17 @@ impl MergeWorkspace {
         let rotate = move || workspace.rotate_file(index);
         let workspace = self.clone();
         let remove = move || workspace.remove_file(index);
-        ordered_item_controls(
-            OrderedItemControlOptions {
-                controls_sensitive,
-                can_move_up: index > 0,
-                can_move_down: index + 1 < count,
-                can_remove: true,
-            },
-            move_up,
-            move_down,
-            rotate,
-            remove,
-        )
-        .append_to_row(&row);
+        ordered_item_controls(options, move_up, move_down, rotate, remove).append_to_row(&row);
+
+        let workspace = self.clone();
+        let move_up = move || workspace.move_file(index, index.saturating_sub(1));
+        let workspace = self.clone();
+        let move_down = move || workspace.move_file(index, index.saturating_add(1));
+        let workspace = self.clone();
+        let rotate = move || workspace.rotate_file(index);
+        let workspace = self.clone();
+        let remove = move || workspace.remove_file(index);
+        add_ordered_item_context_menu(&row, options, move_up, move_down, rotate, remove);
 
         self.add_file_drag_and_drop(&row, index);
 
@@ -408,7 +411,12 @@ impl MergeWorkspace {
         controls.append(&size);
 
         let imp = self.imp();
-        let controls_sensitive = !imp.merge.job.is_busy(imp.is_running.get());
+        let options = OrderedItemControlOptions {
+            controls_sensitive: !imp.merge.job.is_busy(imp.is_running.get()),
+            can_move_up: index > 0,
+            can_move_down: index + 1 < count,
+            can_remove: true,
+        };
         let workspace = self.clone();
         let move_up = move || workspace.move_file(index, index.saturating_sub(1));
         let workspace = self.clone();
@@ -417,21 +425,18 @@ impl MergeWorkspace {
         let rotate = move || workspace.rotate_file(index);
         let workspace = self.clone();
         let remove = move || workspace.remove_file(index);
-        ordered_item_controls(
-            OrderedItemControlOptions {
-                controls_sensitive,
-                can_move_up: index > 0,
-                can_move_down: index + 1 < count,
-                can_remove: true,
-            },
-            move_up,
-            move_down,
-            rotate,
-            remove,
-        )
-        .append_to_box(&controls);
+        ordered_item_controls(options, move_up, move_down, rotate, remove).append_to_box(&controls);
 
         tile.append(&controls);
+        let workspace = self.clone();
+        let move_up = move || workspace.move_file(index, index.saturating_sub(1));
+        let workspace = self.clone();
+        let move_down = move || workspace.move_file(index, index.saturating_add(1));
+        let workspace = self.clone();
+        let rotate = move || workspace.rotate_file(index);
+        let workspace = self.clone();
+        let remove = move || workspace.remove_file(index);
+        add_ordered_item_context_menu(&tile, options, move_up, move_down, rotate, remove);
         self.add_file_drag_and_drop(&tile, index);
 
         tile
