@@ -15,10 +15,43 @@ pub struct PdfInput {
     pub rotation: i64,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PageSelectionKind {
+    Page,
+    Blank,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PageSelection {
     pub page_number: u32,
     pub rotation: i64,
+    pub kind: PageSelectionKind,
+}
+
+impl PageSelection {
+    pub fn page(page_number: u32, rotation: i64) -> Self {
+        Self {
+            page_number,
+            rotation,
+            kind: PageSelectionKind::Page,
+        }
+    }
+
+    pub fn blank_like_page(page_number: u32, rotation: i64) -> Self {
+        Self {
+            page_number,
+            rotation,
+            kind: PageSelectionKind::Blank,
+        }
+    }
+
+    pub fn is_blank(&self) -> bool {
+        self.kind == PageSelectionKind::Blank
+    }
+
+    pub fn rotate_clockwise(&mut self) {
+        self.rotation = (self.rotation + 90).rem_euclid(360);
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

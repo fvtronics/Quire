@@ -5,16 +5,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use lopdf::{Document, Object, ObjectId};
+use lopdf::{dictionary, Document, Object, ObjectId};
 
 use super::types::{PageSelection, PdfBackendError};
 
 pub(super) fn page_selections(pages: std::ops::RangeInclusive<u32>) -> Vec<PageSelection> {
     pages
-        .map(|page_number| PageSelection {
-            page_number,
-            rotation: 0,
-        })
+        .map(|page_number| PageSelection::page(page_number, 0))
         .collect()
 }
 
@@ -65,6 +62,27 @@ pub(super) fn rotated_page_object(
         .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?
         .clone();
     set_page_rotation(&mut dictionary, page_rotation, rotation);
+
+    Ok(Object::Dictionary(dictionary))
+}
+
+pub(super) fn blank_page_object(
+    document: &Document,
+    source_object_id: ObjectId,
+    rotation: i64,
+) -> Result<Object, PdfBackendError> {
+    let mut dictionary = dictionary! {
+        "Type" => "Page",
+        "Resources" => dictionary! {},
+        "MediaBox" => inherited_page_object(document, source_object_id, b"MediaBox")
+            .ok_or_else(|| PdfBackendError::InvalidDocument("MediaBox not found".to_string()))?,
+    };
+
+    if let Some(crop_box) = inherited_page_object(document, source_object_id, b"CropBox") {
+        dictionary.set("CropBox", crop_box);
+    }
+
+    set_page_rotation(&mut dictionary, 0, rotation);
 
     Ok(Object::Dictionary(dictionary))
 }

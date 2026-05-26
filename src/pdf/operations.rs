@@ -14,7 +14,7 @@ use super::document::{
     build_and_save_document, load_document, remove_metadata, save_document, OutputPages,
 };
 use super::metadata::edit_pdf_metadata_blocking;
-use super::pages::{page_selections, rotated_page_object};
+use super::pages::{blank_page_object, page_selections, rotated_page_object};
 use super::ranges::{split_breaks, split_output_prefix};
 use super::types::{
     CompressOptions, PageSelection, PdfBackendError, PdfEditableMetadata, PdfInput,
@@ -164,6 +164,7 @@ fn write_selected_pages_from_document(
 
     let pages = document.get_pages();
     let mut output_pages = OutputPages::with_capacity(page_numbers.len());
+    let mut next_page_id = document.max_id + 1;
 
     for selection in page_numbers {
         let object_id = pages.get(&selection.page_number).ok_or_else(|| {
@@ -172,10 +173,14 @@ fn write_selected_pages_from_document(
                 selection.page_number
             ))
         })?;
-        output_pages.push(
-            *object_id,
-            rotated_page_object(document, *object_id, selection.rotation)?,
-        );
+        let page_id = (next_page_id, 0);
+        next_page_id += 1;
+        let page = if selection.is_blank() {
+            blank_page_object(document, *object_id, selection.rotation)?
+        } else {
+            rotated_page_object(document, *object_id, selection.rotation)?
+        };
+        output_pages.push(page_id, page);
     }
 
     build_and_save_document(document.objects.clone(), output_pages, output_file, options)

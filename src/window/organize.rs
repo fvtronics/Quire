@@ -1,11 +1,13 @@
 use super::ui::{
-    dim_tile_label, open_pdf_file, page_count_label, preview_tile, rotated_list_preview_prefix,
-    save_pdf_file, tile_controls, tile_label, tile_preview_widget,
+    blank_list_preview_prefix, blank_tile_preview_widget, dim_tile_label, open_pdf_file,
+    page_count_label, preview_tile, rotated_list_preview_prefix, save_pdf_file, tile_controls,
+    tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    add_ordered_item_context_menu, load_single_processable_pdf, open_output, ordered_item_controls,
-    output_option_callback, parent_window, run_output_job, setup_advanced_options_menu,
-    update_shell_title, update_shell_view_mode, AdvancedOptionsMenu, OrderedItemControlOptions,
+    add_item_context_menu, load_single_processable_pdf, open_output,
+    ordered_item_context_menu_items, ordered_item_controls, output_option_callback, parent_window,
+    run_output_job, setup_advanced_options_menu, update_shell_title, update_shell_view_mode,
+    AdvancedOptionsMenu, ContextMenuItem, OrderedItemActions, OrderedItemControlOptions,
     SinglePdfLoadHandlers,
 };
 use super::PdfTool;
@@ -246,26 +248,18 @@ impl OrganizeWorkspace {
         let has_pages = !page_order.is_empty();
         let is_busy = imp.organize.job.is_busy(imp.is_running.get());
         let previews = imp.organize.previews.borrow();
-        let rotations = imp.organize.rotations.borrow();
 
         imp.organize_page_list.remove_all();
         imp.organize_page_grid.remove_all();
-        for (index, page_number) in page_order.iter().enumerate() {
-            let preview = previews.get(page_number);
-            let rotation = *rotations.get(page_number).unwrap_or(&0);
-            imp.organize_page_list.append(&self.page_row(
-                index,
-                *page_number,
-                page_order.len(),
-                preview,
-                rotation,
-            ));
+        for (index, page) in page_order.iter().enumerate() {
+            let preview = previews.get(&page.page_number);
+            imp.organize_page_list
+                .append(&self.page_row(index, *page, page_order.len(), preview));
             imp.organize_page_grid.append(&self.organize_page_tile(
-                *page_number,
+                *page,
                 preview,
                 index,
                 page_order.len(),
-                rotation,
             ));
         }
 
@@ -306,13 +300,12 @@ impl OrganizeWorkspace {
     fn page_row(
         &self,
         index: usize,
-        page_number: u32,
+        page: crate::pdf::PageSelection,
         count: usize,
         preview: Option<&crate::preview::PagePreview>,
-        rotation: i64,
     ) -> adw::ActionRow {
         let row = adw::ActionRow::builder()
-            .title(format!("{} {page_number}", gettext("Page")))
+            .title(page_title(page))
             .subtitle(format!(
                 "{} {} {} {count}",
                 gettext("Position"),
@@ -322,7 +315,11 @@ impl OrganizeWorkspace {
             .activatable(true)
             .build();
 
-        row.add_prefix(&rotated_list_preview_prefix(preview, rotation));
+        if page.is_blank() {
+            row.add_prefix(&blank_list_preview_prefix(preview, page.rotation));
+        } else {
+            row.add_prefix(&rotated_list_preview_prefix(preview, page.rotation));
+        }
 
         let imp = self.imp();
         let options = OrderedItemControlOptions {
@@ -331,42 +328,30 @@ impl OrganizeWorkspace {
             can_move_down: index + 1 < count,
             can_remove: count > 1,
         };
-        let workspace = self.clone();
-        let move_up = move || workspace.move_page(index, index.saturating_sub(1));
-        let workspace = self.clone();
-        let move_down = move || workspace.move_page(index, index.saturating_add(1));
-        let workspace = self.clone();
-        let rotate = move || workspace.rotate_page(page_number);
-        let workspace = self.clone();
-        let remove = move || workspace.remove_page(index);
-        ordered_item_controls(options, move_up, move_down, rotate, remove).append_to_row(&row);
+        let actions = self.page_actions(options, index);
+        ordered_item_controls(&actions).append_to_row(&row);
 
-        let workspace = self.clone();
-        let move_up = move || workspace.move_page(index, index.saturating_sub(1));
-        let workspace = self.clone();
-        let move_down = move || workspace.move_page(index, index.saturating_add(1));
-        let workspace = self.clone();
-        let rotate = move || workspace.rotate_page(page_number);
-        let workspace = self.clone();
-        let remove = move || workspace.remove_page(index);
-        add_ordered_item_context_menu(&row, options, move_up, move_down, rotate, remove);
+        self.add_page_context_menu(&row, &actions, index);
 
-        self.add_page_drag_and_drop(&row, page_number);
+        self.add_page_drag_and_drop(&row, index);
 
         row
     }
 
     fn organize_page_tile(
         &self,
-        page_number: u32,
+        page: crate::pdf::PageSelection,
         preview: Option<&crate::preview::PagePreview>,
         index: usize,
         count: usize,
-        rotation: i64,
     ) -> gtk::Box {
         let tile = preview_tile();
-        tile.append(&tile_preview_widget(preview, rotation));
-        tile.append(&tile_label(format!("{} {}", gettext("Page"), page_number)));
+        if page.is_blank() {
+            tile.append(&blank_tile_preview_widget(preview, page.rotation));
+        } else {
+            tile.append(&tile_preview_widget(preview, page.rotation));
+        }
+        tile.append(&tile_label(page_title(page)));
 
         let controls = tile_controls();
         let position = dim_tile_label(format!("{}/{}", index + 1, count));
@@ -379,30 +364,60 @@ impl OrganizeWorkspace {
             can_move_down: index + 1 < count,
             can_remove: count > 1,
         };
-        let workspace = self.clone();
-        let move_up = move || workspace.move_page(index, index.saturating_sub(1));
-        let workspace = self.clone();
-        let move_down = move || workspace.move_page(index, index.saturating_add(1));
-        let workspace = self.clone();
-        let rotate = move || workspace.rotate_page(page_number);
-        let workspace = self.clone();
-        let remove = move || workspace.remove_page(index);
-        ordered_item_controls(options, move_up, move_down, rotate, remove).append_to_box(&controls);
+        let actions = self.page_actions(options, index);
+        ordered_item_controls(&actions).append_to_box(&controls);
 
         tile.append(&controls);
+        self.add_page_context_menu(&tile, &actions, index);
+
+        self.add_page_drag_and_drop(&tile, index);
+
+        tile
+    }
+
+    fn page_actions(&self, options: OrderedItemControlOptions, index: usize) -> OrderedItemActions {
         let workspace = self.clone();
         let move_up = move || workspace.move_page(index, index.saturating_sub(1));
         let workspace = self.clone();
         let move_down = move || workspace.move_page(index, index.saturating_add(1));
         let workspace = self.clone();
-        let rotate = move || workspace.rotate_page(page_number);
+        let rotate = move || workspace.rotate_page(index);
         let workspace = self.clone();
         let remove = move || workspace.remove_page(index);
-        add_ordered_item_context_menu(&tile, options, move_up, move_down, rotate, remove);
 
-        self.add_page_drag_and_drop(&tile, page_number);
+        OrderedItemActions::new(options, move_up, move_down, rotate, remove)
+    }
 
-        tile
+    fn add_page_context_menu(
+        &self,
+        widget: &impl IsA<gtk::Widget>,
+        actions: &OrderedItemActions,
+        index: usize,
+    ) {
+        let workspace = self.clone();
+        let insert_blank = move || workspace.insert_blank_page_after(index);
+        let workspace = self.clone();
+        let duplicate = move || workspace.duplicate_page(index);
+
+        let mut items = ordered_item_context_menu_items(actions);
+        items.splice(
+            2..2,
+            [
+                ContextMenuItem::new(
+                    "insert-blank",
+                    gettext("Insert Blank Page After"),
+                    actions.options().controls_sensitive,
+                    insert_blank,
+                ),
+                ContextMenuItem::new(
+                    "duplicate",
+                    gettext("Duplicate"),
+                    actions.options().controls_sensitive,
+                    duplicate,
+                ),
+            ],
+        );
+        add_item_context_menu(widget, items);
     }
 
     fn move_page(&self, from: usize, to: usize) {
@@ -415,13 +430,14 @@ impl OrganizeWorkspace {
         }
     }
 
-    fn rotate_page(&self, page_number: u32) {
+    fn rotate_page(&self, index: usize) {
         if self.is_busy() {
             return;
         }
 
-        self.imp().organize.rotate_page(page_number);
-        self.update_view();
+        if self.imp().organize.rotate_page(index) {
+            self.update_view();
+        }
     }
 
     fn rotate_all_pages(&self) {
@@ -434,23 +450,23 @@ impl OrganizeWorkspace {
         }
     }
 
-    fn reorder_page(&self, dragged_page: u32, target_page: u32) {
+    fn reorder_page(&self, from: usize, to: usize) {
         if self.is_busy() {
             return;
         }
 
-        if self.imp().organize.reorder_page(dragged_page, target_page) {
+        if self.imp().organize.reorder_page(from, to) {
             self.update_view();
         }
     }
 
-    fn add_page_drag_and_drop(&self, widget: &impl IsA<gtk::Widget>, page_number: u32) {
+    fn add_page_drag_and_drop(&self, widget: &impl IsA<gtk::Widget>, index: usize) {
         let drag_source = gtk::DragSource::builder()
             .actions(gtk::gdk::DragAction::MOVE)
             .build();
         drag_source.connect_prepare(move |_, _, _| {
             Some(gtk::gdk::ContentProvider::for_value(
-                &page_number.to_value(),
+                &(index as u32).to_value(),
             ))
         });
         widget.add_controller(drag_source);
@@ -458,11 +474,11 @@ impl OrganizeWorkspace {
         let drop_target = gtk::DropTarget::new(u32::static_type(), gtk::gdk::DragAction::MOVE);
         let window = self.clone();
         drop_target.connect_drop(move |_, value, _, _| {
-            let Ok(dragged_page) = value.get::<u32>() else {
+            let Ok(from) = value.get::<u32>() else {
                 return false;
             };
 
-            window.reorder_page(dragged_page, page_number);
+            window.reorder_page(from as usize, index);
             true
         });
         widget.add_controller(drop_target);
@@ -478,6 +494,26 @@ impl OrganizeWorkspace {
         }
     }
 
+    fn insert_blank_page_after(&self, index: usize) {
+        if self.is_busy() {
+            return;
+        }
+
+        if self.imp().organize.insert_blank_page_after(index) {
+            self.update_view();
+        }
+    }
+
+    fn duplicate_page(&self, index: usize) {
+        if self.is_busy() {
+            return;
+        }
+
+        if self.imp().organize.duplicate_page(index) {
+            self.update_view();
+        }
+    }
+
     fn open_last_output(&self) {
         if let Some(path) = self.imp().organize.job.last_output() {
             open_output(self, &path);
@@ -487,5 +523,13 @@ impl OrganizeWorkspace {
     fn is_busy(&self) -> bool {
         let imp = self.imp();
         imp.organize.job.is_busy(imp.is_running.get())
+    }
+}
+
+fn page_title(page: crate::pdf::PageSelection) -> String {
+    if page.is_blank() {
+        gettext("Blank Page")
+    } else {
+        format!("{} {}", gettext("Page"), page.page_number)
     }
 }

@@ -143,12 +143,27 @@ impl OutputOptionsState {
 
 #[derive(Debug, Default)]
 pub struct MergeState {
-    pub files: RefCell<Vec<PathBuf>>,
+    pub files: RefCell<Vec<MergeItem>>,
     pub passwords: RefCell<BTreeMap<PathBuf, String>>,
-    pub rotations: RefCell<BTreeMap<PathBuf, i64>>,
     pub previews: RefCell<BTreeMap<PathBuf, crate::preview::PagePreview>>,
     pub options: OutputOptionsState,
     pub job: JobState,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MergeItem {
+    pub path: PathBuf,
+    pub rotation: i64,
+}
+
+impl MergeItem {
+    fn new(path: PathBuf) -> Self {
+        Self { path, rotation: 0 }
+    }
+
+    fn rotate_clockwise(&mut self) {
+        self.rotation = rotate_clockwise(self.rotation);
+    }
 }
 
 #[derive(Debug, Default)]
@@ -166,8 +181,7 @@ pub struct OrganizeState {
     pub password: RefCell<Option<String>>,
     pub page_count: Cell<usize>,
     pub previews: RefCell<BTreeMap<u32, crate::preview::PagePreview>>,
-    pub page_order: RefCell<Vec<u32>>,
-    pub rotations: RefCell<BTreeMap<u32, i64>>,
+    pub page_order: RefCell<Vec<crate::pdf::PageSelection>>,
     pub options: OutputOptionsState,
     pub job: JobState,
 }
@@ -207,7 +221,6 @@ impl MergeState {
     pub fn clear(&self) {
         self.files.borrow_mut().clear();
         self.passwords.borrow_mut().clear();
-        self.rotations.borrow_mut().clear();
         self.previews.borrow_mut().clear();
         self.job.clear_last_output();
     }
@@ -222,7 +235,9 @@ impl MergeState {
     }
 
     pub fn add_files(&self, paths: Vec<PathBuf>) {
-        self.files.borrow_mut().extend(paths);
+        self.files
+            .borrow_mut()
+            .extend(paths.into_iter().map(MergeItem::new));
         self.job.clear_last_output();
     }
 
@@ -239,19 +254,20 @@ impl MergeState {
                 .into_iter()
                 .filter_map(|(path, password)| password.map(|password| (path, password))),
         );
-        self.files.borrow_mut().extend(paths);
+        self.files
+            .borrow_mut()
+            .extend(paths.into_iter().map(MergeItem::new));
     }
 
     pub fn pdf_inputs(&self) -> Vec<crate::pdf::PdfInput> {
-        let rotations = self.rotations.borrow();
         let passwords = self.passwords.borrow();
         self.files
             .borrow()
             .iter()
-            .map(|path| crate::pdf::PdfInput {
-                path: path.clone(),
-                password: passwords.get(path).cloned(),
-                rotation: *rotations.get(path).unwrap_or(&0),
+            .map(|item| crate::pdf::PdfInput {
+                path: item.path.clone(),
+                password: passwords.get(&item.path).cloned(),
+                rotation: item.rotation,
             })
             .collect()
     }
@@ -268,23 +284,27 @@ impl MergeState {
     }
 
     pub fn rotate_file(&self, index: usize) -> bool {
-        let Some(path) = self.files.borrow().get(index).cloned() else {
+        let mut files = self.files.borrow_mut();
+        let Some(item) = files.get_mut(index) else {
             return false;
         };
-        rotate_entry(&self.rotations, path);
+
+        item.rotate_clockwise();
+        drop(files);
         self.job.clear_last_output();
         true
     }
 
     pub fn rotate_all_files(&self) -> bool {
-        let files = self.files.borrow();
+        let mut files = self.files.borrow_mut();
         if files.is_empty() {
             return false;
         }
 
-        for path in files.iter().cloned().collect::<BTreeSet<_>>() {
-            rotate_entry(&self.rotations, path);
+        for item in files.iter_mut() {
+            item.rotate_clockwise();
         }
+        drop(files);
         self.job.clear_last_output();
         true
     }
@@ -294,12 +314,22 @@ impl MergeState {
     }
 
     pub fn remove_file(&self, index: usize) {
-        let path = self.files.borrow_mut().remove(index);
-        if !self.files.borrow().contains(&path) {
+        let path = self.files.borrow_mut().remove(index).path;
+
+        if !self.files.borrow().iter().any(|item| item.path == path) {
             self.passwords.borrow_mut().remove(&path);
-            self.rotations.borrow_mut().remove(&path);
         }
         self.job.clear_last_output();
+    }
+
+    pub fn duplicate_file(&self, index: usize) -> bool {
+        let Some(item) = self.files.borrow().get(index).cloned() else {
+            return false;
+        };
+
+        self.files.borrow_mut().insert(index + 1, item);
+        self.job.clear_last_output();
+        true
     }
 }
 
@@ -340,9 +370,8 @@ impl OrganizeState {
 
         let mut page_order = self.page_order.borrow_mut();
         page_order.clear();
-        page_order.extend(1..=page_count as u32);
-
-        self.rotations.borrow_mut().clear();
+        page_order
+            .extend((1..=page_count as u32).map(|page| crate::pdf::PageSelection::page(page, 0)));
         self.job.clear_last_output();
     }
 
@@ -354,8 +383,8 @@ impl OrganizeState {
 
         let mut page_order = self.page_order.borrow_mut();
         page_order.clear();
-        page_order.extend(1..=page_count as u32);
-        self.rotations.borrow_mut().clear();
+        page_order
+            .extend((1..=page_count as u32).map(|page| crate::pdf::PageSelection::page(page, 0)));
         self.job.clear_last_output();
         true
     }
@@ -363,16 +392,7 @@ impl OrganizeState {
     pub fn selections(&self) -> Option<(PathBuf, Option<String>, Vec<crate::pdf::PageSelection>)> {
         let input_file = self.file.borrow().clone()?;
         let password = self.password.borrow().clone();
-        let rotations = self.rotations.borrow();
-        let pages = self
-            .page_order
-            .borrow()
-            .iter()
-            .map(|page_number| crate::pdf::PageSelection {
-                page_number: *page_number,
-                rotation: *rotations.get(page_number).unwrap_or(&0),
-            })
-            .collect();
+        let pages = self.page_order.borrow().clone();
 
         Some((input_file, password, pages))
     }
@@ -388,38 +408,33 @@ impl OrganizeState {
         true
     }
 
-    pub fn rotate_page(&self, page_number: u32) {
-        rotate_entry(&self.rotations, page_number);
-        self.job.clear_last_output();
-    }
-
-    pub fn rotate_all_pages(&self) -> bool {
-        let pages = self.page_order.borrow();
-        if pages.is_empty() {
+    pub fn rotate_page(&self, index: usize) -> bool {
+        let mut pages = self.page_order.borrow_mut();
+        let Some(page) = pages.get_mut(index) else {
             return false;
-        }
+        };
 
-        for page_number in pages.iter() {
-            rotate_entry(&self.rotations, *page_number);
-        }
+        page.rotate_clockwise();
+        drop(pages);
         self.job.clear_last_output();
         true
     }
 
-    pub fn reorder_page(&self, dragged_page: u32, target_page: u32) -> bool {
-        if dragged_page == target_page {
+    pub fn rotate_all_pages(&self) -> bool {
+        let mut pages = self.page_order.borrow_mut();
+        if pages.is_empty() {
             return false;
         }
 
-        let pages = self.page_order.borrow();
-        let Some(from) = pages.iter().position(|page| *page == dragged_page) else {
-            return false;
-        };
-        let Some(to) = pages.iter().position(|page| *page == target_page) else {
-            return false;
-        };
-
+        for page in pages.iter_mut() {
+            page.rotate_clockwise();
+        }
         drop(pages);
+        self.job.clear_last_output();
+        true
+    }
+
+    pub fn reorder_page(&self, from: usize, to: usize) -> bool {
         self.move_page(from, to)
     }
 
@@ -428,8 +443,30 @@ impl OrganizeState {
             return false;
         }
 
-        let page_number = self.page_order.borrow_mut().remove(index);
-        self.rotations.borrow_mut().remove(&page_number);
+        self.page_order.borrow_mut().remove(index);
+        self.job.clear_last_output();
+        true
+    }
+
+    pub fn insert_blank_page_after(&self, index: usize) -> bool {
+        let Some(page) = self.page_order.borrow().get(index).copied() else {
+            return false;
+        };
+
+        self.page_order.borrow_mut().insert(
+            index + 1,
+            crate::pdf::PageSelection::blank_like_page(page.page_number, page.rotation),
+        );
+        self.job.clear_last_output();
+        true
+    }
+
+    pub fn duplicate_page(&self, index: usize) -> bool {
+        let Some(page) = self.page_order.borrow().get(index).copied() else {
+            return false;
+        };
+
+        self.page_order.borrow_mut().insert(index + 1, page);
         self.job.clear_last_output();
         true
     }
@@ -473,9 +510,11 @@ impl ExtractState {
         let rotations = self.rotations.borrow();
         let pages = page_numbers
             .into_iter()
-            .map(|page_number| crate::pdf::PageSelection {
-                page_number,
-                rotation: *rotations.get(&page_number).unwrap_or(&0),
+            .map(|page_number| {
+                crate::pdf::PageSelection::page(
+                    page_number,
+                    *rotations.get(&page_number).unwrap_or(&0),
+                )
             })
             .collect();
 
@@ -569,12 +608,16 @@ where
     Key: Ord,
 {
     let mut rotations = rotations.borrow_mut();
-    let rotation = (rotations.get(&key).copied().unwrap_or(0) + 90).rem_euclid(360);
+    let rotation = rotate_clockwise(rotations.get(&key).copied().unwrap_or(0));
     if rotation == 0 {
         rotations.remove(&key);
     } else {
         rotations.insert(key, rotation);
     }
+}
+
+fn rotate_clockwise(rotation: i64) -> i64 {
+    (rotation + 90).rem_euclid(360)
 }
 
 fn move_vec_item<T>(items: &mut Vec<T>, from: usize, to: usize) -> bool {
@@ -590,7 +633,7 @@ fn move_vec_item<T>(items: &mut Vec<T>, from: usize, to: usize) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        CompressState, ExtractState, JobState, MergeState, MetadataState, OrganizeState,
+        CompressState, ExtractState, JobState, MergeItem, MergeState, MetadataState, OrganizeState,
         OutputOptionsState, SaveOptionsState, SplitState,
     };
     use std::path::PathBuf;
@@ -614,6 +657,22 @@ mod tests {
                 })
                 .collect(),
         }
+    }
+
+    fn page_selection(page_number: u32) -> crate::pdf::PageSelection {
+        crate::pdf::PageSelection::page(page_number, 0)
+    }
+
+    fn page_numbers(pages: &[crate::pdf::PageSelection]) -> Vec<u32> {
+        pages.iter().map(|page| page.page_number).collect()
+    }
+
+    fn merge_item(path: &str) -> MergeItem {
+        MergeItem::new(PathBuf::from(path))
+    }
+
+    fn merge_paths(items: &[MergeItem]) -> Vec<PathBuf> {
+        items.iter().map(|item| item.path.clone()).collect()
     }
 
     #[test]
@@ -691,16 +750,16 @@ mod tests {
     fn merge_move_file_moves_by_index_and_clears_output() {
         let state = MergeState::default();
         *state.files.borrow_mut() = vec![
-            PathBuf::from("first.pdf"),
-            PathBuf::from("second.pdf"),
-            PathBuf::from("third.pdf"),
+            merge_item("first.pdf"),
+            merge_item("second.pdf"),
+            merge_item("third.pdf"),
         ];
         state.job.set_last_output(PathBuf::from("merged.pdf"));
 
         assert!(state.move_file(0, 2));
 
         assert_eq!(
-            *state.files.borrow(),
+            merge_paths(&state.files.borrow()),
             vec![
                 PathBuf::from("second.pdf"),
                 PathBuf::from("third.pdf"),
@@ -713,7 +772,7 @@ mod tests {
     #[test]
     fn merge_move_file_rejects_invalid_indices() {
         let state = MergeState::default();
-        *state.files.borrow_mut() = vec![PathBuf::from("first.pdf"), PathBuf::from("second.pdf")];
+        *state.files.borrow_mut() = vec![merge_item("first.pdf"), merge_item("second.pdf")];
         state.job.set_last_output(PathBuf::from("merged.pdf"));
 
         assert!(!state.move_file(0, 0));
@@ -721,7 +780,7 @@ mod tests {
         assert!(!state.move_file(2, 0));
 
         assert_eq!(
-            *state.files.borrow(),
+            merge_paths(&state.files.borrow()),
             vec![PathBuf::from("first.pdf"), PathBuf::from("second.pdf")]
         );
         assert_eq!(state.job.last_output(), Some(PathBuf::from("merged.pdf")));
@@ -757,28 +816,79 @@ mod tests {
     }
 
     #[test]
+    fn merge_rotates_duplicated_files_independently() {
+        let state = MergeState::default();
+        state.add_files(vec![PathBuf::from("input.pdf")]);
+
+        assert!(state.duplicate_file(0));
+        assert!(state.rotate_file(1));
+
+        let inputs = state.pdf_inputs();
+        assert_eq!(inputs[0].rotation, 0);
+        assert_eq!(inputs[1].rotation, 90);
+    }
+
+    #[test]
+    fn merge_keeps_rotations_with_move_remove_and_duplicate() {
+        let state = MergeState::default();
+        state.add_files(vec![
+            PathBuf::from("first.pdf"),
+            PathBuf::from("second.pdf"),
+            PathBuf::from("third.pdf"),
+        ]);
+
+        assert!(state.rotate_file(1));
+        assert!(state.rotate_file(2));
+        assert!(state.move_file(1, 0));
+        assert!(state.duplicate_file(0));
+        assert!(state.rotate_file(1));
+        state.remove_file(2);
+
+        let inputs = state.pdf_inputs();
+        assert_eq!(
+            inputs
+                .iter()
+                .map(|input| input.path.clone())
+                .collect::<Vec<_>>(),
+            vec![
+                PathBuf::from("second.pdf"),
+                PathBuf::from("second.pdf"),
+                PathBuf::from("third.pdf"),
+            ]
+        );
+        assert_eq!(
+            inputs
+                .iter()
+                .map(|input| input.rotation)
+                .collect::<Vec<_>>(),
+            vec![90, 180, 90]
+        );
+    }
+
+    #[test]
     fn organize_move_page_moves_by_index_and_clears_output() {
         let state = OrganizeState::default();
-        *state.page_order.borrow_mut() = vec![1, 2, 3];
+        *state.page_order.borrow_mut() =
+            vec![page_selection(1), page_selection(2), page_selection(3)];
         state.job.set_last_output(PathBuf::from("organized.pdf"));
 
         assert!(state.move_page(2, 0));
 
-        assert_eq!(*state.page_order.borrow(), vec![3, 1, 2]);
+        assert_eq!(page_numbers(&state.page_order.borrow()), vec![3, 1, 2]);
         assert_eq!(state.job.last_output(), None);
     }
 
     #[test]
     fn organize_move_page_rejects_invalid_indices() {
         let state = OrganizeState::default();
-        *state.page_order.borrow_mut() = vec![1, 2];
+        *state.page_order.borrow_mut() = vec![page_selection(1), page_selection(2)];
         state.job.set_last_output(PathBuf::from("organized.pdf"));
 
         assert!(!state.move_page(1, 1));
         assert!(!state.move_page(0, 2));
         assert!(!state.move_page(2, 0));
 
-        assert_eq!(*state.page_order.borrow(), vec![1, 2]);
+        assert_eq!(page_numbers(&state.page_order.borrow()), vec![1, 2]);
         assert_eq!(
             state.job.last_output(),
             Some(PathBuf::from("organized.pdf"))
@@ -796,8 +906,44 @@ mod tests {
         );
 
         assert_eq!(state.page_count.get(), 3);
-        assert_eq!(*state.page_order.borrow(), vec![1, 2, 3]);
+        assert_eq!(page_numbers(&state.page_order.borrow()), vec![1, 2, 3]);
         assert!(!state.previews.borrow().contains_key(&2));
+    }
+
+    #[test]
+    fn organize_duplicates_and_inserts_blank_pages() {
+        let state = OrganizeState::default();
+        *state.page_order.borrow_mut() = vec![page_selection(1), page_selection(2)];
+        state.job.set_last_output(PathBuf::from("organized.pdf"));
+
+        assert!(state.duplicate_page(0));
+        assert!(state.insert_blank_page_after(1));
+
+        let pages = state.page_order.borrow();
+        assert_eq!(page_numbers(&pages), vec![1, 1, 1, 2]);
+        assert!(!pages[1].is_blank());
+        assert!(pages[2].is_blank());
+        assert_eq!(state.job.last_output(), None);
+    }
+
+    #[test]
+    fn organize_blank_pages_keep_rotation_when_rotated_and_reused() {
+        let state = OrganizeState::default();
+        *state.page_order.borrow_mut() = vec![crate::pdf::PageSelection::page(1, 90)];
+
+        assert!(state.insert_blank_page_after(0));
+        assert!(state.rotate_page(1));
+        assert!(state.insert_blank_page_after(1));
+
+        let pages = state.page_order.borrow();
+        assert_eq!(page_numbers(&pages), vec![1, 1, 1]);
+        assert_eq!(
+            pages.iter().map(|page| page.rotation).collect::<Vec<_>>(),
+            vec![90, 180, 180]
+        );
+        assert!(!pages[0].is_blank());
+        assert!(pages[1].is_blank());
+        assert!(pages[2].is_blank());
     }
 
     #[test]

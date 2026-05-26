@@ -4,9 +4,10 @@ use super::ui::{
     save_pdf_file, set_entry_validation_error, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    load_single_processable_pdf, open_output, output_option_callback, parent_window,
-    run_output_job, setup_advanced_options_menu, show_backend_error, show_toast,
-    update_shell_title, update_shell_view_mode, AdvancedOptionsMenu, SinglePdfLoadHandlers,
+    add_item_context_menu, load_single_processable_pdf, open_output, output_option_callback,
+    parent_window, run_output_job, setup_advanced_options_menu, show_backend_error, show_toast,
+    update_shell_title, update_shell_view_mode, AdvancedOptionsMenu, ContextMenuItem,
+    SinglePdfLoadHandlers,
 };
 use super::PdfTool;
 use adw::prelude::*;
@@ -405,6 +406,8 @@ impl ExtractWorkspace {
             window.toggle_extract_page(page_number, button.is_active());
         });
 
+        self.add_page_context_menu(&row, page_number, selected);
+
         row
     }
 
@@ -419,6 +422,7 @@ impl ExtractWorkspace {
         let preview_widget = tile_preview_widget(preview, rotation);
         let window = self.clone();
         let click = gtk::GestureClick::new();
+        click.set_button(gtk::gdk::BUTTON_PRIMARY);
         click.connect_released(move |_, _, _, _| {
             window.toggle_extract_page(page_number, !selected);
         });
@@ -452,7 +456,44 @@ impl ExtractWorkspace {
             window.toggle_extract_page(page_number, button.is_active());
         });
 
+        self.add_page_context_menu(&tile, page_number, selected);
+
         tile
+    }
+
+    fn add_page_context_menu(
+        &self,
+        widget: &impl IsA<gtk::Widget>,
+        page_number: u32,
+        selected: bool,
+    ) {
+        let sensitive = !self.is_busy();
+        let workspace = self.clone();
+        let rotate = move || workspace.rotate_extract_page(page_number);
+        let workspace = self.clone();
+        let toggle = move || workspace.toggle_extract_page(page_number, !selected);
+
+        add_item_context_menu(
+            widget,
+            vec![
+                ContextMenuItem::new(
+                    "rotate",
+                    gettext("Rotate Clockwise"),
+                    sensitive && selected,
+                    rotate,
+                ),
+                ContextMenuItem::new(
+                    "toggle",
+                    if selected {
+                        gettext("Unselect")
+                    } else {
+                        gettext("Select")
+                    },
+                    sensitive,
+                    toggle,
+                ),
+            ],
+        );
     }
 
     fn toggle_extract_page(&self, page_number: u32, selected: bool) {

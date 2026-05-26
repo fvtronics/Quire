@@ -5,6 +5,7 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 pub(super) fn parent_window(widget: &impl IsA<gtk::Widget>) -> Option<gtk::Window> {
     widget.root().and_downcast::<gtk::Window>()
@@ -342,6 +343,36 @@ pub(super) struct OrderedItemControlOptions {
     pub can_remove: bool,
 }
 
+pub(super) struct OrderedItemActions {
+    options: OrderedItemControlOptions,
+    move_up: Rc<dyn Fn() + 'static>,
+    move_down: Rc<dyn Fn() + 'static>,
+    rotate: Rc<dyn Fn() + 'static>,
+    remove: Rc<dyn Fn() + 'static>,
+}
+
+impl OrderedItemActions {
+    pub(super) fn new(
+        options: OrderedItemControlOptions,
+        on_move_up: impl Fn() + 'static,
+        on_move_down: impl Fn() + 'static,
+        on_rotate: impl Fn() + 'static,
+        on_remove: impl Fn() + 'static,
+    ) -> Self {
+        Self {
+            options,
+            move_up: Rc::new(on_move_up),
+            move_down: Rc::new(on_move_down),
+            rotate: Rc::new(on_rotate),
+            remove: Rc::new(on_remove),
+        }
+    }
+
+    pub(super) fn options(&self) -> OrderedItemControlOptions {
+        self.options
+    }
+}
+
 impl OrderedItemControls {
     pub(super) fn append_to_row(&self, row: &adw::ActionRow) {
         row.add_suffix(&self.up);
@@ -358,28 +389,26 @@ impl OrderedItemControls {
     }
 }
 
-pub(super) fn ordered_item_controls(
-    options: OrderedItemControlOptions,
-    on_move_up: impl Fn() + 'static,
-    on_move_down: impl Fn() + 'static,
-    on_rotate: impl Fn() + 'static,
-    on_remove: impl Fn() + 'static,
-) -> OrderedItemControls {
+pub(super) fn ordered_item_controls(actions: &OrderedItemActions) -> OrderedItemControls {
     let up = icon_button("go-up-symbolic", &gettext("Move Up"));
-    up.set_sensitive(options.controls_sensitive && options.can_move_up);
-    up.connect_clicked(move |_| on_move_up());
+    up.set_sensitive(actions.options.controls_sensitive && actions.options.can_move_up);
+    let move_up = actions.move_up.clone();
+    up.connect_clicked(move |_| (move_up)());
 
     let down = icon_button("go-down-symbolic", &gettext("Move Down"));
-    down.set_sensitive(options.controls_sensitive && options.can_move_down);
-    down.connect_clicked(move |_| on_move_down());
+    down.set_sensitive(actions.options.controls_sensitive && actions.options.can_move_down);
+    let move_down = actions.move_down.clone();
+    down.connect_clicked(move |_| (move_down)());
 
     let rotate = icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
-    rotate.set_sensitive(options.controls_sensitive);
-    rotate.connect_clicked(move |_| on_rotate());
+    rotate.set_sensitive(actions.options.controls_sensitive);
+    let rotate_action = actions.rotate.clone();
+    rotate.connect_clicked(move |_| (rotate_action)());
 
     let remove = icon_button("edit-delete-symbolic", &gettext("Remove"));
-    remove.set_sensitive(options.controls_sensitive && options.can_remove);
-    remove.connect_clicked(move |_| on_remove());
+    remove.set_sensitive(actions.options.controls_sensitive && actions.options.can_remove);
+    let remove_action = actions.remove.clone();
+    remove.connect_clicked(move |_| (remove_action)());
 
     OrderedItemControls {
         up,
@@ -389,40 +418,77 @@ pub(super) fn ordered_item_controls(
     }
 }
 
-pub(super) fn add_ordered_item_context_menu(
-    widget: &impl IsA<gtk::Widget>,
-    options: OrderedItemControlOptions,
-    on_move_up: impl Fn() + 'static,
-    on_move_down: impl Fn() + 'static,
-    on_rotate: impl Fn() + 'static,
-    on_remove: impl Fn() + 'static,
-) {
-    let menu = gio::Menu::new();
-    menu.append(Some(&gettext("Move Up")), Some("item.move-up"));
-    menu.append(Some(&gettext("Move Down")), Some("item.move-down"));
-    menu.append(Some(&gettext("Rotate Clockwise")), Some("item.rotate"));
-    menu.append(Some(&gettext("Remove")), Some("item.remove"));
+pub(super) fn ordered_item_context_menu_items(
+    actions: &OrderedItemActions,
+) -> Vec<ContextMenuItem> {
+    vec![
+        ContextMenuItem::from_action(
+            "move-up",
+            gettext("Move Up"),
+            actions.options.controls_sensitive && actions.options.can_move_up,
+            actions.move_up.clone(),
+        ),
+        ContextMenuItem::from_action(
+            "move-down",
+            gettext("Move Down"),
+            actions.options.controls_sensitive && actions.options.can_move_down,
+            actions.move_down.clone(),
+        ),
+        ContextMenuItem::from_action(
+            "rotate",
+            gettext("Rotate Clockwise"),
+            actions.options.controls_sensitive,
+            actions.rotate.clone(),
+        ),
+        ContextMenuItem::from_action(
+            "remove",
+            gettext("Remove"),
+            actions.options.controls_sensitive && actions.options.can_remove,
+            actions.remove.clone(),
+        ),
+    ]
+}
 
+pub(super) struct ContextMenuItem {
+    name: &'static str,
+    label: String,
+    sensitive: bool,
+    on_activate: Rc<dyn Fn() + 'static>,
+}
+
+impl ContextMenuItem {
+    pub(super) fn new(
+        name: &'static str,
+        label: String,
+        sensitive: bool,
+        on_activate: impl Fn() + 'static,
+    ) -> Self {
+        Self::from_action(name, label, sensitive, Rc::new(on_activate))
+    }
+
+    pub(super) fn from_action(
+        name: &'static str,
+        label: String,
+        sensitive: bool,
+        on_activate: Rc<dyn Fn() + 'static>,
+    ) -> Self {
+        Self {
+            name,
+            label,
+            sensitive,
+            on_activate,
+        }
+    }
+}
+
+pub(super) fn add_item_context_menu(widget: &impl IsA<gtk::Widget>, items: Vec<ContextMenuItem>) {
+    let menu = gio::Menu::new();
     let actions = gio::SimpleActionGroup::new();
-    add_context_menu_action(
-        &actions,
-        "move-up",
-        options.controls_sensitive && options.can_move_up,
-        on_move_up,
-    );
-    add_context_menu_action(
-        &actions,
-        "move-down",
-        options.controls_sensitive && options.can_move_down,
-        on_move_down,
-    );
-    add_context_menu_action(&actions, "rotate", options.controls_sensitive, on_rotate);
-    add_context_menu_action(
-        &actions,
-        "remove",
-        options.controls_sensitive && options.can_remove,
-        on_remove,
-    );
+
+    for item in items {
+        menu.append(Some(&item.label), Some(&format!("item.{}", item.name)));
+        add_context_menu_action(&actions, item);
+    }
     widget.insert_action_group("item", Some(&actions));
 
     let popover = gtk::PopoverMenu::from_model(Some(&menu));
@@ -446,16 +512,11 @@ pub(super) fn add_ordered_item_context_menu(
     });
 }
 
-fn add_context_menu_action(
-    actions: &gio::SimpleActionGroup,
-    name: &str,
-    sensitive: bool,
-    on_activate: impl Fn() + 'static,
-) {
-    let action = gio::SimpleAction::new(name, None);
-    action.set_enabled(sensitive);
+fn add_context_menu_action(actions: &gio::SimpleActionGroup, item: ContextMenuItem) {
+    let action = gio::SimpleAction::new(item.name, None);
+    action.set_enabled(item.sensitive);
     action.connect_activate(move |_, _| {
-        on_activate();
+        (item.on_activate)();
     });
     actions.add_action(&action);
 }

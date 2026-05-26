@@ -203,6 +203,31 @@ fn write_selected_pages_uses_requested_order() {
 }
 
 #[test]
+fn write_selected_pages_duplicates_and_inserts_blank_pages() {
+    let dir = TestDir::new("selected-pages-duplicate-blank");
+    let input = dir.join("input.pdf");
+    let output = dir.join("output.pdf");
+    write_test_pdf(&input, &[10, 20]);
+
+    let result = write_selected_pages(
+        input.clone(),
+        None,
+        vec![
+            page_selection(1, 90),
+            page_selection(1, 180),
+            PageSelection::blank_like_page(2, 0),
+        ],
+        output.clone(),
+        PdfOutputOptions::default(),
+    );
+
+    assert_eq!(result.unwrap(), output);
+    assert_eq!(page_markers(&output), vec![10, 10, 20]);
+    assert_eq!(page_rotations(&output), vec![90, 180, 0]);
+    assert_eq!(page_has_contents(&output), vec![true, true, false]);
+}
+
+#[test]
 fn write_selected_pages_rotates_requested_pages() {
     let dir = TestDir::new("selected-pages-rotation");
     let input = dir.join("input.pdf");
@@ -1079,10 +1104,7 @@ fn pdf_input(path: PathBuf, rotation: i64) -> PdfInput {
 }
 
 fn page_selection(page_number: u32, rotation: i64) -> PageSelection {
-    PageSelection {
-        page_number,
-        rotation,
-    }
+    PageSelection::page(page_number, rotation)
 }
 
 fn page_markers(path: &Path) -> Vec<i64> {
@@ -1123,6 +1145,23 @@ fn page_rotations(path: &Path) -> Vec<i64> {
                 .get(b"Rotate")
                 .and_then(Object::as_i64)
                 .unwrap_or(0)
+        })
+        .collect()
+}
+
+fn page_has_contents(path: &Path) -> Vec<bool> {
+    let document = Document::load(path).expect("test PDF should load");
+    document
+        .get_pages()
+        .into_values()
+        .map(|object_id| {
+            document
+                .get_object(object_id)
+                .expect("page object should exist")
+                .as_dict()
+                .expect("page should be a dictionary")
+                .get(b"Contents")
+                .is_ok()
         })
         .collect()
 }

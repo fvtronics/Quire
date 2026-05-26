@@ -1,6 +1,6 @@
 use adw::prelude::*;
 use gettextrs::{gettext, ngettext};
-use gtk::gdk_pixbuf::PixbufRotation;
+use gtk::gdk_pixbuf::{Pixbuf, PixbufRotation};
 use gtk::{gio, glib};
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
@@ -215,6 +215,13 @@ pub(super) fn rotated_list_preview_prefix(
     }
 }
 
+pub(super) fn blank_list_preview_prefix(
+    source_preview: Option<&crate::preview::PagePreview>,
+    rotation: i64,
+) -> gtk::Widget {
+    blank_page_preview(48, 68, source_preview, rotation)
+}
+
 pub(super) fn single_file_preview_widget(
     preview: Option<&crate::preview::PagePreview>,
 ) -> gtk::Widget {
@@ -249,6 +256,63 @@ pub(super) fn tile_preview_widget(
         let placeholder = gtk::Image::from_icon_name("view-paged-symbolic");
         placeholder.set_size_request(160, 220);
         placeholder.upcast()
+    }
+}
+
+pub(super) fn blank_tile_preview_widget(
+    source_preview: Option<&crate::preview::PagePreview>,
+    rotation: i64,
+) -> gtk::Widget {
+    blank_page_preview(160, 220, source_preview, rotation)
+}
+
+fn blank_page_preview(
+    width: i32,
+    height: i32,
+    source_preview: Option<&crate::preview::PagePreview>,
+    rotation: i64,
+) -> gtk::Widget {
+    let source_size = source_preview
+        .and_then(|preview| Pixbuf::from_read(Cursor::new(preview.png_data.clone())).ok())
+        .map(|pixbuf| (pixbuf.width(), pixbuf.height()))
+        .unwrap_or((
+            width,
+            (width as f64 * std::f64::consts::SQRT_2).ceil() as i32,
+        ));
+    let (content_width, content_height) = rotated_size(source_size.0, source_size.1, rotation);
+    let picture = match blank_page_texture(content_width, content_height) {
+        Some(texture) => gtk::Picture::for_paintable(&texture),
+        None => gtk::Picture::new(),
+    };
+    picture.set_can_shrink(true);
+    picture.set_content_fit(gtk::ContentFit::Contain);
+    picture.set_size_request(width, height);
+    picture.upcast()
+}
+
+fn blank_page_texture(width: i32, height: i32) -> Option<gtk::gdk::Texture> {
+    let surface =
+        cairo::ImageSurface::create(cairo::Format::ARgb32, width.max(1), height.max(1)).ok()?;
+    let context = cairo::Context::new(&surface).ok()?;
+
+    context.set_source_rgb(1.0, 1.0, 1.0);
+    context.paint().ok()?;
+    context.set_source_rgba(0.0, 0.0, 0.0, 0.25);
+    context.set_line_width(1.0);
+    context.rectangle(0.5, 0.5, width as f64 - 1.0, height as f64 - 1.0);
+    context.stroke().ok()?;
+    surface.flush();
+
+    let mut png_data = Vec::new();
+    surface.write_to_png(&mut png_data).ok()?;
+    gtk::gdk::Texture::from_bytes(&glib::Bytes::from(&png_data)).ok()
+}
+
+fn rotated_size(width: i32, height: i32, rotation: i64) -> (i32, i32) {
+    if matches!(normalize_rotation(rotation), 90 | 270) {
+        (height, width)
+    } else {
+        (width, height)
     }
 }
 

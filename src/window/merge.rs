@@ -3,10 +3,11 @@ use super::ui::{
     rotated_list_preview_prefix, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    add_ordered_item_context_menu, load_processable_pdf, open_output, ordered_item_controls,
-    output_option_callback, parent_window, run_output_job, setup_advanced_options_menu,
-    show_pdf_load_error, update_shell_title, update_shell_view_mode, AdvancedOptionsMenu,
-    OrderedItemControlOptions, PdfLoadResult,
+    add_item_context_menu, load_processable_pdf, open_output, ordered_item_context_menu_items,
+    ordered_item_controls, output_option_callback, parent_window, run_output_job,
+    setup_advanced_options_menu, show_pdf_load_error, update_shell_title, update_shell_view_mode,
+    AdvancedOptionsMenu, ContextMenuItem, OrderedItemActions, OrderedItemControlOptions,
+    PdfLoadResult,
 };
 use super::PdfTool;
 use adw::prelude::*;
@@ -290,25 +291,23 @@ impl MergeWorkspace {
         let is_busy = imp.merge.job.is_busy(imp.is_running.get());
         let can_merge = files.len() > 1 && !is_busy;
         let previews = imp.merge.previews.borrow();
-        let rotations = imp.merge.rotations.borrow();
 
         imp.file_list.remove_all();
         imp.merge_file_grid.remove_all();
-        for (index, path) in files.iter().enumerate() {
-            let rotation = *rotations.get(path).unwrap_or(&0);
+        for (index, item) in files.iter().enumerate() {
             imp.file_list.append(&self.file_row(
                 index,
-                path,
+                &item.path,
                 files.len(),
-                previews.get(path),
-                rotation,
+                previews.get(&item.path),
+                item.rotation,
             ));
             imp.merge_file_grid.append(&self.file_tile(
                 index,
-                path,
+                &item.path,
                 files.len(),
-                previews.get(path),
-                rotation,
+                previews.get(&item.path),
+                item.rotation,
             ));
         }
 
@@ -369,25 +368,10 @@ impl MergeWorkspace {
             can_move_down: index + 1 < count,
             can_remove: true,
         };
-        let workspace = self.clone();
-        let move_up = move || workspace.move_file(index, index.saturating_sub(1));
-        let workspace = self.clone();
-        let move_down = move || workspace.move_file(index, index.saturating_add(1));
-        let workspace = self.clone();
-        let rotate = move || workspace.rotate_file(index);
-        let workspace = self.clone();
-        let remove = move || workspace.remove_file(index);
-        ordered_item_controls(options, move_up, move_down, rotate, remove).append_to_row(&row);
+        let actions = self.file_actions(options, index);
+        ordered_item_controls(&actions).append_to_row(&row);
 
-        let workspace = self.clone();
-        let move_up = move || workspace.move_file(index, index.saturating_sub(1));
-        let workspace = self.clone();
-        let move_down = move || workspace.move_file(index, index.saturating_add(1));
-        let workspace = self.clone();
-        let rotate = move || workspace.rotate_file(index);
-        let workspace = self.clone();
-        let remove = move || workspace.remove_file(index);
-        add_ordered_item_context_menu(&row, options, move_up, move_down, rotate, remove);
+        self.add_file_context_menu(&row, &actions, index);
 
         self.add_file_drag_and_drop(&row, index);
 
@@ -417,29 +401,48 @@ impl MergeWorkspace {
             can_move_down: index + 1 < count,
             can_remove: true,
         };
-        let workspace = self.clone();
-        let move_up = move || workspace.move_file(index, index.saturating_sub(1));
-        let workspace = self.clone();
-        let move_down = move || workspace.move_file(index, index.saturating_add(1));
-        let workspace = self.clone();
-        let rotate = move || workspace.rotate_file(index);
-        let workspace = self.clone();
-        let remove = move || workspace.remove_file(index);
-        ordered_item_controls(options, move_up, move_down, rotate, remove).append_to_box(&controls);
+        let actions = self.file_actions(options, index);
+        ordered_item_controls(&actions).append_to_box(&controls);
 
         tile.append(&controls);
-        let workspace = self.clone();
-        let move_up = move || workspace.move_file(index, index.saturating_sub(1));
-        let workspace = self.clone();
-        let move_down = move || workspace.move_file(index, index.saturating_add(1));
-        let workspace = self.clone();
-        let rotate = move || workspace.rotate_file(index);
-        let workspace = self.clone();
-        let remove = move || workspace.remove_file(index);
-        add_ordered_item_context_menu(&tile, options, move_up, move_down, rotate, remove);
+        self.add_file_context_menu(&tile, &actions, index);
         self.add_file_drag_and_drop(&tile, index);
 
         tile
+    }
+
+    fn file_actions(&self, options: OrderedItemControlOptions, index: usize) -> OrderedItemActions {
+        let workspace = self.clone();
+        let move_up = move || workspace.move_file(index, index.saturating_sub(1));
+        let workspace = self.clone();
+        let move_down = move || workspace.move_file(index, index.saturating_add(1));
+        let workspace = self.clone();
+        let rotate = move || workspace.rotate_file(index);
+        let workspace = self.clone();
+        let remove = move || workspace.remove_file(index);
+
+        OrderedItemActions::new(options, move_up, move_down, rotate, remove)
+    }
+
+    fn add_file_context_menu(
+        &self,
+        widget: &impl IsA<gtk::Widget>,
+        actions: &OrderedItemActions,
+        index: usize,
+    ) {
+        let workspace = self.clone();
+        let duplicate = move || workspace.duplicate_file(index);
+        let mut items = ordered_item_context_menu_items(actions);
+        items.insert(
+            2,
+            ContextMenuItem::new(
+                "duplicate",
+                gettext("Duplicate"),
+                actions.options().controls_sensitive,
+                duplicate,
+            ),
+        );
+        add_item_context_menu(widget, items);
     }
 
     fn move_file(&self, from: usize, to: usize) {
@@ -513,6 +516,16 @@ impl MergeWorkspace {
 
         self.imp().merge.remove_file(index);
         self.update_view();
+    }
+
+    fn duplicate_file(&self, index: usize) {
+        if self.is_busy() {
+            return;
+        }
+
+        if self.imp().merge.duplicate_file(index) {
+            self.update_view();
+        }
     }
 
     fn open_last_output(&self) {
