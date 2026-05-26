@@ -150,7 +150,7 @@ pub(super) fn pdf_file_row(path: &Path, subtitle: String) -> adw::ActionRow {
     let row = adw::ActionRow::builder()
         .title(file_title(path))
         .subtitle(subtitle)
-        .activatable(false)
+        .activatable(true)
         .build();
 
     row.add_prefix(&gtk::Image::from_icon_name("view-paged-symbolic"));

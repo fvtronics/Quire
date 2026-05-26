@@ -357,7 +357,7 @@ impl MergeWorkspace {
         let row = adw::ActionRow::builder()
             .title(file_title(path))
             .subtitle(file_subtitle(path))
-            .activatable(false)
+            .activatable(true)
             .build();
 
         row.add_prefix(&rotated_list_preview_prefix(preview, rotation));

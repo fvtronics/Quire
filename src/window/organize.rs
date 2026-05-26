@@ -318,7 +318,7 @@ impl OrganizeWorkspace {
                 index + 1,
                 gettext("of")
             ))
-            .activatable(false)
+            .activatable(true)
             .build();
 
         row.add_prefix(&rotated_list_preview_prefix(preview, rotation));
