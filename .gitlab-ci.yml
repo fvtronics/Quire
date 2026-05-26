@@ -28,7 +28,7 @@ rust-coverage:
       - target/
       - .cargo/
   before_script:
-    - dnf install -y cargo rust llvm gcc pkgconf-pkg-config gtk4-devel libadwaita-devel poppler-glib-devel meson gettext blueprint-compiler
+    - dnf install -y cargo rust llvm gcc pkgconf-pkg-config gtk4-devel libadwaita-devel poppler-glib-devel meson gettext blueprint-compiler desktop-file-utils
     - dnf clean all
     - export PATH="${CARGO_HOME}/bin:$PATH"
     - cargo install cargo-llvm-cov --locked
