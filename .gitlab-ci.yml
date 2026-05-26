@@ -15,11 +15,41 @@ stages:
   - package
   - release
 
+rust-coverage:
+  stage: quality
+  image: rust:1.94
+  variables:
+    CARGO_HOME: "${CI_PROJECT_DIR}/.cargo"
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - target/
+      - .cargo/
+  before_script:
+    - apt-get update
+    - apt-get install -y pkg-config libssl-dev libgtk-4-dev libadwaita-1-dev libpoppler-glib-dev blueprint-compiler
+    - export PATH="${CARGO_HOME}/bin:$PATH"
+    - cargo install cargo-llvm-cov
+  script:
+    - mkdir -p target/sonar
+    - cargo llvm-cov --lcov --output-path target/sonar/lcov.info
+  artifacts:
+    paths:
+      - target/sonar/lcov.info
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "develop"'
+
 sonarcloud-check:
   stage: quality
   image:
     name: sonarsource/sonar-scanner-cli:latest
     entrypoint: [""]
+  needs:
+    - job: rust-coverage
+      artifacts: true
   cache:
     key: "${CI_JOB_NAME}"
     paths:
