@@ -1,8 +1,8 @@
-# v0.1.7
+# v0.1.8
 
-<p>Changes</p>
+<p>New</p>
 <ul>
-  <li>Added clearer hints and error feedback when a field needs attention</li>
-  <li>Improved validation when editing PDF keywords</li>
-  <li>Fixed page ranges so repeated pages are handled correctly</li>
+  <li>Added right-click menus for items that can be reordered</li>
+  <li>Added options to duplicate PDFs and pages while organizing documents</li>
+  <li>Added an option to insert blank pages while organizing a PDF</li>
 </ul>

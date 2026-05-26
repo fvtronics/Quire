@@ -62,6 +62,16 @@
   </branding>
 
   <releases>
+    <release version="0.1.8" date="2026-05-26">
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>Added right-click menus for items that can be reordered</li>
+          <li>Added options to duplicate PDFs and pages while organizing documents</li>
+          <li>Added an option to insert blank pages while organizing a PDF</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.7" date="2026-05-25">
       <description translate="no">
         <p>Changes</p>
