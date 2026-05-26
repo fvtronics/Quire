@@ -164,9 +164,8 @@ fn write_selected_pages_from_document(
 
     let pages = document.get_pages();
     let mut output_pages = OutputPages::with_capacity(page_numbers.len());
-    let mut next_page_id = document.max_id + 1;
 
-    for selection in page_numbers {
+    for (next_page_id, selection) in (document.max_id + 1..).zip(page_numbers) {
         let object_id = pages.get(&selection.page_number).ok_or_else(|| {
             PdfBackendError::InvalidPageRange(format!(
                 "Page {} is not in this PDF.",
@@ -174,7 +173,6 @@ fn write_selected_pages_from_document(
             ))
         })?;
         let page_id = (next_page_id, 0);
-        next_page_id += 1;
         let page = if selection.is_blank() {
             blank_page_object(document, *object_id, selection.rotation)?
         } else {
