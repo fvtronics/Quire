@@ -20,6 +20,8 @@ rust-coverage:
   image: fedora:44
   variables:
     CARGO_HOME: "${CI_PROJECT_DIR}/.cargo"
+    LLVM_COV: /usr/bin/llvm-cov
+    LLVM_PROFDATA: /usr/bin/llvm-profdata
   cache:
     key: "${CI_JOB_NAME}"
     paths:
