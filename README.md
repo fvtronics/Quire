@@ -7,12 +7,12 @@ It can merge multiple PDFs, organize pages, extract page ranges, split
 documents, compress files, and edit metadata without sending them to an online
 service.
 
-[![Scanned on SonarQube](https://sonarcloud.io/images/project_badges/sonarcloud-white.svg)](https://sonarcloud.io/summary/new_code?id=fvtronics_folios)
+[![Scanned on SonarQube](https://sonarcloud.io/images/project_badges/sonarcloud-white.svg)](https://sonarcloud.io/summary/overall?id=fvtronics_folios)
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_folios&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=fvtronics_folios)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_folios&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=fvtronics_folios)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_folios&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=fvtronics_folios)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_folios&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=fvtronics_folios)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_folios&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=fvtronics_folios)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_folios&metric=security_rating)](https://sonarcloud.io/summary/overall?id=fvtronics_folios)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_folios&metric=reliability_rating)](https://sonarcloud.io/summary/overall?id=fvtronics_folios)
 
 ## Screenshots
 
