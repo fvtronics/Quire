@@ -28,16 +28,18 @@ rust-coverage:
       - target/
       - .cargo/
   before_script:
-    - dnf install -y cargo rust llvm gcc pkgconf-pkg-config gtk4-devel libadwaita-devel poppler-glib-devel meson gettext blueprint-compiler desktop-file-utils
+    - dnf install -y cargo rust clippy llvm gcc pkgconf-pkg-config gtk4-devel libadwaita-devel poppler-glib-devel meson gettext blueprint-compiler desktop-file-utils
     - dnf clean all
     - export PATH="${CARGO_HOME}/bin:$PATH"
     - cargo install cargo-llvm-cov --locked
   script:
     - mkdir -p target/sonar
     - meson setup builddir
+    - cargo clippy --locked --message-format=json > target/sonar/clippy.json
     - cargo llvm-cov --locked --lcov --output-path target/sonar/lcov.info
   artifacts:
     paths:
+      - target/sonar/clippy.json
       - target/sonar/lcov.info
     expire_in: 1 week
   rules:
