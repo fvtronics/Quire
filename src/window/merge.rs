@@ -1,6 +1,7 @@
 use super::ui::{
-    dim_tile_label, file_subtitle, file_title, open_pdf_files, preview_tile,
-    rotated_list_preview_prefix, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
+    collection_list_row, collection_list_text, dim_tile_label, file_subtitle, file_title,
+    list_preview_widget, open_pdf_files, preview_tile, save_pdf_file, tile_controls, tile_label,
+    tile_preview_widget,
 };
 use super::workspace::{
     add_item_context_menu, load_processable_pdf, open_output, ordered_item_context_menu_items,
@@ -352,14 +353,10 @@ impl MergeWorkspace {
         count: usize,
         preview: Option<&crate::preview::PagePreview>,
         rotation: i64,
-    ) -> adw::ActionRow {
-        let row = adw::ActionRow::builder()
-            .title(file_title(path))
-            .subtitle(file_subtitle(path))
-            .activatable(true)
-            .build();
-
-        row.add_prefix(&rotated_list_preview_prefix(preview, rotation));
+    ) -> gtk::Box {
+        let row = collection_list_row();
+        row.append(&list_preview_widget(preview, rotation));
+        row.append(&collection_list_text(file_title(path), file_subtitle(path)));
 
         let imp = self.imp();
         let options = OrderedItemControlOptions {
@@ -369,7 +366,7 @@ impl MergeWorkspace {
             can_remove: true,
         };
         let actions = self.file_actions(options, index);
-        ordered_item_controls(&actions).append_to_row(&row);
+        ordered_item_controls(&actions).append_to_box(&row);
 
         self.add_file_context_menu(&row, &actions, index);
 

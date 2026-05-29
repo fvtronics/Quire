@@ -1,9 +1,14 @@
 use adw::prelude::*;
 use gettextrs::{gettext, ngettext};
-use gtk::gdk_pixbuf::{Pixbuf, PixbufRotation};
+use gtk::gdk_pixbuf::{InterpType, Pixbuf, PixbufRotation};
 use gtk::{gio, glib};
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
+
+const LIST_COLLECTION_PREVIEW_WIDTH: i32 = 128;
+const LIST_COLLECTION_PREVIEW_HEIGHT: i32 = 128;
+const GRID_COLLECTION_PREVIEW_WIDTH: i32 = 200;
+const GRID_COLLECTION_PREVIEW_HEIGHT: i32 = 220;
 
 pub(super) fn pdf_filters() -> gio::ListStore {
     let filter = gtk::FileFilter::new();
@@ -178,48 +183,34 @@ pub(super) fn rotated_preview_picture(
     preview: &crate::preview::PagePreview,
     rotation: i64,
 ) -> gtk::Picture {
-    let picture = match gtk::gdk_pixbuf::Pixbuf::from_read(Cursor::new(preview.png_data.clone())) {
-        Ok(mut pixbuf) => {
-            if let Some(rotated) = match normalize_rotation(rotation) {
-                90 => pixbuf.rotate_simple(PixbufRotation::Clockwise),
-                180 => pixbuf.rotate_simple(PixbufRotation::Upsidedown),
-                270 => pixbuf.rotate_simple(PixbufRotation::Counterclockwise),
-                _ => None,
-            } {
-                pixbuf = rotated;
-            }
-
-            let texture = gtk::gdk::Texture::from_bytes(&glib::Bytes::from(
-                &pixbuf.save_to_bufferv("png", &[]).unwrap(),
-            ))
-            .unwrap();
-            gtk::Picture::for_paintable(&texture)
-        }
-        Err(_) => gtk::Picture::new(),
-    };
-    picture.set_can_shrink(true);
-    picture.set_content_fit(gtk::ContentFit::Contain);
-    picture
-}
-
-pub(super) fn rotated_list_preview_prefix(
-    preview: Option<&crate::preview::PagePreview>,
-    rotation: i64,
-) -> gtk::Widget {
-    if let Some(preview) = preview {
-        let picture = rotated_preview_picture(preview, rotation);
-        picture.set_size_request(48, 68);
-        picture.upcast()
-    } else {
-        gtk::Image::from_icon_name("view-paged-symbolic").upcast()
+    match rotated_preview_pixbuf(preview, rotation).and_then(|pixbuf| pixbuf_picture(&pixbuf)) {
+        Some(picture) => picture,
+        None => preview_picture_fallback(),
     }
 }
 
-pub(super) fn blank_list_preview_prefix(
+pub(super) fn list_preview_widget(
+    preview: Option<&crate::preview::PagePreview>,
+    rotation: i64,
+) -> gtk::Widget {
+    collection_preview_widget(
+        preview,
+        rotation,
+        LIST_COLLECTION_PREVIEW_WIDTH,
+        LIST_COLLECTION_PREVIEW_HEIGHT,
+    )
+}
+
+pub(super) fn blank_list_preview_widget(
     source_preview: Option<&crate::preview::PagePreview>,
     rotation: i64,
 ) -> gtk::Widget {
-    blank_page_preview(48, 68, source_preview, rotation)
+    collection_blank_preview_widget(
+        source_preview,
+        rotation,
+        LIST_COLLECTION_PREVIEW_WIDTH,
+        LIST_COLLECTION_PREVIEW_HEIGHT,
+    )
 }
 
 pub(super) fn single_file_preview_widget(
@@ -240,57 +231,136 @@ pub(super) fn preview_tile() -> gtk::Box {
     gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(6)
-        .width_request(180)
+        .width_request(220)
         .build()
+}
+
+pub(super) fn collection_list_row() -> gtk::Box {
+    gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(12)
+        .margin_top(6)
+        .margin_bottom(6)
+        .margin_start(12)
+        .margin_end(12)
+        .build()
+}
+
+pub(super) fn collection_list_text(title: impl AsRef<str>, subtitle: impl AsRef<str>) -> gtk::Box {
+    let box_ = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .valign(gtk::Align::Center)
+        .hexpand(true)
+        .build();
+
+    box_.append(
+        &gtk::Label::builder()
+            .label(title.as_ref())
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .build(),
+    );
+
+    let subtitle = gtk::Label::builder()
+        .label(subtitle.as_ref())
+        .xalign(0.0)
+        .ellipsize(gtk::pango::EllipsizeMode::End)
+        .build();
+    subtitle.add_css_class("dim-label");
+    box_.append(&subtitle);
+
+    box_
 }
 
 pub(super) fn tile_preview_widget(
     preview: Option<&crate::preview::PagePreview>,
     rotation: i64,
 ) -> gtk::Widget {
-    if let Some(preview) = preview {
-        let picture = rotated_preview_picture(preview, rotation);
-        picture.set_size_request(160, 220);
-        picture.upcast()
-    } else {
-        let placeholder = gtk::Image::from_icon_name("view-paged-symbolic");
-        placeholder.set_size_request(160, 220);
-        placeholder.upcast()
-    }
+    collection_preview_widget(
+        preview,
+        rotation,
+        GRID_COLLECTION_PREVIEW_WIDTH,
+        GRID_COLLECTION_PREVIEW_HEIGHT,
+    )
 }
 
 pub(super) fn blank_tile_preview_widget(
     source_preview: Option<&crate::preview::PagePreview>,
     rotation: i64,
 ) -> gtk::Widget {
-    blank_page_preview(160, 220, source_preview, rotation)
+    collection_blank_preview_widget(
+        source_preview,
+        rotation,
+        GRID_COLLECTION_PREVIEW_WIDTH,
+        GRID_COLLECTION_PREVIEW_HEIGHT,
+    )
 }
 
-fn blank_page_preview(
+fn collection_preview_widget(
+    preview: Option<&crate::preview::PagePreview>,
+    rotation: i64,
     width: i32,
     height: i32,
+) -> gtk::Widget {
+    let child: gtk::Widget = if let Some(preview) = preview {
+        let picture = match rotated_preview_pixbuf(preview, rotation)
+            .and_then(|pixbuf| fit_pixbuf(&pixbuf, width, height))
+            .and_then(|pixbuf| pixbuf_picture(&pixbuf))
+        {
+            Some(picture) => picture,
+            None => preview_picture_fallback(),
+        };
+        picture.upcast()
+    } else {
+        collection_preview_placeholder(width, height)
+    };
+
+    collection_preview_slot(width, height, &child)
+}
+
+fn collection_blank_preview_widget(
     source_preview: Option<&crate::preview::PagePreview>,
     rotation: i64,
+    width: i32,
+    height: i32,
 ) -> gtk::Widget {
     let source_size = source_preview
-        .and_then(|preview| Pixbuf::from_read(Cursor::new(preview.png_data.clone())).ok())
-        .map(|pixbuf| (pixbuf.width(), pixbuf.height()))
-        .unwrap_or((
-            width,
-            (width as f64 * std::f64::consts::SQRT_2).ceil() as i32,
-        ));
-    let (content_width, content_height) = rotated_size(source_size.0, source_size.1, rotation);
-    let picture = match blank_page_texture(content_width, content_height) {
+        .and_then(|preview| {
+            rotated_preview_pixbuf(preview, rotation)
+                .and_then(|pixbuf| fit_size(pixbuf.width(), pixbuf.height(), width, height))
+        })
+        .unwrap_or_else(|| blank_page_fallback_size(width, height, rotation));
+    let picture = match blank_page_texture(source_size.0, source_size.1) {
         Some(texture) => gtk::Picture::for_paintable(&texture),
-        None => gtk::Picture::new(),
+        None => preview_picture_fallback(),
     };
     picture.set_can_shrink(true);
     picture.set_content_fit(gtk::ContentFit::Contain);
-    picture.set_size_request(width, height);
-    picture.upcast()
+    collection_preview_slot(width, height, &picture.upcast())
+}
+
+fn collection_preview_slot(width: i32, height: i32, child: &gtk::Widget) -> gtk::Widget {
+    let slot = gtk::AspectFrame::new(0.5, 0.5, width as f32 / height as f32, false);
+    slot.set_size_request(width, height);
+    slot.set_halign(gtk::Align::Center);
+    slot.set_valign(gtk::Align::Center);
+    slot.set_child(Some(child));
+    slot.upcast()
+}
+
+fn collection_preview_placeholder(width: i32, height: i32) -> gtk::Widget {
+    let placeholder = gtk::Image::from_icon_name("view-paged-symbolic");
+    placeholder.set_pixel_size((width.min(height) / 2).max(16));
+    placeholder.set_size_request(width, height);
+    placeholder.upcast()
 }
 
 fn blank_page_texture(width: i32, height: i32) -> Option<gtk::gdk::Texture> {
+    let png_data = blank_page_png(width, height)?;
+    gtk::gdk::Texture::from_bytes(&glib::Bytes::from(&png_data)).ok()
+}
+
+fn blank_page_png(width: i32, height: i32) -> Option<Vec<u8>> {
     let surface =
         cairo::ImageSurface::create(cairo::Format::ARgb32, width.max(1), height.max(1)).ok()?;
     let context = cairo::Context::new(&surface).ok()?;
@@ -305,7 +375,35 @@ fn blank_page_texture(width: i32, height: i32) -> Option<gtk::gdk::Texture> {
 
     let mut png_data = Vec::new();
     surface.write_to_png(&mut png_data).ok()?;
-    gtk::gdk::Texture::from_bytes(&glib::Bytes::from(&png_data)).ok()
+    Some(png_data)
+}
+
+fn fit_pixbuf(pixbuf: &Pixbuf, max_width: i32, max_height: i32) -> Option<Pixbuf> {
+    let (width, height) = fit_size(pixbuf.width(), pixbuf.height(), max_width, max_height)?;
+    if width == pixbuf.width() && height == pixbuf.height() {
+        Some(pixbuf.clone())
+    } else {
+        pixbuf.scale_simple(width, height, InterpType::Bilinear)
+    }
+}
+
+fn fit_size(width: i32, height: i32, max_width: i32, max_height: i32) -> Option<(i32, i32)> {
+    if width <= 0 || height <= 0 || max_width <= 0 || max_height <= 0 {
+        return None;
+    }
+
+    let scale = (max_width as f64 / width as f64).min(max_height as f64 / height as f64);
+    Some((
+        (width as f64 * scale).round().max(1.0) as i32,
+        (height as f64 * scale).round().max(1.0) as i32,
+    ))
+}
+
+fn blank_page_fallback_size(width: i32, height: i32, rotation: i64) -> (i32, i32) {
+    let page_width = width;
+    let page_height = (width as f64 * std::f64::consts::SQRT_2).ceil() as i32;
+    let (page_width, page_height) = rotated_size(page_width, page_height, rotation);
+    fit_size(page_width, page_height, width, height).unwrap_or((width, height))
 }
 
 fn rotated_size(width: i32, height: i32, rotation: i64) -> (i32, i32) {
@@ -314,6 +412,40 @@ fn rotated_size(width: i32, height: i32, rotation: i64) -> (i32, i32) {
     } else {
         (width, height)
     }
+}
+
+fn rotated_preview_pixbuf(preview: &crate::preview::PagePreview, rotation: i64) -> Option<Pixbuf> {
+    let mut pixbuf = Pixbuf::from_read(Cursor::new(preview.png_data.clone())).ok()?;
+    if let Some(rotated) = match normalize_rotation(rotation) {
+        90 => pixbuf.rotate_simple(PixbufRotation::Clockwise),
+        180 => pixbuf.rotate_simple(PixbufRotation::Upsidedown),
+        270 => pixbuf.rotate_simple(PixbufRotation::Counterclockwise),
+        _ => None,
+    } {
+        pixbuf = rotated;
+    }
+    Some(pixbuf)
+}
+
+fn pixbuf_picture(pixbuf: &Pixbuf) -> Option<gtk::Picture> {
+    pixbuf_texture(pixbuf).map(|texture| {
+        let picture = gtk::Picture::for_paintable(&texture);
+        picture.set_can_shrink(true);
+        picture.set_content_fit(gtk::ContentFit::Contain);
+        picture
+    })
+}
+
+fn preview_picture_fallback() -> gtk::Picture {
+    let picture = gtk::Picture::new();
+    picture.set_can_shrink(true);
+    picture.set_content_fit(gtk::ContentFit::Contain);
+    picture
+}
+
+fn pixbuf_texture(pixbuf: &Pixbuf) -> Option<gtk::gdk::Texture> {
+    let png_data = pixbuf.save_to_bufferv("png", &[]).ok()?;
+    gtk::gdk::Texture::from_bytes(&glib::Bytes::from(&png_data)).ok()
 }
 
 pub(super) fn tile_label(text: impl AsRef<str>) -> gtk::Label {
