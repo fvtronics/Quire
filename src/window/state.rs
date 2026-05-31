@@ -473,16 +473,42 @@ impl OrganizeState {
 }
 
 impl ExtractState {
-    pub fn clear_range_selection(&self) {
+    pub fn clear_range_selection(&self) -> Vec<u32> {
+        let mut changed = self
+            .selected_pages
+            .borrow()
+            .iter()
+            .copied()
+            .collect::<Vec<_>>();
+        changed.extend(self.rotations.borrow().keys().copied());
+        changed.sort_unstable();
+        changed.dedup();
         self.selected_pages.borrow_mut().clear();
         self.rotations.borrow_mut().clear();
+        changed
     }
 
-    pub fn apply_range_selection(&self, pages: Vec<u32>) {
-        self.rotations
-            .borrow_mut()
-            .retain(|page_number, _| pages.contains(page_number));
-        *self.selected_pages.borrow_mut() = pages.into_iter().collect();
+    pub fn apply_range_selection(&self, pages: Vec<u32>) -> Vec<u32> {
+        let pages = pages.into_iter().collect::<BTreeSet<_>>();
+        let mut changed = self
+            .selected_pages
+            .borrow()
+            .symmetric_difference(&pages)
+            .copied()
+            .collect::<Vec<_>>();
+        let mut rotations = self.rotations.borrow_mut();
+        rotations.retain(|page_number, _| {
+            let retain = pages.contains(page_number);
+            if !retain {
+                changed.push(*page_number);
+            }
+            retain
+        });
+        drop(rotations);
+        changed.sort_unstable();
+        changed.dedup();
+        *self.selected_pages.borrow_mut() = pages;
+        changed
     }
 
     pub fn load_document(
@@ -497,7 +523,7 @@ impl ExtractState {
         *self.password.borrow_mut() = password;
         self.page_count.set(page_count);
         *self.previews.borrow_mut() = previews.previews;
-        self.clear_range_selection();
+        let _ = self.clear_range_selection();
         self.job.clear_last_output();
     }
 
@@ -521,18 +547,20 @@ impl ExtractState {
         Some((input_file, password, pages))
     }
 
-    pub fn toggle_page(&self, page_number: u32, selected: bool) {
+    pub fn toggle_page(&self, page_number: u32, selected: bool) -> bool {
         let mut pages = self.selected_pages.borrow_mut();
 
-        if selected {
-            pages.insert(page_number);
+        let changed = if selected {
+            pages.insert(page_number)
         } else {
-            pages.remove(&page_number);
-            self.rotations.borrow_mut().remove(&page_number);
-        }
+            pages.remove(&page_number) | self.rotations.borrow_mut().remove(&page_number).is_some()
+        };
 
         drop(pages);
-        self.job.clear_last_output();
+        if changed {
+            self.job.clear_last_output();
+        }
+        changed
     }
 
     pub fn rotate_page(&self, page_number: u32) -> bool {
@@ -1052,7 +1080,7 @@ mod tests {
     fn extract_selection_is_sorted_and_deduplicated() {
         let state = ExtractState::default();
 
-        state.apply_range_selection(vec![3, 1, 3, 2]);
+        let _ = state.apply_range_selection(vec![3, 1, 3, 2]);
 
         assert_eq!(
             state
@@ -1063,5 +1091,25 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec![1, 2, 3]
         );
+    }
+
+    #[test]
+    fn extract_selection_updates_report_no_op_changes() {
+        let state = ExtractState::default();
+
+        assert!(state.toggle_page(1, true));
+        assert!(!state.toggle_page(1, true));
+        assert_eq!(state.apply_range_selection(vec![1, 2]), vec![2]);
+        assert!(state.apply_range_selection(vec![1, 2]).is_empty());
+        assert_eq!(state.clear_range_selection(), vec![1, 2]);
+        assert!(state.clear_range_selection().is_empty());
+    }
+
+    #[test]
+    fn extract_range_selection_reports_only_changed_pages() {
+        let state = ExtractState::default();
+
+        assert_eq!(state.apply_range_selection(vec![1, 2, 3]), vec![1, 2, 3]);
+        assert_eq!(state.apply_range_selection(vec![2, 3, 4]), vec![1, 4]);
     }
 }

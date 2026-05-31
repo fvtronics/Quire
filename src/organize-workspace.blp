@@ -102,7 +102,7 @@ template $OrganizeWorkspace: Gtk.Box {
       title: _("List");
       icon-name: "view-list-symbolic";
 
-      child: Gtk.ScrolledWindow {
+      child: Gtk.ScrolledWindow organize_list_scrolled_window {
         child: Gtk.ListBox organize_page_list {
           selection-mode: none;
           styles ["boxed-list"]
@@ -115,7 +115,7 @@ template $OrganizeWorkspace: Gtk.Box {
       title: _("Grid");
       icon-name: "view-grid-symbolic";
 
-      child: Gtk.ScrolledWindow {
+      child: Gtk.ScrolledWindow organize_grid_scrolled_window {
         child: Gtk.FlowBox organize_page_grid {
           column-spacing: 12;
           row-spacing: 12;

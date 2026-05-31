@@ -116,7 +116,7 @@ template $ExtractWorkspace: Gtk.Box {
         title: _("List");
         icon-name: "view-list-symbolic";
 
-        child: Gtk.ScrolledWindow {
+        child: Gtk.ScrolledWindow extract_list_scrolled_window {
           child: Gtk.ListBox extract_page_list {
             selection-mode: none;
             styles ["boxed-list"]
@@ -129,7 +129,7 @@ template $ExtractWorkspace: Gtk.Box {
         title: _("Grid");
         icon-name: "view-grid-symbolic";
 
-        child: Gtk.ScrolledWindow {
+        child: Gtk.ScrolledWindow extract_grid_scrolled_window {
           child: Gtk.FlowBox extract_page_grid {
             column-spacing: 12;
             row-spacing: 12;

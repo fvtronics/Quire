@@ -1,12 +1,14 @@
 use super::ui::{
-    format_page_ranges, icon_button, list_preview_widget, normalize_pages, open_pdf_file,
-    page_count_label, page_ranges_error_message, pdf_file_row, preview_tile, save_pdf_file,
+    format_page_ranges, icon_button, list_preview_widget, open_pdf_file, page_count_label,
+    page_ranges_error_message, pdf_file_row, preview_tile, save_pdf_file,
     set_entry_validation_error, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    add_item_context_menu, load_single_processable_pdf, open_output, output_option_callback,
-    parent_window, run_output_job, setup_advanced_options_menu, show_backend_error, show_toast,
-    update_shell_title, update_shell_view_mode, AdvancedOptionsMenu, ContextMenuItem,
+    add_item_context_menu, collection_scroll_position, load_single_processable_pdf, open_output,
+    output_option_callback, parent_window, preserve_collection_scroll_position,
+    replace_collection_item, restore_collection_scroll_position, run_output_job,
+    setup_advanced_options_menu, show_backend_error, show_toast, update_shell_title,
+    update_shell_view_mode, AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem,
     SinglePdfLoadHandlers,
 };
 use super::PdfTool;
@@ -46,6 +48,10 @@ mod imp {
         #[template_child]
         pub extract_page_grid: TemplateChild<gtk::FlowBox>,
         #[template_child]
+        pub extract_list_scrolled_window: TemplateChild<gtk::ScrolledWindow>,
+        #[template_child]
+        pub extract_grid_scrolled_window: TemplateChild<gtk::ScrolledWindow>,
+        #[template_child]
         pub extract_save_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub extract_advanced_options_button: TemplateChild<gtk::MenuButton>,
@@ -54,6 +60,7 @@ mod imp {
 
         pub extract: ExtractState,
         pub is_running: Cell<bool>,
+        pub is_syncing_ranges_entry: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -76,7 +83,7 @@ mod imp {
             self.parent_constructed();
             let obj = self.obj();
             obj.setup_callbacks();
-            obj.update_view();
+            obj.refresh_view_state();
         }
     }
     impl WidgetImpl for ExtractWorkspace {}
@@ -99,7 +106,7 @@ impl ExtractWorkspace {
             self.clone(),
             |workspace, active| workspace.imp().extract.options.set_modern_pdf(active),
             |workspace| workspace.imp().extract.job.clear_last_output(),
-            Self::update_view,
+            Self::refresh_view_state,
         );
         let normalize_page_size = output_option_callback(
             self.clone(),
@@ -111,13 +118,13 @@ impl ExtractWorkspace {
                     .set_normalize_page_size(active);
             },
             |workspace| workspace.imp().extract.job.clear_last_output(),
-            Self::update_view,
+            Self::refresh_view_state,
         );
         let remove_metadata = output_option_callback(
             self.clone(),
             |workspace, active| workspace.imp().extract.options.set_remove_metadata(active),
             |workspace| workspace.imp().extract.job.clear_last_output(),
-            Self::update_view,
+            Self::refresh_view_state,
         );
         setup_advanced_options_menu(
             &imp.extract_advanced_options_button,
@@ -153,20 +160,28 @@ impl ExtractWorkspace {
         let workspace = self.clone();
         imp.extract_ranges_entry.connect_changed(move |entry| {
             let imp = workspace.imp();
+            if imp.is_syncing_ranges_entry.get() {
+                return;
+            }
             let text = entry.text();
             let text = text.trim();
 
-            if text.is_empty() {
-                imp.extract.clear_range_selection();
+            let changed_pages = if text.is_empty() {
+                imp.extract.clear_range_selection()
             } else if let Ok(pages) =
                 crate::pdf::parse_page_ranges(text, imp.extract.page_count.get())
             {
-                let pages = normalize_pages(pages);
-                imp.extract.apply_range_selection(pages);
-            }
+                imp.extract.apply_range_selection(pages)
+            } else {
+                Vec::new()
+            };
 
             imp.extract.job.clear_last_output();
-            workspace.update_view();
+            if changed_pages.is_empty() {
+                workspace.refresh_view_state();
+            } else {
+                workspace.refresh_items(&changed_pages);
+            }
         });
     }
 
@@ -241,12 +256,13 @@ impl ExtractWorkspace {
                 store_loaded: |workspace: &Self, path, password, previews| {
                     let imp = workspace.imp();
                     imp.extract.load_document(path, password, previews);
-                    imp.extract_ranges_entry.set_text("");
+                    workspace.set_extract_ranges_entry("");
+                    workspace.rebuild_collection(false);
                 },
                 finish_loading_failed: |workspace: &Self| {
                     workspace.imp().extract.job.finish_loading_failed();
                 },
-                refresh: Self::update_view,
+                refresh: Self::refresh_view_state,
             },
         );
     }
@@ -267,7 +283,7 @@ impl ExtractWorkspace {
             |workspace, running| workspace.imp().is_running.set(running),
             |workspace| workspace.imp().extract.job.clear_last_output(),
             |workspace, path| workspace.imp().extract.job.set_last_output(path),
-            Self::update_view,
+            Self::refresh_view_state,
         );
     }
 
@@ -281,7 +297,76 @@ impl ExtractWorkspace {
             .set_visible_child_name(view_mode.name());
     }
 
-    pub(super) fn update_view(&self) {
+    fn rebuild_collection(&self, preserve_scroll: bool) {
+        let imp = self.imp();
+        let scroll_position = if preserve_scroll {
+            collection_scroll_position(
+                &imp.extract_list_scrolled_window,
+                &imp.extract_grid_scrolled_window,
+            )
+        } else {
+            CollectionScrollPosition::default()
+        };
+        imp.extract_page_list.remove_all();
+        imp.extract_page_grid.remove_all();
+        for page_number in 1..=imp.extract.page_count.get() as u32 {
+            let (row, tile) = self.extract_page_widgets(page_number);
+            imp.extract_page_list.append(&row);
+            imp.extract_page_grid.append(&tile);
+        }
+        restore_collection_scroll_position(
+            &imp.extract_list_scrolled_window,
+            &imp.extract_grid_scrolled_window,
+            scroll_position,
+        );
+        self.refresh_view_state();
+    }
+
+    fn refresh_item(&self, page_number: u32) {
+        self.refresh_items(&[page_number]);
+    }
+
+    fn refresh_items(&self, page_numbers: &[u32]) {
+        let imp = self.imp();
+        preserve_collection_scroll_position(
+            &imp.extract_list_scrolled_window,
+            &imp.extract_grid_scrolled_window,
+            || {
+                for page_number in page_numbers {
+                    let (row, tile) = self.extract_page_widgets(*page_number);
+                    replace_collection_item(
+                        &self.imp().extract_page_list,
+                        &self.imp().extract_page_grid,
+                        page_number.saturating_sub(1) as usize,
+                        &row,
+                        &tile,
+                    );
+                }
+            },
+        );
+        self.refresh_view_state();
+    }
+
+    fn refresh_all_items(&self) {
+        let pages = (1..=self.imp().extract.page_count.get() as u32).collect::<Vec<_>>();
+        self.refresh_items(&pages);
+    }
+
+    fn extract_page_widgets(&self, page_number: u32) -> (adw::ActionRow, gtk::Box) {
+        let imp = self.imp();
+        let selected_pages = imp.extract.selected_pages.borrow();
+        let rotations = imp.extract.rotations.borrow();
+        let previews = imp.extract.previews.borrow();
+        let preview = previews.get(&page_number);
+        let selected = selected_pages.contains(&page_number);
+        let rotation = *rotations.get(&page_number).unwrap_or(&0);
+        (
+            self.extract_page_row(page_number, selected, preview, rotation),
+            self.extract_page_tile(page_number, preview, selected, rotation),
+        )
+    }
+
+    pub(super) fn refresh_view_state(&self) {
         let imp = self.imp();
         let has_file = imp.extract.file.borrow().is_some();
         let has_ranges = !imp.extract_ranges_entry.text().trim().is_empty();
@@ -296,32 +381,10 @@ impl ExtractWorkspace {
                 .append(&self.extract_file_row(path, imp.extract.page_count.get()));
         }
 
-        imp.extract_page_list.remove_all();
-        imp.extract_page_grid.remove_all();
-        let selected_pages = imp.extract.selected_pages.borrow();
-        let rotations = imp.extract.rotations.borrow();
-        let previews = imp.extract.previews.borrow();
-        for page_number in 1..=imp.extract.page_count.get() as u32 {
-            let preview = previews.get(&page_number);
-            let selected = selected_pages.contains(&page_number);
-            let rotation = *rotations.get(&page_number).unwrap_or(&0);
-            imp.extract_page_list.append(&self.extract_page_row(
-                page_number,
-                selected,
-                preview,
-                rotation,
-            ));
-            imp.extract_page_grid.append(&self.extract_page_tile(
-                page_number,
-                preview,
-                selected,
-                rotation,
-            ));
-        }
-
         imp.extract_empty_status.set_visible(!has_file);
         imp.extract_actions.set_visible(has_file);
         imp.extract_content.set_visible(has_file);
+        imp.extract_view_stack.set_sensitive(!is_busy);
         imp.extract_choose_button.set_visible(has_file);
         imp.extract_advanced_options_button.set_visible(has_file);
         imp.extract_save_button.set_visible(has_file);
@@ -378,7 +441,6 @@ impl ExtractWorkspace {
     ) -> adw::ActionRow {
         let check_button = gtk::CheckButton::builder()
             .active(selected)
-            .sensitive(!self.is_busy())
             .tooltip_text(gettext("Select Page"))
             .valign(gtk::Align::Center)
             .build();
@@ -392,7 +454,7 @@ impl ExtractWorkspace {
 
         let rotate_button =
             icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
-        rotate_button.set_sensitive(selected && !self.is_busy());
+        rotate_button.set_sensitive(selected);
         let window = self.clone();
         rotate_button.connect_clicked(move |_| {
             window.rotate_extract_page(page_number);
@@ -434,14 +496,13 @@ impl ExtractWorkspace {
         label.set_hexpand(true);
         let rotate_button =
             icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
-        rotate_button.set_sensitive(selected && !self.is_busy());
+        rotate_button.set_sensitive(selected);
         let window = self.clone();
         rotate_button.connect_clicked(move |_| {
             window.rotate_extract_page(page_number);
         });
         let check_button = gtk::CheckButton::builder()
             .active(selected)
-            .sensitive(!self.is_busy())
             .tooltip_text(gettext("Select Page"))
             .valign(gtk::Align::Center)
             .build();
@@ -467,7 +528,6 @@ impl ExtractWorkspace {
         page_number: u32,
         selected: bool,
     ) {
-        let sensitive = !self.is_busy();
         let workspace = self.clone();
         let rotate = move || workspace.rotate_extract_page(page_number);
         let workspace = self.clone();
@@ -476,12 +536,7 @@ impl ExtractWorkspace {
         add_item_context_menu(
             widget,
             vec![
-                ContextMenuItem::new(
-                    "rotate",
-                    gettext("Rotate Clockwise"),
-                    sensitive && selected,
-                    rotate,
-                ),
+                ContextMenuItem::new("rotate", gettext("Rotate Clockwise"), selected, rotate),
                 ContextMenuItem::new(
                     "toggle",
                     if selected {
@@ -489,7 +544,7 @@ impl ExtractWorkspace {
                     } else {
                         gettext("Select")
                     },
-                    sensitive,
+                    true,
                     toggle,
                 ),
             ],
@@ -501,9 +556,10 @@ impl ExtractWorkspace {
             return;
         }
 
-        self.imp().extract.toggle_page(page_number, selected);
-        self.update_extract_ranges_entry();
-        self.update_view();
+        if self.imp().extract.toggle_page(page_number, selected) {
+            self.update_extract_ranges_entry();
+            self.refresh_item(page_number);
+        }
     }
 
     fn rotate_extract_page(&self, page_number: u32) {
@@ -512,7 +568,7 @@ impl ExtractWorkspace {
         }
 
         if self.imp().extract.rotate_page(page_number) {
-            self.update_view();
+            self.refresh_item(page_number);
         }
     }
 
@@ -522,7 +578,7 @@ impl ExtractWorkspace {
         }
 
         if self.imp().extract.rotate_selected_pages() {
-            self.update_view();
+            self.refresh_all_items();
         }
     }
 
@@ -539,9 +595,18 @@ impl ExtractWorkspace {
             format_page_ranges(&pages)
         };
 
-        if imp.extract_ranges_entry.text().as_str() != text {
-            imp.extract_ranges_entry.set_text(&text);
+        self.set_extract_ranges_entry(&text);
+    }
+
+    fn set_extract_ranges_entry(&self, text: &str) {
+        let imp = self.imp();
+        if imp.extract_ranges_entry.text().as_str() == text {
+            return;
         }
+
+        imp.is_syncing_ranges_entry.set(true);
+        imp.extract_ranges_entry.set_text(text);
+        imp.is_syncing_ranges_entry.set(false);
     }
 
     fn open_last_output(&self) {

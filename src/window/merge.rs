@@ -3,10 +3,12 @@ use super::ui::{
     save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    add_item_context_menu, load_processable_pdf, open_output, ordered_item_context_menu_items,
-    ordered_item_controls, output_option_callback, parent_window, run_output_job,
-    setup_advanced_options_menu, show_pdf_load_error, update_shell_title, update_shell_view_mode,
-    AdvancedOptionsMenu, ContextMenuItem, OrderedItemActions, OrderedItemControlOptions,
+    add_item_context_menu, collection_scroll_position, load_processable_pdf, open_output,
+    ordered_item_context_menu_items, ordered_item_controls, output_option_callback, parent_window,
+    preserve_collection_scroll_position, replace_collection_item,
+    restore_collection_scroll_position, run_output_job, setup_advanced_options_menu,
+    show_pdf_load_error, update_shell_title, update_shell_view_mode, AdvancedOptionsMenu,
+    CollectionScrollPosition, ContextMenuItem, OrderedItemActions, OrderedItemControlOptions,
     PdfLoadResult,
 };
 use super::PdfTool;
@@ -40,6 +42,10 @@ mod imp {
         #[template_child]
         pub merge_file_grid: TemplateChild<gtk::FlowBox>,
         #[template_child]
+        pub merge_list_scrolled_window: TemplateChild<gtk::ScrolledWindow>,
+        #[template_child]
+        pub merge_grid_scrolled_window: TemplateChild<gtk::ScrolledWindow>,
+        #[template_child]
         pub clear_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub advanced_options_button: TemplateChild<gtk::MenuButton>,
@@ -72,7 +78,7 @@ mod imp {
             self.parent_constructed();
             let obj = self.obj();
             obj.setup_callbacks();
-            obj.update_view();
+            obj.refresh_view_state();
         }
     }
     impl WidgetImpl for MergeWorkspace {}
@@ -95,7 +101,7 @@ impl MergeWorkspace {
             self.clone(),
             |workspace, active| workspace.imp().merge.options.set_modern_pdf(active),
             |workspace| workspace.imp().merge.job.clear_last_output(),
-            Self::update_view,
+            Self::refresh_view_state,
         );
         let normalize_page_size = output_option_callback(
             self.clone(),
@@ -107,13 +113,13 @@ impl MergeWorkspace {
                     .set_normalize_page_size(active)
             },
             |workspace| workspace.imp().merge.job.clear_last_output(),
-            Self::update_view,
+            Self::refresh_view_state,
         );
         let remove_metadata = output_option_callback(
             self.clone(),
             |workspace, active| workspace.imp().merge.options.set_remove_metadata(active),
             |workspace| workspace.imp().merge.job.clear_last_output(),
-            Self::update_view,
+            Self::refresh_view_state,
         );
         setup_advanced_options_menu(
             &imp.advanced_options_button,
@@ -139,7 +145,7 @@ impl MergeWorkspace {
         let workspace = self.clone();
         imp.clear_button.connect_clicked(move |_| {
             workspace.imp().merge.clear();
-            workspace.update_view();
+            workspace.rebuild_collection(false);
         });
 
         let workspace = self.clone();
@@ -196,12 +202,12 @@ impl MergeWorkspace {
 
         if paths_to_preview.is_empty() {
             imp.merge.add_files(paths);
-            self.update_view();
+            self.rebuild_collection(true);
             return;
         }
 
         imp.merge.job.begin_loading();
-        self.update_view();
+        self.refresh_view_state();
         self.load_merge_previews(paths, paths_to_preview, parent);
     }
 
@@ -244,7 +250,7 @@ impl MergeWorkspace {
                 .imp()
                 .merge
                 .finish_loading(files_to_add, loaded_previews, loaded_passwords);
-            workspace.update_view();
+            workspace.rebuild_collection(true);
         });
     }
 
@@ -270,7 +276,7 @@ impl MergeWorkspace {
             |workspace, running| workspace.imp().is_running.set(running),
             |workspace| workspace.imp().merge.job.clear_last_output(),
             |workspace, path| workspace.imp().merge.job.set_last_output(path),
-            Self::update_view,
+            Self::refresh_view_state,
         );
     }
 
@@ -284,12 +290,17 @@ impl MergeWorkspace {
             .set_visible_child_name(view_mode.name());
     }
 
-    pub(super) fn update_view(&self) {
+    fn rebuild_collection(&self, preserve_scroll: bool) {
         let imp = self.imp();
+        let scroll_position = if preserve_scroll {
+            collection_scroll_position(
+                &imp.merge_list_scrolled_window,
+                &imp.merge_grid_scrolled_window,
+            )
+        } else {
+            CollectionScrollPosition::default()
+        };
         let files = imp.merge.files.borrow();
-        let has_files = !files.is_empty();
-        let is_busy = imp.merge.job.is_busy(imp.is_running.get());
-        let can_merge = files.len() > 1 && !is_busy;
         let previews = imp.merge.previews.borrow();
 
         imp.file_list.remove_all();
@@ -310,10 +321,76 @@ impl MergeWorkspace {
                 item.rotation,
             ));
         }
+        drop(previews);
+        drop(files);
+        restore_collection_scroll_position(
+            &imp.merge_list_scrolled_window,
+            &imp.merge_grid_scrolled_window,
+            scroll_position,
+        );
+        self.refresh_view_state();
+    }
+
+    fn refresh_item(&self, index: usize) {
+        let imp = self.imp();
+        preserve_collection_scroll_position(
+            &imp.merge_list_scrolled_window,
+            &imp.merge_grid_scrolled_window,
+            || self.refresh_item_widgets(index),
+        );
+        self.refresh_view_state();
+    }
+
+    fn refresh_all_items(&self) {
+        let count = self.imp().merge.files.borrow().len();
+        let imp = self.imp();
+        preserve_collection_scroll_position(
+            &imp.merge_list_scrolled_window,
+            &imp.merge_grid_scrolled_window,
+            || {
+                for index in 0..count {
+                    self.refresh_item_widgets(index);
+                }
+            },
+        );
+        self.refresh_view_state();
+    }
+
+    fn refresh_item_widgets(&self, index: usize) {
+        let imp = self.imp();
+        let files = imp.merge.files.borrow();
+        let Some(item) = files.get(index) else {
+            return;
+        };
+        let previews = imp.merge.previews.borrow();
+        let row = self.file_row(
+            index,
+            &item.path,
+            files.len(),
+            previews.get(&item.path),
+            item.rotation,
+        );
+        let tile = self.file_tile(
+            index,
+            &item.path,
+            files.len(),
+            previews.get(&item.path),
+            item.rotation,
+        );
+        replace_collection_item(&imp.file_list, &imp.merge_file_grid, index, &row, &tile);
+    }
+
+    pub(super) fn refresh_view_state(&self) {
+        let imp = self.imp();
+        let files = imp.merge.files.borrow();
+        let has_files = !files.is_empty();
+        let is_busy = imp.merge.job.is_busy(imp.is_running.get());
+        let can_merge = files.len() > 1 && !is_busy;
 
         imp.empty_status.set_visible(!has_files);
         imp.merge_actions.set_visible(has_files);
         imp.merge_view_stack.set_visible(has_files);
+        imp.merge_view_stack.set_sensitive(!is_busy);
         imp.add_button.set_visible(has_files);
         imp.advanced_options_button.set_visible(has_files);
         imp.clear_button.set_visible(has_files);
@@ -360,9 +437,7 @@ impl MergeWorkspace {
             .build();
         row.add_prefix(&list_preview_widget(preview, rotation));
 
-        let imp = self.imp();
         let options = OrderedItemControlOptions {
-            controls_sensitive: !imp.merge.job.is_busy(imp.is_running.get()),
             can_move_up: index > 0,
             can_move_down: index + 1 < count,
             can_remove: true,
@@ -393,9 +468,7 @@ impl MergeWorkspace {
         let size = dim_tile_label(file_subtitle(path));
         controls.append(&size);
 
-        let imp = self.imp();
         let options = OrderedItemControlOptions {
-            controls_sensitive: !imp.merge.job.is_busy(imp.is_running.get()),
             can_move_up: index > 0,
             can_move_down: index + 1 < count,
             can_remove: true,
@@ -434,12 +507,7 @@ impl MergeWorkspace {
         let mut items = ordered_item_context_menu_items(actions);
         items.insert(
             2,
-            ContextMenuItem::new(
-                "duplicate",
-                gettext("Duplicate"),
-                actions.options().controls_sensitive,
-                duplicate,
-            ),
+            ContextMenuItem::new("duplicate", gettext("Duplicate"), true, duplicate),
         );
         add_item_context_menu(widget, items);
     }
@@ -450,7 +518,7 @@ impl MergeWorkspace {
         }
 
         if self.imp().merge.move_file(from, to) {
-            self.update_view();
+            self.rebuild_collection(true);
         }
     }
 
@@ -460,7 +528,7 @@ impl MergeWorkspace {
         }
 
         if self.imp().merge.rotate_file(index) {
-            self.update_view();
+            self.refresh_item(index);
         }
     }
 
@@ -470,7 +538,7 @@ impl MergeWorkspace {
         }
 
         if self.imp().merge.rotate_all_files() {
-            self.update_view();
+            self.refresh_all_items();
         }
     }
 
@@ -480,7 +548,7 @@ impl MergeWorkspace {
         }
 
         if self.imp().merge.reorder_file(from, to) {
-            self.update_view();
+            self.rebuild_collection(true);
         }
     }
 
@@ -514,7 +582,7 @@ impl MergeWorkspace {
         }
 
         self.imp().merge.remove_file(index);
-        self.update_view();
+        self.rebuild_collection(true);
     }
 
     fn duplicate_file(&self, index: usize) {
@@ -523,7 +591,7 @@ impl MergeWorkspace {
         }
 
         if self.imp().merge.duplicate_file(index) {
-            self.update_view();
+            self.rebuild_collection(true);
         }
     }
 

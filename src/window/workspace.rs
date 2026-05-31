@@ -328,6 +328,71 @@ pub(super) fn open_output(widget: &impl IsA<gtk::Widget>, path: &Path) {
     }
 }
 
+#[derive(Clone, Copy, Default)]
+pub(super) struct CollectionScrollPosition {
+    list: f64,
+    grid: f64,
+}
+
+pub(super) fn collection_scroll_position(
+    list: &gtk::ScrolledWindow,
+    grid: &gtk::ScrolledWindow,
+) -> CollectionScrollPosition {
+    CollectionScrollPosition {
+        list: list.vadjustment().value(),
+        grid: grid.vadjustment().value(),
+    }
+}
+
+pub(super) fn restore_collection_scroll_position(
+    list: &gtk::ScrolledWindow,
+    grid: &gtk::ScrolledWindow,
+    position: CollectionScrollPosition,
+) {
+    let list_adjustment = list.vadjustment();
+    let grid_adjustment = grid.vadjustment();
+    restore_adjustment(&list_adjustment, position.list);
+    restore_adjustment(&grid_adjustment, position.grid);
+
+    glib::idle_add_local_once(move || {
+        restore_adjustment(&list_adjustment, position.list);
+        restore_adjustment(&grid_adjustment, position.grid);
+    });
+}
+
+pub(super) fn preserve_collection_scroll_position(
+    list: &gtk::ScrolledWindow,
+    grid: &gtk::ScrolledWindow,
+    update: impl FnOnce(),
+) {
+    let position = collection_scroll_position(list, grid);
+    update();
+    restore_collection_scroll_position(list, grid, position);
+}
+
+fn restore_adjustment(adjustment: &gtk::Adjustment, value: f64) {
+    let upper = (adjustment.upper() - adjustment.page_size()).max(adjustment.lower());
+    adjustment.set_value(value.clamp(adjustment.lower(), upper));
+}
+
+pub(super) fn replace_collection_item(
+    list: &gtk::ListBox,
+    grid: &gtk::FlowBox,
+    index: usize,
+    row: &impl IsA<gtk::Widget>,
+    tile: &impl IsA<gtk::Widget>,
+) {
+    let index = index as i32;
+    if let Some(old_row) = list.row_at_index(index) {
+        list.remove(&old_row);
+        list.insert(row, index);
+    }
+    if let Some(old_tile) = grid.child_at_index(index) {
+        grid.remove(&old_tile);
+        grid.insert(tile, index);
+    }
+}
+
 pub(super) struct OrderedItemControls {
     pub up: gtk::Button,
     pub down: gtk::Button,
@@ -337,7 +402,6 @@ pub(super) struct OrderedItemControls {
 
 #[derive(Clone, Copy)]
 pub(super) struct OrderedItemControlOptions {
-    pub controls_sensitive: bool,
     pub can_move_up: bool,
     pub can_move_down: bool,
     pub can_remove: bool,
@@ -367,10 +431,6 @@ impl OrderedItemActions {
             remove: Rc::new(on_remove),
         }
     }
-
-    pub(super) fn options(&self) -> OrderedItemControlOptions {
-        self.options
-    }
 }
 
 impl OrderedItemControls {
@@ -391,22 +451,21 @@ impl OrderedItemControls {
 
 pub(super) fn ordered_item_controls(actions: &OrderedItemActions) -> OrderedItemControls {
     let up = icon_button("go-up-symbolic", &gettext("Move Up"));
-    up.set_sensitive(actions.options.controls_sensitive && actions.options.can_move_up);
+    up.set_sensitive(actions.options.can_move_up);
     let move_up = actions.move_up.clone();
     up.connect_clicked(move |_| (move_up)());
 
     let down = icon_button("go-down-symbolic", &gettext("Move Down"));
-    down.set_sensitive(actions.options.controls_sensitive && actions.options.can_move_down);
+    down.set_sensitive(actions.options.can_move_down);
     let move_down = actions.move_down.clone();
     down.connect_clicked(move |_| (move_down)());
 
     let rotate = icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
-    rotate.set_sensitive(actions.options.controls_sensitive);
     let rotate_action = actions.rotate.clone();
     rotate.connect_clicked(move |_| (rotate_action)());
 
     let remove = icon_button("edit-delete-symbolic", &gettext("Remove"));
-    remove.set_sensitive(actions.options.controls_sensitive && actions.options.can_remove);
+    remove.set_sensitive(actions.options.can_remove);
     let remove_action = actions.remove.clone();
     remove.connect_clicked(move |_| (remove_action)());
 
@@ -425,25 +484,25 @@ pub(super) fn ordered_item_context_menu_items(
         ContextMenuItem::from_action(
             "move-up",
             gettext("Move Up"),
-            actions.options.controls_sensitive && actions.options.can_move_up,
+            actions.options.can_move_up,
             actions.move_up.clone(),
         ),
         ContextMenuItem::from_action(
             "move-down",
             gettext("Move Down"),
-            actions.options.controls_sensitive && actions.options.can_move_down,
+            actions.options.can_move_down,
             actions.move_down.clone(),
         ),
         ContextMenuItem::from_action(
             "rotate",
             gettext("Rotate Clockwise"),
-            actions.options.controls_sensitive,
+            true,
             actions.rotate.clone(),
         ),
         ContextMenuItem::from_action(
             "remove",
             gettext("Remove"),
-            actions.options.controls_sensitive && actions.options.can_remove,
+            actions.options.can_remove,
             actions.remove.clone(),
         ),
     ]

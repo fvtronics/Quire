@@ -296,10 +296,10 @@ impl FoliosWindow {
     fn update_active_workspace(&self) {
         let imp = self.imp();
         match imp.active_tool.get() {
-            PdfTool::Merge => imp.merge_workspace.update_view(),
+            PdfTool::Merge => imp.merge_workspace.refresh_view_state(),
             PdfTool::Compress => imp.compress_workspace.update_view(),
-            PdfTool::Organize => imp.organize_workspace.update_view(),
-            PdfTool::Extract => imp.extract_workspace.update_view(),
+            PdfTool::Organize => imp.organize_workspace.refresh_view_state(),
+            PdfTool::Extract => imp.extract_workspace.refresh_view_state(),
             PdfTool::Split => imp.split_workspace.update_view(),
             PdfTool::Metadata => imp.metadata_workspace.update_view(),
         }

@@ -444,12 +444,6 @@ pub(super) fn clear_box(box_: &gtk::Box) {
     }
 }
 
-pub(super) fn normalize_pages(mut pages: Vec<u32>) -> Vec<u32> {
-    pages.sort_unstable();
-    pages.dedup();
-    pages
-}
-
 pub(super) fn format_page_ranges(pages: &[u32]) -> String {
     let Some((&first, rest)) = pages.split_first() else {
         return String::new();
@@ -520,12 +514,7 @@ fn format_page_range(start: u32, end: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{fit_size, format_page_ranges, normalize_pages, rotated_size};
-
-    #[test]
-    fn normalize_pages_sorts_and_removes_duplicates() {
-        assert_eq!(normalize_pages(vec![3, 1, 3, 2]), vec![1, 2, 3]);
-    }
+    use super::{fit_size, format_page_ranges, rotated_size};
 
     #[test]
     fn format_page_ranges_groups_contiguous_pages() {

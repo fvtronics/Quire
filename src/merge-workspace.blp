@@ -99,7 +99,7 @@ template $MergeWorkspace: Gtk.Box {
     Adw.ViewStackPage {
       name: "list";
 
-      child: Gtk.ScrolledWindow {
+      child: Gtk.ScrolledWindow merge_list_scrolled_window {
         child: Gtk.ListBox file_list {
           selection-mode: none;
           styles ["boxed-list"]
@@ -110,7 +110,7 @@ template $MergeWorkspace: Gtk.Box {
     Adw.ViewStackPage {
       name: "grid";
 
-      child: Gtk.ScrolledWindow {
+      child: Gtk.ScrolledWindow merge_grid_scrolled_window {
         child: Gtk.FlowBox merge_file_grid {
           column-spacing: 12;
           row-spacing: 12;

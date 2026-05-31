@@ -4,11 +4,12 @@ use super::ui::{
     tile_preview_widget,
 };
 use super::workspace::{
-    add_item_context_menu, load_single_processable_pdf, open_output,
+    add_item_context_menu, collection_scroll_position, load_single_processable_pdf, open_output,
     ordered_item_context_menu_items, ordered_item_controls, output_option_callback, parent_window,
-    run_output_job, setup_advanced_options_menu, update_shell_title, update_shell_view_mode,
-    AdvancedOptionsMenu, ContextMenuItem, OrderedItemActions, OrderedItemControlOptions,
-    SinglePdfLoadHandlers,
+    preserve_collection_scroll_position, replace_collection_item,
+    restore_collection_scroll_position, run_output_job, setup_advanced_options_menu,
+    update_shell_title, update_shell_view_mode, AdvancedOptionsMenu, CollectionScrollPosition,
+    ContextMenuItem, OrderedItemActions, OrderedItemControlOptions, SinglePdfLoadHandlers,
 };
 use super::PdfTool;
 use adw::prelude::*;
@@ -40,6 +41,10 @@ mod imp {
         pub organize_page_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub organize_page_grid: TemplateChild<gtk::FlowBox>,
+        #[template_child]
+        pub organize_list_scrolled_window: TemplateChild<gtk::ScrolledWindow>,
+        #[template_child]
+        pub organize_grid_scrolled_window: TemplateChild<gtk::ScrolledWindow>,
         #[template_child]
         pub organize_reset_button: TemplateChild<gtk::Button>,
         #[template_child]
@@ -73,7 +78,7 @@ mod imp {
             self.parent_constructed();
             let obj = self.obj();
             obj.setup_callbacks();
-            obj.update_view();
+            obj.refresh_view_state();
         }
     }
     impl WidgetImpl for OrganizeWorkspace {}
@@ -96,7 +101,7 @@ impl OrganizeWorkspace {
             self.clone(),
             |workspace, active| workspace.imp().organize.options.set_modern_pdf(active),
             |workspace| workspace.imp().organize.job.clear_last_output(),
-            Self::update_view,
+            Self::refresh_view_state,
         );
         let normalize_page_size = output_option_callback(
             self.clone(),
@@ -108,13 +113,13 @@ impl OrganizeWorkspace {
                     .set_normalize_page_size(active);
             },
             |workspace| workspace.imp().organize.job.clear_last_output(),
-            Self::update_view,
+            Self::refresh_view_state,
         );
         let remove_metadata = output_option_callback(
             self.clone(),
             |workspace, active| workspace.imp().organize.options.set_remove_metadata(active),
             |workspace| workspace.imp().organize.job.clear_last_output(),
-            Self::update_view,
+            Self::refresh_view_state,
         );
         setup_advanced_options_menu(
             &imp.organize_advanced_options_button,
@@ -198,18 +203,19 @@ impl OrganizeWorkspace {
                         .imp()
                         .organize
                         .load_document(path, password, previews);
+                    workspace.rebuild_collection(false);
                 },
                 finish_loading_failed: |workspace: &Self| {
                     workspace.imp().organize.job.finish_loading_failed();
                 },
-                refresh: Self::update_view,
+                refresh: Self::refresh_view_state,
             },
         );
     }
 
     fn reset_pdf(&self) {
         if self.imp().organize.reset() {
-            self.update_view();
+            self.rebuild_collection(true);
         }
     }
 
@@ -227,7 +233,7 @@ impl OrganizeWorkspace {
             |workspace, running| workspace.imp().is_running.set(running),
             |workspace| workspace.imp().organize.job.clear_last_output(),
             |workspace, path| workspace.imp().organize.job.set_last_output(path),
-            Self::update_view,
+            Self::refresh_view_state,
         );
     }
 
@@ -241,12 +247,17 @@ impl OrganizeWorkspace {
             .set_visible_child_name(view_mode.name());
     }
 
-    pub(super) fn update_view(&self) {
+    fn rebuild_collection(&self, preserve_scroll: bool) {
         let imp = self.imp();
+        let scroll_position = if preserve_scroll {
+            collection_scroll_position(
+                &imp.organize_list_scrolled_window,
+                &imp.organize_grid_scrolled_window,
+            )
+        } else {
+            CollectionScrollPosition::default()
+        };
         let page_order = imp.organize.page_order.borrow();
-        let has_file = imp.organize.file.borrow().is_some();
-        let has_pages = !page_order.is_empty();
-        let is_busy = imp.organize.job.is_busy(imp.is_running.get());
         let previews = imp.organize.previews.borrow();
 
         imp.organize_page_list.remove_all();
@@ -262,10 +273,71 @@ impl OrganizeWorkspace {
                 page_order.len(),
             ));
         }
+        drop(previews);
+        drop(page_order);
+        restore_collection_scroll_position(
+            &imp.organize_list_scrolled_window,
+            &imp.organize_grid_scrolled_window,
+            scroll_position,
+        );
+        self.refresh_view_state();
+    }
+
+    fn refresh_item(&self, index: usize) {
+        let imp = self.imp();
+        preserve_collection_scroll_position(
+            &imp.organize_list_scrolled_window,
+            &imp.organize_grid_scrolled_window,
+            || self.refresh_item_widgets(index),
+        );
+        self.refresh_view_state();
+    }
+
+    fn refresh_all_items(&self) {
+        let count = self.imp().organize.page_order.borrow().len();
+        let imp = self.imp();
+        preserve_collection_scroll_position(
+            &imp.organize_list_scrolled_window,
+            &imp.organize_grid_scrolled_window,
+            || {
+                for index in 0..count {
+                    self.refresh_item_widgets(index);
+                }
+            },
+        );
+        self.refresh_view_state();
+    }
+
+    fn refresh_item_widgets(&self, index: usize) {
+        let imp = self.imp();
+        let page_order = imp.organize.page_order.borrow();
+        let Some(page) = page_order.get(index).copied() else {
+            return;
+        };
+        let previews = imp.organize.previews.borrow();
+        let preview = previews.get(&page.page_number);
+        let row = self.page_row(index, page, page_order.len(), preview);
+        let tile = self.organize_page_tile(page, preview, index, page_order.len());
+        replace_collection_item(
+            &imp.organize_page_list,
+            &imp.organize_page_grid,
+            index,
+            &row,
+            &tile,
+        );
+    }
+
+    pub(super) fn refresh_view_state(&self) {
+        let imp = self.imp();
+        let page_order = imp.organize.page_order.borrow();
+        let has_file = imp.organize.file.borrow().is_some();
+        let has_pages = !page_order.is_empty();
+        let is_busy = imp.organize.job.is_busy(imp.is_running.get());
 
         imp.organize_empty_status.set_visible(!has_file);
         imp.organize_actions.set_visible(has_file);
         imp.organize_view_stack.set_visible(has_file);
+        imp.organize_view_stack.set_sensitive(!is_busy);
         imp.organize_choose_button.set_visible(has_file);
         imp.organize_advanced_options_button.set_visible(has_file);
         imp.organize_reset_button.set_visible(has_file);
@@ -316,9 +388,7 @@ impl OrganizeWorkspace {
             row.add_prefix(&list_preview_widget(preview, page.rotation));
         }
 
-        let imp = self.imp();
         let options = OrderedItemControlOptions {
-            controls_sensitive: !imp.organize.job.is_busy(imp.is_running.get()),
             can_move_up: index > 0,
             can_move_down: index + 1 < count,
             can_remove: count > 1,
@@ -352,9 +422,7 @@ impl OrganizeWorkspace {
         let position = dim_tile_label(format!("{}/{}", index + 1, count));
         controls.append(&position);
 
-        let imp = self.imp();
         let options = OrderedItemControlOptions {
-            controls_sensitive: !imp.organize.job.is_busy(imp.is_running.get()),
             can_move_up: index > 0,
             can_move_down: index + 1 < count,
             can_remove: count > 1,
@@ -401,15 +469,10 @@ impl OrganizeWorkspace {
                 ContextMenuItem::new(
                     "insert-blank",
                     gettext("Insert Blank Page After"),
-                    actions.options().controls_sensitive,
+                    true,
                     insert_blank,
                 ),
-                ContextMenuItem::new(
-                    "duplicate",
-                    gettext("Duplicate"),
-                    actions.options().controls_sensitive,
-                    duplicate,
-                ),
+                ContextMenuItem::new("duplicate", gettext("Duplicate"), true, duplicate),
             ],
         );
         add_item_context_menu(widget, items);
@@ -421,7 +484,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.move_page(from, to) {
-            self.update_view();
+            self.rebuild_collection(true);
         }
     }
 
@@ -431,7 +494,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.rotate_page(index) {
-            self.update_view();
+            self.refresh_item(index);
         }
     }
 
@@ -441,7 +504,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.rotate_all_pages() {
-            self.update_view();
+            self.refresh_all_items();
         }
     }
 
@@ -451,7 +514,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.reorder_page(from, to) {
-            self.update_view();
+            self.rebuild_collection(true);
         }
     }
 
@@ -485,7 +548,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.remove_page(index) {
-            self.update_view();
+            self.rebuild_collection(true);
         }
     }
 
@@ -495,7 +558,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.insert_blank_page_after(index) {
-            self.update_view();
+            self.rebuild_collection(true);
         }
     }
 
@@ -505,7 +568,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.duplicate_page(index) {
-            self.update_view();
+            self.rebuild_collection(true);
         }
     }
 
