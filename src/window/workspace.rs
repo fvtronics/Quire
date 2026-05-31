@@ -374,6 +374,13 @@ impl OrderedItemActions {
 }
 
 impl OrderedItemControls {
+    pub(super) fn append_to_row(&self, row: &adw::ActionRow) {
+        row.add_suffix(&self.up);
+        row.add_suffix(&self.down);
+        row.add_suffix(&self.rotate);
+        row.add_suffix(&self.remove);
+    }
+
     pub(super) fn append_to_box(&self, box_: &gtk::Box) {
         box_.append(&self.up);
         box_.append(&self.down);

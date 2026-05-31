@@ -1,7 +1,6 @@
 use super::ui::{
-    collection_list_row, collection_list_text, format_page_ranges, icon_button,
-    list_preview_widget, normalize_pages, open_pdf_file, page_count_label,
-    page_ranges_error_message, pdf_file_row, preview_tile, save_pdf_file,
+    format_page_ranges, icon_button, list_preview_widget, normalize_pages, open_pdf_file,
+    page_count_label, page_ranges_error_message, pdf_file_row, preview_tile, save_pdf_file,
     set_entry_validation_error, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
@@ -376,23 +375,20 @@ impl ExtractWorkspace {
         selected: bool,
         preview: Option<&crate::preview::PagePreview>,
         rotation: i64,
-    ) -> gtk::ListBoxRow {
+    ) -> adw::ActionRow {
         let check_button = gtk::CheckButton::builder()
             .active(selected)
             .sensitive(!self.is_busy())
             .tooltip_text(gettext("Select Page"))
             .valign(gtk::Align::Center)
             .build();
-        let content = collection_list_row();
-        content.append(&list_preview_widget(preview, rotation));
-        content.append(&collection_list_text(
-            format!("{} {page_number}", gettext("Page")),
-            if selected {
-                gettext("Selected")
-            } else {
-                gettext("Not selected")
-            },
-        ));
+        let row = adw::ActionRow::builder()
+            .title(format!("{} {page_number}", gettext("Page")))
+            .activatable(true)
+            .activatable_widget(&check_button)
+            .build();
+
+        row.add_prefix(&list_preview_widget(preview, rotation));
 
         let rotate_button =
             icon_button("object-rotate-right-symbolic", &gettext("Rotate Clockwise"));
@@ -401,18 +397,9 @@ impl ExtractWorkspace {
         rotate_button.connect_clicked(move |_| {
             window.rotate_extract_page(page_number);
         });
-        content.append(&rotate_button);
+        row.add_suffix(&rotate_button);
 
-        content.append(&check_button);
-
-        let row = gtk::ListBoxRow::builder()
-            .activatable(true)
-            .child(&content)
-            .build();
-        let window = self.clone();
-        row.connect_activate(move |_| {
-            window.toggle_extract_page(page_number, !selected);
-        });
+        row.add_suffix(&check_button);
 
         let window = self.clone();
         check_button.connect_toggled(move |button| {

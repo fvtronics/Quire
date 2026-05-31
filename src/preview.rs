@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::path::PathBuf;
 
-const PAGE_PREVIEW_WIDTH: i32 = 160;
+const PAGE_PREVIEW_WIDTH: i32 = 200;
 const SINGLE_FILE_PREVIEW_WIDTH: i32 = 360;
 
 #[derive(Debug, Clone)]

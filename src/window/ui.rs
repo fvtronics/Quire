@@ -183,7 +183,7 @@ pub(super) fn rotated_preview_picture(
     preview: &crate::preview::PagePreview,
     rotation: i64,
 ) -> gtk::Picture {
-    match rotated_preview_pixbuf(preview, rotation).and_then(|pixbuf| pixbuf_picture(&pixbuf)) {
+    match rotated_preview_pixbuf(preview, rotation).map(|pixbuf| pixbuf_picture(&pixbuf)) {
         Some(picture) => picture,
         None => preview_picture_fallback(),
     }
@@ -235,43 +235,6 @@ pub(super) fn preview_tile() -> gtk::Box {
         .build()
 }
 
-pub(super) fn collection_list_row() -> gtk::Box {
-    gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(12)
-        .margin_top(6)
-        .margin_bottom(6)
-        .margin_start(12)
-        .margin_end(12)
-        .build()
-}
-
-pub(super) fn collection_list_text(title: impl AsRef<str>, subtitle: impl AsRef<str>) -> gtk::Box {
-    let box_ = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .valign(gtk::Align::Center)
-        .hexpand(true)
-        .build();
-
-    box_.append(
-        &gtk::Label::builder()
-            .label(title.as_ref())
-            .xalign(0.0)
-            .ellipsize(gtk::pango::EllipsizeMode::End)
-            .build(),
-    );
-
-    let subtitle = gtk::Label::builder()
-        .label(subtitle.as_ref())
-        .xalign(0.0)
-        .ellipsize(gtk::pango::EllipsizeMode::End)
-        .build();
-    subtitle.add_css_class("dim-label");
-    box_.append(&subtitle);
-
-    box_
-}
-
 pub(super) fn tile_preview_widget(
     preview: Option<&crate::preview::PagePreview>,
     rotation: i64,
@@ -305,7 +268,7 @@ fn collection_preview_widget(
     let child: gtk::Widget = if let Some(preview) = preview {
         let picture = match rotated_preview_pixbuf(preview, rotation)
             .and_then(|pixbuf| fit_pixbuf(&pixbuf, width, height))
-            .and_then(|pixbuf| pixbuf_picture(&pixbuf))
+            .map(|pixbuf| pixbuf_picture(&pixbuf))
         {
             Some(picture) => picture,
             None => preview_picture_fallback(),
@@ -427,13 +390,23 @@ fn rotated_preview_pixbuf(preview: &crate::preview::PagePreview, rotation: i64) 
     Some(pixbuf)
 }
 
-fn pixbuf_picture(pixbuf: &Pixbuf) -> Option<gtk::Picture> {
-    pixbuf_texture(pixbuf).map(|texture| {
-        let picture = gtk::Picture::for_paintable(&texture);
-        picture.set_can_shrink(true);
-        picture.set_content_fit(gtk::ContentFit::Contain);
-        picture
-    })
+fn pixbuf_picture(pixbuf: &Pixbuf) -> gtk::Picture {
+    let format = if pixbuf.has_alpha() {
+        gtk::gdk::MemoryFormat::R8g8b8a8
+    } else {
+        gtk::gdk::MemoryFormat::R8g8b8
+    };
+    let texture = gtk::gdk::MemoryTexture::new(
+        pixbuf.width(),
+        pixbuf.height(),
+        format,
+        &pixbuf.read_pixel_bytes(),
+        pixbuf.rowstride() as usize,
+    );
+    let picture = gtk::Picture::for_paintable(&texture);
+    picture.set_can_shrink(true);
+    picture.set_content_fit(gtk::ContentFit::Contain);
+    picture
 }
 
 fn preview_picture_fallback() -> gtk::Picture {
@@ -441,11 +414,6 @@ fn preview_picture_fallback() -> gtk::Picture {
     picture.set_can_shrink(true);
     picture.set_content_fit(gtk::ContentFit::Contain);
     picture
-}
-
-fn pixbuf_texture(pixbuf: &Pixbuf) -> Option<gtk::gdk::Texture> {
-    let png_data = pixbuf.save_to_bufferv("png", &[]).ok()?;
-    gtk::gdk::Texture::from_bytes(&glib::Bytes::from(&png_data)).ok()
 }
 
 pub(super) fn tile_label(text: impl AsRef<str>) -> gtk::Label {
@@ -552,7 +520,7 @@ fn format_page_range(start: u32, end: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{format_page_ranges, normalize_pages};
+    use super::{fit_size, format_page_ranges, normalize_pages, rotated_size};
 
     #[test]
     fn normalize_pages_sorts_and_removes_duplicates() {
@@ -569,5 +537,29 @@ mod tests {
         assert_eq!(format_page_ranges(&[]), "");
         assert_eq!(format_page_ranges(&[4]), "4");
         assert_eq!(format_page_ranges(&[1, 3, 5]), "1,3,5");
+    }
+
+    #[test]
+    fn fit_size_preserves_aspect_ratio_for_portrait_and_landscape_previews() {
+        assert_eq!(fit_size(200, 400, 200, 220), Some((110, 220)));
+        assert_eq!(fit_size(400, 200, 200, 220), Some((200, 100)));
+    }
+
+    #[test]
+    fn fit_size_allows_previews_to_fill_larger_slots() {
+        assert_eq!(fit_size(100, 50, 200, 220), Some((200, 100)));
+    }
+
+    #[test]
+    fn fit_size_rejects_invalid_dimensions() {
+        assert_eq!(fit_size(0, 100, 200, 220), None);
+        assert_eq!(fit_size(100, 100, -1, 220), None);
+    }
+
+    #[test]
+    fn rotated_size_swaps_dimensions_for_quarter_turns() {
+        assert_eq!(rotated_size(100, 200, 90), (200, 100));
+        assert_eq!(rotated_size(100, 200, 270), (200, 100));
+        assert_eq!(rotated_size(100, 200, 180), (100, 200));
     }
 }

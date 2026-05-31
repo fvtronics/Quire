@@ -1,7 +1,7 @@
 use super::ui::{
-    blank_list_preview_widget, blank_tile_preview_widget, collection_list_row,
-    collection_list_text, dim_tile_label, list_preview_widget, open_pdf_file, page_count_label,
-    preview_tile, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
+    blank_list_preview_widget, blank_tile_preview_widget, dim_tile_label, list_preview_widget,
+    open_pdf_file, page_count_label, preview_tile, save_pdf_file, tile_controls, tile_label,
+    tile_preview_widget,
 };
 use super::workspace::{
     add_item_context_menu, load_single_processable_pdf, open_output,
@@ -303,18 +303,18 @@ impl OrganizeWorkspace {
         page: crate::pdf::PageSelection,
         count: usize,
         preview: Option<&crate::preview::PagePreview>,
-    ) -> gtk::Box {
-        let row = collection_list_row();
+    ) -> adw::ActionRow {
+        let row = adw::ActionRow::builder()
+            .title(page_title(page))
+            .subtitle(format!("{} {}/{}", gettext("Position"), index + 1, count))
+            .activatable(true)
+            .build();
 
         if page.is_blank() {
-            row.append(&blank_list_preview_widget(preview, page.rotation));
+            row.add_prefix(&blank_list_preview_widget(preview, page.rotation));
         } else {
-            row.append(&list_preview_widget(preview, page.rotation));
+            row.add_prefix(&list_preview_widget(preview, page.rotation));
         }
-        row.append(&collection_list_text(
-            page_title(page),
-            format!("{} {}/{}", gettext("Position"), index + 1, count),
-        ));
 
         let imp = self.imp();
         let options = OrderedItemControlOptions {
@@ -324,7 +324,7 @@ impl OrganizeWorkspace {
             can_remove: count > 1,
         };
         let actions = self.page_actions(options, index);
-        ordered_item_controls(&actions).append_to_box(&row);
+        ordered_item_controls(&actions).append_to_row(&row);
 
         self.add_page_context_menu(&row, &actions, index);
 
