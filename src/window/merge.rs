@@ -9,7 +9,7 @@ use super::workspace::{
     restore_collection_scroll_position, run_output_job, setup_advanced_options_menu,
     show_pdf_load_error, update_shell_title, update_shell_view_mode, AdvancedOptionsMenu,
     CollectionScrollPosition, ContextMenuItem, OrderedItemActions, OrderedItemControlOptions,
-    PdfLoadResult,
+    PdfLoadResult, PendingUndo,
 };
 use super::PdfTool;
 use adw::prelude::*;
@@ -20,6 +20,7 @@ use std::path::{Path, PathBuf};
 
 mod imp {
     use super::super::state::MergeState;
+    use super::PendingUndo;
     use adw::subclass::prelude::*;
     use gtk::{glib, TemplateChild};
     use std::cell::Cell;
@@ -55,6 +56,7 @@ mod imp {
         pub open_output_button: TemplateChild<gtk::Button>,
 
         pub merge: MergeState,
+        pub(super) pending_undo: PendingUndo,
         pub is_running: Cell<bool>,
     }
 
@@ -144,8 +146,7 @@ impl MergeWorkspace {
 
         let workspace = self.clone();
         imp.clear_button.connect_clicked(move |_| {
-            workspace.imp().merge.clear();
-            workspace.rebuild_collection(false);
+            workspace.clear_files();
         });
 
         let workspace = self.clone();
@@ -196,6 +197,7 @@ impl MergeWorkspace {
             return;
         }
 
+        self.dismiss_pending_undo();
         let imp = self.imp();
         let paths_to_preview = imp.merge.paths_needing_previews(&paths);
         imp.merge.job.clear_last_output();
@@ -518,6 +520,7 @@ impl MergeWorkspace {
         }
 
         if self.imp().merge.move_file(from, to) {
+            self.dismiss_pending_undo();
             self.rebuild_collection(true);
         }
     }
@@ -528,6 +531,7 @@ impl MergeWorkspace {
         }
 
         if self.imp().merge.rotate_file(index) {
+            self.dismiss_pending_undo();
             self.refresh_item(index);
         }
     }
@@ -538,6 +542,7 @@ impl MergeWorkspace {
         }
 
         if self.imp().merge.rotate_all_files() {
+            self.dismiss_pending_undo();
             self.refresh_all_items();
         }
     }
@@ -548,6 +553,7 @@ impl MergeWorkspace {
         }
 
         if self.imp().merge.reorder_file(from, to) {
+            self.dismiss_pending_undo();
             self.rebuild_collection(true);
         }
     }
@@ -581,8 +587,19 @@ impl MergeWorkspace {
             return;
         }
 
-        self.imp().merge.remove_file(index);
+        let undo = self.imp().merge.remove_file(index);
         self.rebuild_collection(true);
+        let workspace = self.downgrade();
+        self.imp()
+            .pending_undo
+            .show(self, &gettext("PDF removed"), move || {
+                let Some(workspace) = workspace.upgrade() else {
+                    return;
+                };
+                workspace.dismiss_pending_undo();
+                workspace.imp().merge.restore_removed_file(undo);
+                workspace.rebuild_collection(true);
+            });
     }
 
     fn duplicate_file(&self, index: usize) {
@@ -591,6 +608,7 @@ impl MergeWorkspace {
         }
 
         if self.imp().merge.duplicate_file(index) {
+            self.dismiss_pending_undo();
             self.rebuild_collection(true);
         }
     }
@@ -604,5 +622,29 @@ impl MergeWorkspace {
     fn is_busy(&self) -> bool {
         let imp = self.imp();
         imp.merge.job.is_busy(imp.is_running.get())
+    }
+
+    fn clear_files(&self) {
+        if self.is_busy() {
+            return;
+        }
+
+        let undo = self.imp().merge.clear();
+        self.rebuild_collection(false);
+        let workspace = self.downgrade();
+        self.imp()
+            .pending_undo
+            .show(self, &gettext("Merge list cleared"), move || {
+                let Some(workspace) = workspace.upgrade() else {
+                    return;
+                };
+                workspace.dismiss_pending_undo();
+                workspace.imp().merge.restore_clear(undo);
+                workspace.rebuild_collection(false);
+            });
+    }
+
+    fn dismiss_pending_undo(&self) {
+        self.imp().pending_undo.dismiss();
     }
 }

@@ -156,6 +156,20 @@ pub struct MergeItem {
     pub rotation: i64,
 }
 
+#[derive(Debug)]
+pub(super) struct MergeClearUndo {
+    files: Vec<MergeItem>,
+    passwords: BTreeMap<PathBuf, String>,
+    previews: BTreeMap<PathBuf, crate::preview::PagePreview>,
+}
+
+#[derive(Debug)]
+pub(super) struct MergeRemoveUndo {
+    index: usize,
+    item: MergeItem,
+    password: Option<String>,
+}
+
 impl MergeItem {
     fn new(path: PathBuf) -> Self {
         Self { path, rotation: 0 }
@@ -184,6 +198,17 @@ pub struct OrganizeState {
     pub page_order: RefCell<Vec<crate::pdf::PageSelection>>,
     pub options: OutputOptionsState,
     pub job: JobState,
+}
+
+#[derive(Debug)]
+pub(super) struct OrganizeResetUndo {
+    page_order: Vec<crate::pdf::PageSelection>,
+}
+
+#[derive(Debug)]
+pub(super) struct OrganizeRemoveUndo {
+    index: usize,
+    page: crate::pdf::PageSelection,
 }
 
 #[derive(Debug, Default)]
@@ -218,10 +243,20 @@ pub struct MetadataState {
 }
 
 impl MergeState {
-    pub fn clear(&self) {
-        self.files.borrow_mut().clear();
-        self.passwords.borrow_mut().clear();
-        self.previews.borrow_mut().clear();
+    pub(super) fn clear(&self) -> MergeClearUndo {
+        let undo = MergeClearUndo {
+            files: std::mem::take(&mut *self.files.borrow_mut()),
+            passwords: std::mem::take(&mut *self.passwords.borrow_mut()),
+            previews: std::mem::take(&mut *self.previews.borrow_mut()),
+        };
+        self.job.clear_last_output();
+        undo
+    }
+
+    pub(super) fn restore_clear(&self, undo: MergeClearUndo) {
+        *self.files.borrow_mut() = undo.files;
+        *self.passwords.borrow_mut() = undo.passwords;
+        *self.previews.borrow_mut() = undo.previews;
         self.job.clear_last_output();
     }
 
@@ -313,12 +348,31 @@ impl MergeState {
         self.move_file(from, to)
     }
 
-    pub fn remove_file(&self, index: usize) {
-        let path = self.files.borrow_mut().remove(index).path;
+    pub(super) fn remove_file(&self, index: usize) -> MergeRemoveUndo {
+        let item = self.files.borrow_mut().remove(index);
 
-        if !self.files.borrow().iter().any(|item| item.path == path) {
-            self.passwords.borrow_mut().remove(&path);
+        let password = (!self
+            .files
+            .borrow()
+            .iter()
+            .any(|file| file.path == item.path))
+        .then(|| self.passwords.borrow_mut().remove(&item.path))
+        .flatten();
+        self.job.clear_last_output();
+        MergeRemoveUndo {
+            index,
+            item,
+            password,
         }
+    }
+
+    pub(super) fn restore_removed_file(&self, undo: MergeRemoveUndo) {
+        if let Some(password) = undo.password {
+            self.passwords
+                .borrow_mut()
+                .insert(undo.item.path.clone(), password);
+        }
+        self.files.borrow_mut().insert(undo.index, undo.item);
         self.job.clear_last_output();
     }
 
@@ -368,25 +422,30 @@ impl OrganizeState {
         self.page_count.set(page_count);
         *self.previews.borrow_mut() = previews.previews;
 
-        let mut page_order = self.page_order.borrow_mut();
-        page_order.clear();
-        page_order
-            .extend((1..=page_count as u32).map(|page| crate::pdf::PageSelection::page(page, 0)));
+        *self.page_order.borrow_mut() = original_page_order(page_count);
         self.job.clear_last_output();
     }
 
-    pub fn reset(&self) -> bool {
+    pub(super) fn reset(&self) -> Option<OrganizeResetUndo> {
         let page_count = self.page_count.get();
         if self.file.borrow().is_none() || page_count == 0 {
-            return false;
+            return None;
         }
 
+        let original_page_order = original_page_order(page_count);
         let mut page_order = self.page_order.borrow_mut();
-        page_order.clear();
-        page_order
-            .extend((1..=page_count as u32).map(|page| crate::pdf::PageSelection::page(page, 0)));
+        if *page_order == original_page_order {
+            return None;
+        }
+
+        let page_order = std::mem::replace(&mut *page_order, original_page_order);
         self.job.clear_last_output();
-        true
+        Some(OrganizeResetUndo { page_order })
+    }
+
+    pub(super) fn restore_reset(&self, undo: OrganizeResetUndo) {
+        *self.page_order.borrow_mut() = undo.page_order;
+        self.job.clear_last_output();
     }
 
     pub fn selections(&self) -> Option<(PathBuf, Option<String>, Vec<crate::pdf::PageSelection>)> {
@@ -438,14 +497,19 @@ impl OrganizeState {
         self.move_page(from, to)
     }
 
-    pub fn remove_page(&self, index: usize) -> bool {
+    pub(super) fn remove_page(&self, index: usize) -> Option<OrganizeRemoveUndo> {
         if self.page_order.borrow().len() <= 1 {
-            return false;
+            return None;
         }
 
-        self.page_order.borrow_mut().remove(index);
+        let page = self.page_order.borrow_mut().remove(index);
         self.job.clear_last_output();
-        true
+        Some(OrganizeRemoveUndo { index, page })
+    }
+
+    pub(super) fn restore_removed_page(&self, undo: OrganizeRemoveUndo) {
+        self.page_order.borrow_mut().insert(undo.index, undo.page);
+        self.job.clear_last_output();
     }
 
     pub fn insert_blank_page_after(&self, index: usize) -> bool {
@@ -644,6 +708,12 @@ where
     }
 }
 
+fn original_page_order(page_count: usize) -> Vec<crate::pdf::PageSelection> {
+    (1..=page_count as u32)
+        .map(|page| crate::pdf::PageSelection::page(page, 0))
+        .collect()
+}
+
 fn rotate_clockwise(rotation: i64) -> i64 {
     (rotation + 90).rem_euclid(360)
 }
@@ -701,6 +771,13 @@ mod tests {
 
     fn merge_paths(items: &[MergeItem]) -> Vec<PathBuf> {
         items.iter().map(|item| item.path.clone()).collect()
+    }
+
+    fn page_preview(page_number: u32) -> crate::preview::PagePreview {
+        crate::preview::PagePreview {
+            page_number,
+            png_data: vec![page_number as u8],
+        }
     }
 
     #[test]
@@ -841,6 +918,87 @@ mod tests {
             .passwords
             .borrow()
             .contains_key(&PathBuf::from("locked.pdf")));
+    }
+
+    #[test]
+    fn merge_clear_and_restore_recovers_cached_data_and_clears_output() {
+        let state = MergeState::default();
+        let locked = PathBuf::from("locked.pdf");
+        state.finish_loading(
+            vec![locked.clone()],
+            vec![(locked.clone(), page_preview(1))],
+            vec![(locked.clone(), Some("secret".to_string()))],
+        );
+        state.job.set_last_output(PathBuf::from("merged.pdf"));
+
+        let undo = state.clear();
+
+        assert!(state.files.borrow().is_empty());
+        assert!(state.passwords.borrow().is_empty());
+        assert!(state.previews.borrow().is_empty());
+        assert_eq!(state.job.last_output(), None);
+
+        state.job.set_last_output(PathBuf::from("stale.pdf"));
+        state.restore_clear(undo);
+
+        assert_eq!(merge_paths(&state.files.borrow()), vec![locked.clone()]);
+        assert_eq!(
+            state.passwords.borrow().get(&locked).map(String::as_str),
+            Some("secret")
+        );
+        assert_eq!(state.previews.borrow()[&locked].png_data, vec![1]);
+        assert_eq!(state.job.last_output(), None);
+    }
+
+    #[test]
+    fn merge_remove_and_restore_last_copy_recovers_password_and_clears_output() {
+        let state = MergeState::default();
+        let locked = PathBuf::from("locked.pdf");
+        state.finish_loading(
+            vec![locked.clone()],
+            vec![(locked.clone(), page_preview(1))],
+            vec![(locked.clone(), Some("secret".to_string()))],
+        );
+
+        let undo = state.remove_file(0);
+
+        assert!(!state.passwords.borrow().contains_key(&locked));
+        assert!(state.previews.borrow().contains_key(&locked));
+
+        state.job.set_last_output(PathBuf::from("stale.pdf"));
+        state.restore_removed_file(undo);
+
+        assert_eq!(merge_paths(&state.files.borrow()), vec![locked.clone()]);
+        assert_eq!(
+            state.passwords.borrow().get(&locked).map(String::as_str),
+            Some("secret")
+        );
+        assert_eq!(state.job.last_output(), None);
+    }
+
+    #[test]
+    fn merge_remove_and_restore_duplicate_keeps_shared_cached_data() {
+        let state = MergeState::default();
+        let locked = PathBuf::from("locked.pdf");
+        state.finish_loading(
+            vec![locked.clone()],
+            vec![(locked.clone(), page_preview(1))],
+            vec![(locked.clone(), Some("secret".to_string()))],
+        );
+        assert!(state.duplicate_file(0));
+
+        let undo = state.remove_file(0);
+
+        assert!(state.passwords.borrow().contains_key(&locked));
+        assert!(state.previews.borrow().contains_key(&locked));
+
+        state.restore_removed_file(undo);
+
+        assert_eq!(
+            merge_paths(&state.files.borrow()),
+            vec![locked.clone(), locked]
+        );
+        assert_eq!(state.previews.borrow().len(), 1);
     }
 
     #[test]
@@ -988,6 +1146,73 @@ mod tests {
         assert_eq!(path, PathBuf::from("locked.pdf"));
         assert_eq!(password.as_deref(), Some("secret"));
         assert_eq!(pages.len(), 2);
+    }
+
+    #[test]
+    fn organize_reset_and_restore_recovers_staged_pages_and_clears_output() {
+        let state = OrganizeState::default();
+        state.load_document(
+            PathBuf::from("input.pdf"),
+            None,
+            document_previews(3, &[1, 2, 3]),
+        );
+        assert!(state.rotate_page(1));
+        assert!(state.duplicate_page(1));
+        assert!(state.insert_blank_page_after(2));
+        let staged_pages = state.page_order.borrow().clone();
+        state.job.set_last_output(PathBuf::from("organized.pdf"));
+
+        let undo = state.reset().unwrap();
+
+        assert_eq!(
+            state.page_order.borrow().as_slice(),
+            &[page_selection(1), page_selection(2), page_selection(3)]
+        );
+        assert_eq!(state.job.last_output(), None);
+
+        state.job.set_last_output(PathBuf::from("stale.pdf"));
+        state.restore_reset(undo);
+
+        assert_eq!(*state.page_order.borrow(), staged_pages);
+        assert_eq!(state.job.last_output(), None);
+    }
+
+    #[test]
+    fn organize_remove_and_restore_recovers_position_and_clears_output() {
+        let state = OrganizeState::default();
+        *state.page_order.borrow_mut() = vec![
+            page_selection(1),
+            crate::pdf::PageSelection::blank_like_page(1, 90),
+            page_selection(2),
+        ];
+
+        let undo = state.remove_page(1).unwrap();
+
+        assert_eq!(page_numbers(&state.page_order.borrow()), vec![1, 2]);
+
+        state.job.set_last_output(PathBuf::from("stale.pdf"));
+        state.restore_removed_page(undo);
+
+        let pages = state.page_order.borrow();
+        assert_eq!(page_numbers(&pages), vec![1, 1, 2]);
+        assert!(pages[1].is_blank());
+        assert_eq!(pages[1].rotation, 90);
+        assert_eq!(state.job.last_output(), None);
+    }
+
+    #[test]
+    fn organize_remove_rejects_final_page() {
+        let state = OrganizeState::default();
+        *state.page_order.borrow_mut() = vec![page_selection(1)];
+        state.job.set_last_output(PathBuf::from("organized.pdf"));
+
+        assert!(state.remove_page(0).is_none());
+
+        assert_eq!(page_numbers(&state.page_order.borrow()), vec![1]);
+        assert_eq!(
+            state.job.last_output(),
+            Some(PathBuf::from("organized.pdf"))
+        );
     }
 
     #[test]

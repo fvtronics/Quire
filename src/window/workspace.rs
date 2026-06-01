@@ -3,6 +3,7 @@ use super::{FoliosWindow, PdfTool};
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use std::cell::RefCell;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -12,6 +13,10 @@ pub(super) fn parent_window(widget: &impl IsA<gtk::Widget>) -> Option<gtk::Windo
 }
 
 pub(super) fn show_toast(widget: &impl IsA<gtk::Widget>, message: &str) {
+    add_toast(widget, adw::Toast::new(message));
+}
+
+fn add_toast(widget: &impl IsA<gtk::Widget>, toast: adw::Toast) {
     let Some(window) = widget
         .root()
         .and_downcast::<gtk::Window>()
@@ -20,8 +25,54 @@ pub(super) fn show_toast(widget: &impl IsA<gtk::Widget>, message: &str) {
         return;
     };
 
-    {
-        window.show_toast(message);
+    window.add_toast(toast);
+}
+
+#[derive(Default)]
+pub(super) struct PendingUndo {
+    toast: glib::WeakRef<adw::Toast>,
+}
+
+impl std::fmt::Debug for PendingUndo {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("PendingUndo")
+            .finish_non_exhaustive()
+    }
+}
+
+impl PendingUndo {
+    pub(super) fn show(
+        &self,
+        widget: &impl IsA<gtk::Widget>,
+        message: &str,
+        undo: impl FnOnce() + 'static,
+    ) {
+        self.dismiss();
+        let toast = adw::Toast::builder()
+            .title(message)
+            .button_label(gettext("_Undo"))
+            .build();
+        let undo = Rc::new(RefCell::new(Some(undo)));
+        let clicked_undo = undo.clone();
+        toast.connect_button_clicked(move |_| {
+            let undo = clicked_undo.borrow_mut().take();
+            if let Some(undo) = undo {
+                undo();
+            }
+        });
+        toast.connect_dismissed(move |_| {
+            undo.borrow_mut().take();
+        });
+        add_toast(widget, toast.clone());
+        self.toast.set(Some(&toast));
+    }
+
+    pub(super) fn dismiss(&self) {
+        if let Some(toast) = self.toast.upgrade() {
+            self.toast.set(None);
+            toast.dismiss();
+        }
     }
 }
 

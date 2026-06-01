@@ -9,7 +9,8 @@ use super::workspace::{
     preserve_collection_scroll_position, replace_collection_item,
     restore_collection_scroll_position, run_output_job, setup_advanced_options_menu,
     update_shell_title, update_shell_view_mode, AdvancedOptionsMenu, CollectionScrollPosition,
-    ContextMenuItem, OrderedItemActions, OrderedItemControlOptions, SinglePdfLoadHandlers,
+    ContextMenuItem, OrderedItemActions, OrderedItemControlOptions, PendingUndo,
+    SinglePdfLoadHandlers,
 };
 use super::PdfTool;
 use adw::prelude::*;
@@ -20,6 +21,7 @@ use std::path::PathBuf;
 
 mod imp {
     use super::super::state::OrganizeState;
+    use super::PendingUndo;
     use adw::subclass::prelude::*;
     use gtk::{glib, TemplateChild};
     use std::cell::Cell;
@@ -55,6 +57,7 @@ mod imp {
         pub organize_open_output_button: TemplateChild<gtk::Button>,
 
         pub organize: OrganizeState,
+        pub(super) pending_undo: PendingUndo,
         pub is_running: Cell<bool>,
     }
 
@@ -191,6 +194,7 @@ impl OrganizeWorkspace {
     }
 
     fn load_pdf(&self, path: PathBuf, parent: gtk::Window) {
+        self.dismiss_pending_undo();
         load_single_processable_pdf(
             self.clone(),
             parent,
@@ -214,8 +218,19 @@ impl OrganizeWorkspace {
     }
 
     fn reset_pdf(&self) {
-        if self.imp().organize.reset() {
+        if let Some(undo) = self.imp().organize.reset() {
             self.rebuild_collection(true);
+            let workspace = self.downgrade();
+            self.imp()
+                .pending_undo
+                .show(self, &gettext("Page order reset"), move || {
+                    let Some(workspace) = workspace.upgrade() else {
+                        return;
+                    };
+                    workspace.dismiss_pending_undo();
+                    workspace.imp().organize.restore_reset(undo);
+                    workspace.rebuild_collection(true);
+                });
         }
     }
 
@@ -484,6 +499,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.move_page(from, to) {
+            self.dismiss_pending_undo();
             self.rebuild_collection(true);
         }
     }
@@ -494,6 +510,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.rotate_page(index) {
+            self.dismiss_pending_undo();
             self.refresh_item(index);
         }
     }
@@ -504,6 +521,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.rotate_all_pages() {
+            self.dismiss_pending_undo();
             self.refresh_all_items();
         }
     }
@@ -514,6 +532,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.reorder_page(from, to) {
+            self.dismiss_pending_undo();
             self.rebuild_collection(true);
         }
     }
@@ -547,8 +566,19 @@ impl OrganizeWorkspace {
             return;
         }
 
-        if self.imp().organize.remove_page(index) {
+        if let Some(undo) = self.imp().organize.remove_page(index) {
             self.rebuild_collection(true);
+            let workspace = self.downgrade();
+            self.imp()
+                .pending_undo
+                .show(self, &gettext("Page removed"), move || {
+                    let Some(workspace) = workspace.upgrade() else {
+                        return;
+                    };
+                    workspace.dismiss_pending_undo();
+                    workspace.imp().organize.restore_removed_page(undo);
+                    workspace.rebuild_collection(true);
+                });
         }
     }
 
@@ -558,6 +588,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.insert_blank_page_after(index) {
+            self.dismiss_pending_undo();
             self.rebuild_collection(true);
         }
     }
@@ -568,6 +599,7 @@ impl OrganizeWorkspace {
         }
 
         if self.imp().organize.duplicate_page(index) {
+            self.dismiss_pending_undo();
             self.rebuild_collection(true);
         }
     }
@@ -581,6 +613,10 @@ impl OrganizeWorkspace {
     fn is_busy(&self) -> bool {
         let imp = self.imp();
         imp.organize.job.is_busy(imp.is_running.get())
+    }
+
+    fn dismiss_pending_undo(&self) {
+        self.imp().pending_undo.dismiss();
     }
 }
 

@@ -332,8 +332,7 @@ impl FoliosWindow {
         }
     }
 
-    pub(super) fn show_toast(&self, message: &str) {
-        let imp = self.imp();
-        imp.toast_overlay.add_toast(adw::Toast::new(message));
+    pub(super) fn add_toast(&self, toast: adw::Toast) {
+        self.imp().toast_overlay.add_toast(toast);
     }
 }
