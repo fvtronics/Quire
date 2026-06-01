@@ -299,28 +299,26 @@ impl OrganizeWorkspace {
     }
 
     fn refresh_item(&self, index: usize) {
+        self.refresh_items([index]);
+    }
+
+    fn refresh_items(&self, indices: impl IntoIterator<Item = usize>) {
         let imp = self.imp();
         preserve_collection_scroll_position(
             &imp.organize_list_scrolled_window,
             &imp.organize_grid_scrolled_window,
-            || self.refresh_item_widgets(index),
+            || {
+                for index in indices {
+                    self.refresh_item_widgets(index);
+                }
+            },
         );
         self.refresh_view_state();
     }
 
     fn refresh_all_items(&self) {
         let count = self.imp().organize.page_order.borrow().len();
-        let imp = self.imp();
-        preserve_collection_scroll_position(
-            &imp.organize_list_scrolled_window,
-            &imp.organize_grid_scrolled_window,
-            || {
-                for index in 0..count {
-                    self.refresh_item_widgets(index);
-                }
-            },
-        );
-        self.refresh_view_state();
+        self.refresh_items(0..count);
     }
 
     fn refresh_item_widgets(&self, index: usize) {
@@ -500,7 +498,7 @@ impl OrganizeWorkspace {
 
         if self.imp().organize.move_page(from, to) {
             self.dismiss_pending_undo();
-            self.rebuild_collection(true);
+            self.refresh_items(from.min(to)..=from.max(to));
         }
     }
 
@@ -533,7 +531,7 @@ impl OrganizeWorkspace {
 
         if self.imp().organize.reorder_page(from, to) {
             self.dismiss_pending_undo();
-            self.rebuild_collection(true);
+            self.refresh_items(from.min(to)..=from.max(to));
         }
     }
 
