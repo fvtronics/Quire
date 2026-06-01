@@ -22,7 +22,8 @@ Merge PDFs | Organize pages | Extract pages | Split documents | Compress files |
 
 ## How to install
 
-### AUR
+### AUR&nbsp;&nbsp;[![AUR package](https://repology.org/badge/version-for-repo/aur/folios.svg?header=)](https://repology.org/project/folios/versions)
+
 Arch based distributions can install Folios from the [AUR](https://aur.archlinux.org/packages/folios), or using an aurhelper such as yay: `yay -S folios`
 
 ### Flatpak
