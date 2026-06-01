@@ -627,19 +627,9 @@ impl MergeWorkspace {
             return;
         }
 
-        let undo = self.imp().merge.clear();
+        self.dismiss_pending_undo();
+        self.imp().merge.clear();
         self.rebuild_collection(false);
-        let workspace = self.downgrade();
-        self.imp()
-            .pending_undo
-            .show(self, &gettext("Merge list cleared"), move || {
-                let Some(workspace) = workspace.upgrade() else {
-                    return;
-                };
-                workspace.dismiss_pending_undo();
-                workspace.imp().merge.restore_clear(undo);
-                workspace.rebuild_collection(false);
-            });
     }
 
     fn dismiss_pending_undo(&self) {
