@@ -22,10 +22,7 @@ template $MergeWorkspace: Gtk.Box {
       visible: false;
       valign: center;
       tooltip-text: _("Add PDF Files");
-      child: Adw.ButtonContent {
-        icon-name: "list-add-symbolic";
-        label: _("Add PDFs");
-      };
+      label: _("Add PDFs");
     }
 
     Gtk.Button open_output_button {
@@ -34,10 +31,7 @@ template $MergeWorkspace: Gtk.Box {
       valign: center;
       tooltip-text: _("Open Output File");
 
-      child: Adw.ButtonContent {
-        icon-name: "document-open-symbolic";
-        label: _("Open Output");
-      };
+      label: _("Open Output");
     }
 
     Gtk.Button clear_button {
@@ -46,10 +40,7 @@ template $MergeWorkspace: Gtk.Box {
       valign: center;
       tooltip-text: _("Clear File List");
 
-      child: Adw.ButtonContent {
-        icon-name: "edit-clear-symbolic";
-        label: _("Clear");
-      };
+      label: _("Clear");
     }
 
     Gtk.Button merge_button {
@@ -59,10 +50,7 @@ template $MergeWorkspace: Gtk.Box {
       tooltip-text: _("Merge Selected PDFs");
       styles ["suggested-action"]
 
-      child: Adw.ButtonContent {
-        icon-name: "document-save-symbolic";
-        label: _("Merge");
-      };
+      label: _("Merge");
     }
 
     Gtk.MenuButton advanced_options_button {
@@ -85,10 +73,7 @@ template $MergeWorkspace: Gtk.Box {
       tooltip-text: _("Add PDF Files");
       styles ["suggested-action"]
 
-      child: Adw.ButtonContent {
-        icon-name: "list-add-symbolic";
-        label: _("Add PDFs");
-      };
+      label: _("Add PDFs");
     };
   }
 

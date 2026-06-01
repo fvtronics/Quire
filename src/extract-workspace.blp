@@ -23,10 +23,7 @@ template $ExtractWorkspace: Gtk.Box {
       visible: false;
       valign: center;
       tooltip-text: _("Open PDF");
-      child: Adw.ButtonContent {
-        icon-name: "document-open-symbolic";
-        label: _("Open PDF");
-      };
+      label: _("Open PDF");
     }
 
     Gtk.Button extract_open_output_button {
@@ -35,10 +32,7 @@ template $ExtractWorkspace: Gtk.Box {
       valign: center;
       tooltip-text: _("Open Output File");
 
-      child: Adw.ButtonContent {
-        icon-name: "document-open-symbolic";
-        label: _("Open Output");
-      };
+      label: _("Open Output");
     }
 
     Gtk.Button extract_save_button {
@@ -48,10 +42,7 @@ template $ExtractWorkspace: Gtk.Box {
       tooltip-text: _("Extract Selected Pages");
       styles ["suggested-action"]
 
-      child: Adw.ButtonContent {
-        icon-name: "document-save-symbolic";
-        label: _("Extract");
-      };
+      label: _("Extract");
     }
 
     Gtk.MenuButton extract_advanced_options_button {
@@ -74,10 +65,7 @@ template $ExtractWorkspace: Gtk.Box {
       tooltip-text: _("Open PDF");
       styles ["suggested-action"]
 
-      child: Adw.ButtonContent {
-        icon-name: "document-open-symbolic";
-        label: _("Open PDF");
-      };
+      label: _("Open PDF");
     };
   }
 

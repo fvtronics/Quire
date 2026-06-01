@@ -23,10 +23,7 @@ template $OrganizeWorkspace: Gtk.Box {
       visible: false;
       valign: center;
       tooltip-text: _("Open PDF");
-      child: Adw.ButtonContent {
-        icon-name: "document-open-symbolic";
-        label: _("Open PDF");
-      };
+      label: _("Open PDF");
     }
 
     Gtk.Button organize_open_output_button {
@@ -35,10 +32,7 @@ template $OrganizeWorkspace: Gtk.Box {
       valign: center;
       tooltip-text: _("Open Output File");
 
-      child: Adw.ButtonContent {
-        icon-name: "document-open-symbolic";
-        label: _("Open Output");
-      };
+      label: _("Open Output");
     }
 
     Gtk.Button organize_reset_button {
@@ -47,10 +41,7 @@ template $OrganizeWorkspace: Gtk.Box {
       valign: center;
       tooltip-text: _("Reset Page Order");
 
-      child: Adw.ButtonContent {
-        icon-name: "edit-undo-symbolic";
-        label: _("Reset");
-      };
+      label: _("Reset");
     }
 
     Gtk.Button organize_save_button {
@@ -60,10 +51,7 @@ template $OrganizeWorkspace: Gtk.Box {
       tooltip-text: _("Save Organized PDF");
       styles ["suggested-action"]
 
-      child: Adw.ButtonContent {
-        icon-name: "document-save-symbolic";
-        label: _("Save");
-      };
+      label: _("Save");
     }
 
     Gtk.MenuButton organize_advanced_options_button {
@@ -86,10 +74,7 @@ template $OrganizeWorkspace: Gtk.Box {
       tooltip-text: _("Open PDF");
       styles ["suggested-action"]
 
-      child: Adw.ButtonContent {
-        icon-name: "document-open-symbolic";
-        label: _("Open PDF");
-      };
+      label: _("Open PDF");
     };
   }
 

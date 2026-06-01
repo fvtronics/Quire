@@ -23,10 +23,7 @@ template $CompressWorkspace: Gtk.Box {
       visible: false;
       valign: center;
       tooltip-text: _("Open PDF");
-      child: Adw.ButtonContent {
-        icon-name: "document-open-symbolic";
-        label: _("Open PDF");
-      };
+      label: _("Open PDF");
     }
 
     Gtk.Button compress_open_output_button {
@@ -35,10 +32,7 @@ template $CompressWorkspace: Gtk.Box {
       valign: center;
       tooltip-text: _("Open Output File");
 
-      child: Adw.ButtonContent {
-        icon-name: "document-open-symbolic";
-        label: _("Open Output");
-      };
+      label: _("Open Output");
     }
 
     Gtk.Button compress_save_button {
@@ -48,10 +42,7 @@ template $CompressWorkspace: Gtk.Box {
       tooltip-text: _("Compress PDF");
       styles ["suggested-action"]
 
-      child: Adw.ButtonContent {
-        icon-name: "document-save-symbolic";
-        label: _("Compress");
-      };
+      label: _("Compress");
     }
 
     Gtk.MenuButton compress_advanced_options_button {
@@ -74,10 +65,7 @@ template $CompressWorkspace: Gtk.Box {
       tooltip-text: _("Open PDF");
       styles ["suggested-action"]
 
-      child: Adw.ButtonContent {
-        icon-name: "document-open-symbolic";
-        label: _("Open PDF");
-      };
+      label: _("Open PDF");
     };
   }
 
