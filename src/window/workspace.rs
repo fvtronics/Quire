@@ -566,6 +566,13 @@ pub(super) fn add_item_context_menu(widget: &impl IsA<gtk::Widget>, items: Vec<C
     });
     widget.add_controller(gesture);
 
+    let popover_for_realize = popover.clone();
+    widget.connect_realize(move |widget| {
+        if popover_for_realize.parent().is_none() {
+            popover_for_realize.set_parent(widget);
+        }
+    });
+
     widget.connect_unrealize(move |_| {
         popover.unparent();
     });
