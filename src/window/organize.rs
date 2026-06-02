@@ -4,9 +4,9 @@ use super::ui::{
     tile_preview_widget,
 };
 use super::workspace::{
-    add_item_context_menu, collection_scroll_position, load_single_processable_pdf, open_output,
-    ordered_item_context_menu_items, ordered_item_controls, output_option_callback, parent_window,
-    preserve_collection_scroll_position, replace_collection_item,
+    add_item_context_menu, collection_scroll_position, flow_box_item, load_single_processable_pdf,
+    open_output, ordered_item_context_menu_items, ordered_item_controls, output_option_callback,
+    parent_window, preserve_collection_scroll_position, replace_collection_item,
     restore_collection_scroll_position, run_output_job, setup_advanced_options_menu,
     update_shell_title, update_shell_view_mode, AdvancedOptionsMenu, CollectionScrollPosition,
     ContextMenuItem, OrderedItemActions, OrderedItemControlOptions, PendingUndo,
@@ -422,7 +422,7 @@ impl OrganizeWorkspace {
         preview: Option<&crate::preview::PagePreview>,
         index: usize,
         count: usize,
-    ) -> gtk::Box {
+    ) -> gtk::FlowBoxChild {
         let tile = preview_tile();
         if page.is_blank() {
             tile.append(&blank_tile_preview_widget(preview, page.rotation));
@@ -444,11 +444,12 @@ impl OrganizeWorkspace {
         ordered_item_controls(&actions).append_to_box(&controls);
 
         tile.append(&controls);
-        self.add_page_context_menu(&tile, &actions, index);
+        let item = flow_box_item(&tile);
+        self.add_page_context_menu(&item, &actions, index);
 
-        self.add_page_drag_and_drop(&tile, index);
+        self.add_page_drag_and_drop(&item, index);
 
-        tile
+        item
     }
 
     fn page_actions(&self, options: OrderedItemControlOptions, index: usize) -> OrderedItemActions {
@@ -481,11 +482,11 @@ impl OrganizeWorkspace {
             [
                 ContextMenuItem::new(
                     "insert-blank",
-                    gettext("Insert Blank Page After"),
+                    gettext("Insert _Blank Page After"),
                     true,
                     insert_blank,
                 ),
-                ContextMenuItem::new("duplicate", gettext("Duplicate"), true, duplicate),
+                ContextMenuItem::new("duplicate", gettext("Du_plicate"), true, duplicate),
             ],
         );
         add_item_context_menu(widget, items);

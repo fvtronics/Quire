@@ -3,9 +3,9 @@ use super::ui::{
     save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    add_item_context_menu, collection_scroll_position, load_processable_pdf, open_output,
-    ordered_item_context_menu_items, ordered_item_controls, output_option_callback, parent_window,
-    preserve_collection_scroll_position, replace_collection_item,
+    add_item_context_menu, collection_scroll_position, flow_box_item, load_processable_pdf,
+    open_output, ordered_item_context_menu_items, ordered_item_controls, output_option_callback,
+    parent_window, preserve_collection_scroll_position, replace_collection_item,
     restore_collection_scroll_position, run_output_job, setup_advanced_options_menu,
     show_pdf_load_error, update_shell_title, update_shell_view_mode, AdvancedOptionsMenu,
     CollectionScrollPosition, ContextMenuItem, OrderedItemActions, OrderedItemControlOptions,
@@ -459,7 +459,7 @@ impl MergeWorkspace {
         count: usize,
         preview: Option<&crate::preview::PagePreview>,
         rotation: i64,
-    ) -> gtk::Box {
+    ) -> gtk::FlowBoxChild {
         let tile = preview_tile();
         tile.append(&tile_preview_widget(preview, rotation));
         tile.append(&tile_label(file_title(path)));
@@ -477,10 +477,11 @@ impl MergeWorkspace {
         ordered_item_controls(&actions).append_to_box(&controls);
 
         tile.append(&controls);
-        self.add_file_context_menu(&tile, &actions, index);
-        self.add_file_drag_and_drop(&tile, index);
+        let item = flow_box_item(&tile);
+        self.add_file_context_menu(&item, &actions, index);
+        self.add_file_drag_and_drop(&item, index);
 
-        tile
+        item
     }
 
     fn file_actions(&self, options: OrderedItemControlOptions, index: usize) -> OrderedItemActions {
@@ -507,7 +508,7 @@ impl MergeWorkspace {
         let mut items = ordered_item_context_menu_items(actions);
         items.insert(
             2,
-            ContextMenuItem::new("duplicate", gettext("Duplicate"), true, duplicate),
+            ContextMenuItem::new("duplicate", gettext("Du_plicate"), true, duplicate),
         );
         add_item_context_menu(widget, items);
     }

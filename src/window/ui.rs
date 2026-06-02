@@ -155,7 +155,7 @@ pub(super) fn pdf_file_row(path: &Path, subtitle: String) -> adw::ActionRow {
     let row = adw::ActionRow::builder()
         .title(file_title(path))
         .subtitle(subtitle)
-        .activatable(true)
+        .focusable(false)
         .build();
 
     row.add_prefix(&gtk::Image::from_icon_name("view-paged-symbolic"));
@@ -432,10 +432,27 @@ pub(super) fn dim_tile_label(text: impl AsRef<str>) -> gtk::Label {
 }
 
 pub(super) fn tile_controls() -> gtk::Box {
-    gtk::Box::builder()
+    let controls = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(6)
-        .build()
+        .build();
+    let key = gtk::EventControllerKey::new();
+    key.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let controls_for_key = controls.clone();
+    key.connect_key_pressed(move |_, key, _, modifiers| {
+        let Some(direction) = tile_control_focus_direction(key, modifiers) else {
+            return glib::Propagation::Proceed;
+        };
+
+        if controls_for_key.child_focus(direction) {
+            glib::Propagation::Stop
+        } else {
+            glib::Propagation::Proceed
+        }
+    });
+    controls.add_controller(key);
+
+    controls
 }
 
 pub(super) fn clear_box(box_: &gtk::Box) {
@@ -489,6 +506,29 @@ fn normalize_rotation(rotation: i64) -> i64 {
     rotation.rem_euclid(360)
 }
 
+fn tile_control_focus_direction(
+    key: gtk::gdk::Key,
+    modifiers: gtk::gdk::ModifierType,
+) -> Option<gtk::DirectionType> {
+    let shortcut_modifiers = gtk::gdk::ModifierType::SHIFT_MASK
+        | gtk::gdk::ModifierType::CONTROL_MASK
+        | gtk::gdk::ModifierType::ALT_MASK
+        | gtk::gdk::ModifierType::SUPER_MASK
+        | gtk::gdk::ModifierType::HYPER_MASK
+        | gtk::gdk::ModifierType::META_MASK;
+    if modifiers.intersects(shortcut_modifiers) {
+        return None;
+    }
+
+    if key == gtk::gdk::Key::Left || key == gtk::gdk::Key::Up {
+        Some(gtk::DirectionType::TabBackward)
+    } else if key == gtk::gdk::Key::Right || key == gtk::gdk::Key::Down {
+        Some(gtk::DirectionType::TabForward)
+    } else {
+        None
+    }
+}
+
 fn pdf_file_dialog(title: &str, accept_label: &str, initial_name: Option<&str>) -> gtk::FileDialog {
     let dialog = gtk::FileDialog::builder()
         .title(title)
@@ -514,7 +554,7 @@ fn format_page_range(start: u32, end: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{fit_size, format_page_ranges, rotated_size};
+    use super::{fit_size, format_page_ranges, rotated_size, tile_control_focus_direction};
 
     #[test]
     fn format_page_ranges_groups_contiguous_pages() {
@@ -550,5 +590,34 @@ mod tests {
         assert_eq!(rotated_size(100, 200, 90), (200, 100));
         assert_eq!(rotated_size(100, 200, 270), (200, 100));
         assert_eq!(rotated_size(100, 200, 180), (100, 200));
+    }
+
+    #[test]
+    fn tile_control_arrows_follow_the_control_order() {
+        let no_modifiers = gtk::gdk::ModifierType::empty();
+
+        assert_eq!(
+            tile_control_focus_direction(gtk::gdk::Key::Left, no_modifiers),
+            Some(gtk::DirectionType::TabBackward)
+        );
+        assert_eq!(
+            tile_control_focus_direction(gtk::gdk::Key::Up, no_modifiers),
+            Some(gtk::DirectionType::TabBackward)
+        );
+        assert_eq!(
+            tile_control_focus_direction(gtk::gdk::Key::Right, no_modifiers),
+            Some(gtk::DirectionType::TabForward)
+        );
+        assert_eq!(
+            tile_control_focus_direction(gtk::gdk::Key::Down, no_modifiers),
+            Some(gtk::DirectionType::TabForward)
+        );
+        assert_eq!(
+            tile_control_focus_direction(
+                gtk::gdk::Key::Right,
+                gtk::gdk::ModifierType::CONTROL_MASK
+            ),
+            None
+        );
     }
 }

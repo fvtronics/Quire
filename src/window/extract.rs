@@ -4,8 +4,8 @@ use super::ui::{
     set_entry_validation_error, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    add_item_context_menu, collection_scroll_position, load_single_processable_pdf, open_output,
-    output_option_callback, parent_window, preserve_collection_scroll_position,
+    add_item_context_menu, collection_scroll_position, flow_box_item, load_single_processable_pdf,
+    open_output, output_option_callback, parent_window, preserve_collection_scroll_position,
     replace_collection_item, restore_collection_scroll_position, run_output_job,
     setup_advanced_options_menu, show_backend_error, show_toast, update_shell_title,
     update_shell_view_mode, AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem,
@@ -352,7 +352,7 @@ impl ExtractWorkspace {
         self.refresh_items(&pages);
     }
 
-    fn extract_page_widgets(&self, page_number: u32) -> (adw::ActionRow, gtk::Box) {
+    fn extract_page_widgets(&self, page_number: u32) -> (adw::ActionRow, gtk::FlowBoxChild) {
         let imp = self.imp();
         let selected_pages = imp.extract.selected_pages.borrow();
         let rotations = imp.extract.rotations.borrow();
@@ -479,16 +479,9 @@ impl ExtractWorkspace {
         preview: Option<&crate::preview::PagePreview>,
         selected: bool,
         rotation: i64,
-    ) -> gtk::Box {
+    ) -> gtk::FlowBoxChild {
         let tile = preview_tile();
         let preview_widget = tile_preview_widget(preview, rotation);
-        let window = self.clone();
-        let click = gtk::GestureClick::new();
-        click.set_button(gtk::gdk::BUTTON_PRIMARY);
-        click.connect_released(move |_, _, _, _| {
-            window.toggle_extract_page(page_number, !selected);
-        });
-        preview_widget.add_controller(click);
         tile.append(&preview_widget);
 
         let footer = tile_controls();
@@ -517,9 +510,14 @@ impl ExtractWorkspace {
             window.toggle_extract_page(page_number, button.is_active());
         });
 
-        self.add_page_context_menu(&tile, page_number, selected);
+        let item = flow_box_item(&tile);
+        let window = self.clone();
+        item.connect_activate(move |_| {
+            window.toggle_extract_page(page_number, !selected);
+        });
+        self.add_page_context_menu(&item, page_number, selected);
 
-        tile
+        item
     }
 
     fn add_page_context_menu(
@@ -536,13 +534,13 @@ impl ExtractWorkspace {
         add_item_context_menu(
             widget,
             vec![
-                ContextMenuItem::new("rotate", gettext("Rotate Clockwise"), selected, rotate),
+                ContextMenuItem::new("rotate", gettext("Rotate _Clockwise"), selected, rotate),
                 ContextMenuItem::new(
                     "toggle",
                     if selected {
-                        gettext("Unselect")
+                        gettext("_Unselect")
                     } else {
-                        gettext("Select")
+                        gettext("_Select")
                     },
                     true,
                     toggle,

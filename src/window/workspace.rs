@@ -444,6 +444,16 @@ pub(super) fn replace_collection_item(
     }
 }
 
+pub(super) fn flow_box_item(child: &impl IsA<gtk::Widget>) -> gtk::FlowBoxChild {
+    let popover_bin = gtk::PopoverBin::new();
+    popover_bin.set_child(Some(child));
+
+    gtk::FlowBoxChild::builder()
+        .child(&popover_bin)
+        .focusable(true)
+        .build()
+}
+
 pub(super) struct OrderedItemControls {
     pub up: gtk::Button,
     pub down: gtk::Button,
@@ -534,25 +544,25 @@ pub(super) fn ordered_item_context_menu_items(
     vec![
         ContextMenuItem::from_action(
             "move-up",
-            gettext("Move Up"),
+            gettext("Move _Up"),
             actions.options.can_move_up,
             actions.move_up.clone(),
         ),
         ContextMenuItem::from_action(
             "move-down",
-            gettext("Move Down"),
+            gettext("Move _Down"),
             actions.options.can_move_down,
             actions.move_down.clone(),
         ),
         ContextMenuItem::from_action(
             "rotate",
-            gettext("Rotate Clockwise"),
+            gettext("Rotate _Clockwise"),
             true,
             actions.rotate.clone(),
         ),
         ContextMenuItem::from_action(
             "remove",
-            gettext("Remove"),
+            gettext("_Remove"),
             actions.options.can_remove,
             actions.remove.clone(),
         ),
@@ -604,29 +614,70 @@ pub(super) fn add_item_context_menu(widget: &impl IsA<gtk::Widget>, items: Vec<C
     let popover = gtk::PopoverMenu::from_model(Some(&menu));
     popover.set_has_arrow(false);
     popover.set_position(gtk::PositionType::Right);
-    popover.set_parent(widget);
+    let popover_bin = widget
+        .first_child()
+        .and_then(|child| child.downcast::<gtk::PopoverBin>().ok());
+    if let Some(popover_bin) = &popover_bin {
+        popover_bin.set_popover(Some(&popover));
+        popover_bin.set_handle_input(true);
+    } else {
+        popover.set_parent(widget);
 
-    let gesture = gtk::GestureClick::new();
-    gesture.set_button(gtk::gdk::BUTTON_SECONDARY);
-    let popover_for_click = popover.clone();
-    gesture.connect_pressed(move |gesture, _, x, y| {
-        let bounds = gtk::gdk::Rectangle::new(x as i32, y as i32, 1, 1);
-        popover_for_click.set_pointing_to(Some(&bounds));
-        popover_for_click.popup();
-        gesture.set_state(gtk::EventSequenceState::Claimed);
-    });
-    widget.add_controller(gesture);
+        let gesture = gtk::GestureClick::new();
+        gesture.set_button(gtk::gdk::BUTTON_SECONDARY);
+        let popover_for_click = popover.clone();
+        gesture.connect_pressed(move |gesture, _, x, y| {
+            let bounds = gtk::gdk::Rectangle::new(x as i32, y as i32, 1, 1);
+            popover_for_click.set_pointing_to(Some(&bounds));
+            popover_for_click.popup();
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+        });
+        widget.add_controller(gesture);
+    }
 
-    let popover_for_realize = popover.clone();
-    widget.connect_realize(move |widget| {
-        if popover_for_realize.parent().is_none() {
-            popover_for_realize.set_parent(widget);
+    let key = gtk::EventControllerKey::new();
+    let popover_for_key = popover.clone();
+    let popover_bin_for_key = popover_bin.clone();
+    key.connect_key_pressed(move |_, key, _, modifiers| {
+        if !is_context_menu_key(key, modifiers) {
+            return glib::Propagation::Proceed;
         }
-    });
 
-    widget.connect_unrealize(move |_| {
-        popover.unparent();
+        popover_for_key.set_pointing_to(None);
+        if let Some(popover_bin) = &popover_bin_for_key {
+            popover_bin.popup();
+        } else {
+            popover_for_key.popup();
+        }
+        glib::Propagation::Stop
     });
+    widget.add_controller(key);
+
+    if popover_bin.is_none() {
+        let popover_for_realize = popover.clone();
+        widget.connect_realize(move |widget| {
+            if popover_for_realize.parent().is_none() {
+                popover_for_realize.set_parent(widget);
+            }
+        });
+
+        widget.connect_unrealize(move |_| {
+            popover.unparent();
+        });
+    }
+}
+
+fn is_context_menu_key(key: gtk::gdk::Key, modifiers: gtk::gdk::ModifierType) -> bool {
+    let shortcut_modifiers = gtk::gdk::ModifierType::SHIFT_MASK
+        | gtk::gdk::ModifierType::CONTROL_MASK
+        | gtk::gdk::ModifierType::ALT_MASK
+        | gtk::gdk::ModifierType::SUPER_MASK
+        | gtk::gdk::ModifierType::HYPER_MASK
+        | gtk::gdk::ModifierType::META_MASK;
+    let modifiers = modifiers & shortcut_modifiers;
+
+    (modifiers.is_empty() && (key == gtk::gdk::Key::Menu || key == gtk::gdk::Key::ContextMenu))
+        || (key == gtk::gdk::Key::F10 && modifiers == gtk::gdk::ModifierType::SHIFT_MASK)
 }
 
 fn add_context_menu_action(actions: &gio::SimpleActionGroup, item: ContextMenuItem) {
@@ -667,10 +718,30 @@ fn preview_error_message(_error: &crate::preview::PreviewError) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{backend_error_message, preview_error_message};
+    use super::{backend_error_message, is_context_menu_key, preview_error_message};
     use crate::pdf::PdfBackendError;
     use crate::preview::PreviewError;
     use std::path::PathBuf;
+
+    #[test]
+    fn context_menu_keys_use_standard_keyboard_paths() {
+        let no_modifiers = gtk::gdk::ModifierType::empty();
+
+        assert!(is_context_menu_key(gtk::gdk::Key::Menu, no_modifiers));
+        assert!(is_context_menu_key(
+            gtk::gdk::Key::ContextMenu,
+            no_modifiers
+        ));
+        assert!(is_context_menu_key(
+            gtk::gdk::Key::F10,
+            gtk::gdk::ModifierType::SHIFT_MASK
+        ));
+        assert!(!is_context_menu_key(gtk::gdk::Key::F10, no_modifiers));
+        assert!(!is_context_menu_key(
+            gtk::gdk::Key::F10,
+            gtk::gdk::ModifierType::SHIFT_MASK | gtk::gdk::ModifierType::CONTROL_MASK
+        ));
+    }
 
     #[test]
     fn backend_errors_use_generic_user_messages() {
