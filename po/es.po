@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Folios 0.1.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-01 08:58-0400\n"
-"PO-Revision-Date: 2026-06-01 09:02-0400\n"
+"POT-Creation-Date: 2026-06-02 09:00-0400\n"
+"PO-Revision-Date: 2026-06-02 09:03-0400\n"
 "Last-Translator: Francisco <fvasquez>\n"
 "Language-Team: es_DO\n"
 "Language: es\n"
@@ -21,7 +21,7 @@ msgstr ""
 
 #: data/com.fvtronics.folios.desktop.in:2
 #: data/com.fvtronics.folios.metainfo.xml.in:7 src/window.blp:5
-#: src/window.blp:17 src/window.blp:23 src/window.blp:92
+#: src/window.blp:17 src/window.blp:23 src/window.blp:90
 msgid "Folios"
 msgstr "Folios"
 
@@ -84,97 +84,97 @@ msgstr "Ver y editar metadatos del PDF"
 msgid "translator-credits"
 msgstr "FVtronics <fvasquez.public@fvtronics.com>"
 
-#: src/compress-workspace.blp:25 src/compress-workspace.blp:26
-#: src/compress-workspace.blp:65 src/compress-workspace.blp:68
-#: src/extract-workspace.blp:25 src/extract-workspace.blp:26
-#: src/extract-workspace.blp:65 src/extract-workspace.blp:68
-#: src/metadata-workspace.blp:25 src/metadata-workspace.blp:26
-#: src/metadata-workspace.blp:65 src/metadata-workspace.blp:68
-#: src/organize-workspace.blp:25 src/organize-workspace.blp:26
-#: src/organize-workspace.blp:74 src/organize-workspace.blp:77
-#: src/split-workspace.blp:25 src/split-workspace.blp:26
-#: src/split-workspace.blp:65 src/split-workspace.blp:68
+#: src/compress-workspace.blp:24 src/compress-workspace.blp:25
+#: src/compress-workspace.blp:64 src/compress-workspace.blp:67
+#: src/extract-workspace.blp:24 src/extract-workspace.blp:25
+#: src/extract-workspace.blp:64 src/extract-workspace.blp:67
+#: src/metadata-workspace.blp:24 src/metadata-workspace.blp:25
+#: src/metadata-workspace.blp:64 src/metadata-workspace.blp:67
+#: src/organize-workspace.blp:24 src/organize-workspace.blp:25
+#: src/organize-workspace.blp:73 src/organize-workspace.blp:76
+#: src/split-workspace.blp:24 src/split-workspace.blp:25
+#: src/split-workspace.blp:64 src/split-workspace.blp:67
 #: src/window/compress.rs:137 src/window/extract.rs:194
 #: src/window/metadata.rs:165 src/window/organize.rs:170
-#: src/window/split.rs:214
+#: src/window/split.rs:216
 msgid "Open PDF"
 msgstr "Abrir PDF"
 
-#: src/compress-workspace.blp:33 src/extract-workspace.blp:33
-#: src/merge-workspace.blp:32 src/metadata-workspace.blp:33
-#: src/organize-workspace.blp:33
+#: src/compress-workspace.blp:32 src/extract-workspace.blp:32
+#: src/merge-workspace.blp:32 src/metadata-workspace.blp:32
+#: src/organize-workspace.blp:32
 msgid "Open Output File"
 msgstr "Abrir archivo de salida"
 
-#: src/compress-workspace.blp:35 src/extract-workspace.blp:35
-#: src/merge-workspace.blp:34 src/metadata-workspace.blp:35
-#: src/organize-workspace.blp:35
+#: src/compress-workspace.blp:34 src/extract-workspace.blp:34
+#: src/merge-workspace.blp:34 src/metadata-workspace.blp:34
+#: src/organize-workspace.blp:34
 msgid "Open Output"
 msgstr "Abrir resultado"
 
-#: src/compress-workspace.blp:42 src/window.rs:70
+#: src/compress-workspace.blp:41 src/window.rs:70
 msgid "Compress PDF"
 msgstr "Comprimir PDF"
 
-#: src/compress-workspace.blp:45 src/window.blp:74 src/window/compress.rs:157
+#: src/compress-workspace.blp:44 src/window.blp:72 src/window/compress.rs:157
 msgid "Compress"
 msgstr "Comprimir"
 
-#: src/compress-workspace.blp:52 src/extract-workspace.blp:52
-#: src/merge-workspace.blp:60 src/metadata-workspace.blp:52
-#: src/organize-workspace.blp:61 src/split-workspace.blp:52
+#: src/compress-workspace.blp:51 src/extract-workspace.blp:51
+#: src/merge-workspace.blp:60 src/metadata-workspace.blp:51
+#: src/organize-workspace.blp:60 src/split-workspace.blp:51
 msgid "Advanced Options"
 msgstr "Opciones avanzadas"
 
-#: src/compress-workspace.blp:60
+#: src/compress-workspace.blp:59
 msgid "Open a PDF to Compress"
 msgstr "Abra un archivo PDF para comprimirlo"
 
-#: src/compress-workspace.blp:61
+#: src/compress-workspace.blp:60
 msgid "Choose a PDF, then save a smaller copy."
 msgstr "Elija un PDF y luego guarde una copia reducida."
 
-#: src/compress-workspace.blp:97
+#: src/compress-workspace.blp:96
 msgid "Remove Unused Data"
 msgstr "Eliminar datos no usados"
 
-#: src/compress-workspace.blp:98
+#: src/compress-workspace.blp:97
 msgid "Discard unreferenced PDF objects"
 msgstr "Descartar objetos PDF no referenciados"
 
-#: src/compress-workspace.blp:103
+#: src/compress-workspace.blp:102
 msgid "Remove Empty Streams"
 msgstr "Eliminar flujos vacíos"
 
-#: src/compress-workspace.blp:104
+#: src/compress-workspace.blp:103
 msgid "Discard empty PDF data streams"
 msgstr "Descartar flujos de datos PDF vacíos"
 
-#: src/extract-workspace.blp:42
+#: src/extract-workspace.blp:41
 msgid "Extract Selected Pages"
 msgstr "Extraer páginas seleccionadas"
 
-#: src/extract-workspace.blp:45 src/window/extract.rs:238
+#: src/extract-workspace.blp:44 src/window/extract.rs:238
 msgid "Extract"
 msgstr "Extraer"
 
-#: src/extract-workspace.blp:60
+#: src/extract-workspace.blp:59
 msgid "Open a PDF to Extract Pages"
 msgstr "Abra un archivo PDF para extraer páginas"
 
-#: src/extract-workspace.blp:61
+#: src/extract-workspace.blp:60
 msgid "Choose page ranges, then save them as a new document."
 msgstr "Elija rangos de páginas y guarde la selección como un nuevo documento."
 
-#: src/extract-workspace.blp:93
+#: src/extract-workspace.blp:92
 msgid "Pages"
 msgstr "Páginas"
 
-#: src/extract-workspace.blp:104 src/organize-workspace.blp:87
+#: src/extract-workspace.blp:102 src/organize-workspace.blp:86
 msgid "List"
 msgstr "Lista"
 
-#: src/extract-workspace.blp:117 src/organize-workspace.blp:100
+#: src/extract-workspace.blp:115 src/organize-workspace.blp:99
 msgid "Grid"
 msgstr "Cuadrícula"
 
@@ -199,7 +199,7 @@ msgstr "Limpiar"
 msgid "Merge Selected PDFs"
 msgstr "Combinar los PDF seleccionados"
 
-#: src/merge-workspace.blp:53 src/window.blp:46 src/window/merge.rs:185
+#: src/merge-workspace.blp:53 src/window.blp:44 src/window/merge.rs:185
 msgid "Merge"
 msgstr "Combinar"
 
@@ -211,64 +211,64 @@ msgstr "Añada archivos PDF para comenzar"
 msgid "Choose two or more PDF files to combine into a new document."
 msgstr "Elija dos o más archivos PDF para combinarlos en un nuevo documento."
 
-#: src/metadata-workspace.blp:42
+#: src/metadata-workspace.blp:41
 msgid "Save Metadata"
 msgstr "Guardar metadatos"
 
-#: src/metadata-workspace.blp:45 src/organize-workspace.blp:54
+#: src/metadata-workspace.blp:44 src/organize-workspace.blp:53
 #: src/window/metadata.rs:189 src/window/organize.rs:186
 msgid "Save"
 msgstr "Guardar"
 
-#: src/metadata-workspace.blp:60
+#: src/metadata-workspace.blp:59
 msgid "Open a PDF to Edit Metadata"
 msgstr "Abra un archivo PDF para editar sus metadatos"
 
-#: src/metadata-workspace.blp:61
+#: src/metadata-workspace.blp:60
 msgid "View and update the main document metadata fields."
 msgstr "Vea y actualice los principales campos de metadatos del documento."
 
-#: src/metadata-workspace.blp:97
+#: src/metadata-workspace.blp:96
 msgid "Title"
 msgstr "Título"
 
-#: src/metadata-workspace.blp:101
+#: src/metadata-workspace.blp:100
 msgid "Author"
 msgstr "Autor"
 
-#: src/metadata-workspace.blp:105
+#: src/metadata-workspace.blp:104
 msgid "Subject"
 msgstr "Asunto"
 
-#: src/metadata-workspace.blp:109
+#: src/metadata-workspace.blp:108
 msgid "Keywords"
 msgstr "Palabras clave"
 
-#: src/metadata-workspace.blp:113
+#: src/metadata-workspace.blp:112
 msgid "Creator"
 msgstr "Creador"
 
-#: src/metadata-workspace.blp:117
+#: src/metadata-workspace.blp:116
 msgid "Producer"
 msgstr "Productor"
 
-#: src/organize-workspace.blp:42
+#: src/organize-workspace.blp:41
 msgid "Reset Page Order"
 msgstr "Restablecer orden de páginas"
 
-#: src/organize-workspace.blp:44
+#: src/organize-workspace.blp:43
 msgid "Reset"
 msgstr "Restablecer"
 
-#: src/organize-workspace.blp:51 src/window/organize.rs:185
+#: src/organize-workspace.blp:50 src/window/organize.rs:185
 msgid "Save Organized PDF"
 msgstr "Guardar PDF organizado"
 
-#: src/organize-workspace.blp:69
+#: src/organize-workspace.blp:68
 msgid "Open a PDF to Organize"
 msgstr "Abra un archivo PDF para organizarlo"
 
-#: src/organize-workspace.blp:70
+#: src/organize-workspace.blp:69
 msgid "Reorder or remove pages, then save a new document."
 msgstr "Reordene o elimine páginas y luego guarde un nuevo documento."
 
@@ -288,48 +288,48 @@ msgstr "Desbloquear"
 msgid "Password"
 msgstr "Contraseña"
 
-#: src/password-dialog.blp:30 src/window/workspace.rs:651
-#: src/window/workspace.rs:663
+#: src/password-dialog.blp:30 src/window/workspace.rs:702
+#: src/window/workspace.rs:714
 msgid "Invalid password"
 msgstr "Contraseña incorrecta"
 
-#: src/split-workspace.blp:33
+#: src/split-workspace.blp:32
 msgid "Open Output Folder"
 msgstr "Abrir carpeta de salida"
 
-#: src/split-workspace.blp:35
+#: src/split-workspace.blp:34
 msgid "Open Folder"
 msgstr "Abrir carpeta"
 
-#: src/split-workspace.blp:42 src/window.rs:73
+#: src/split-workspace.blp:41 src/window.rs:73
 msgid "Split PDF"
 msgstr "Dividir PDF"
 
-#: src/split-workspace.blp:45 src/window.blp:67 src/window/split.rs:241
+#: src/split-workspace.blp:44 src/window.blp:65 src/window/split.rs:243
 msgid "Split"
 msgstr "Dividir"
 
-#: src/split-workspace.blp:60
+#: src/split-workspace.blp:59
 msgid "Open a PDF to Split"
 msgstr "Abra un archivo PDF para dividirlo"
 
-#: src/split-workspace.blp:61
+#: src/split-workspace.blp:60
 msgid "Choose where the PDF should be split by page."
 msgstr "Elija en qué páginas dividir el PDF."
 
-#: src/split-workspace.blp:97
+#: src/split-workspace.blp:96
 msgid "Split After"
 msgstr "Dividir después de"
 
-#: src/split-workspace.blp:101 src/window/split.rs:129
+#: src/split-workspace.blp:100 src/window/split.rs:131
 msgid "Specific Pages"
 msgstr "Páginas específicas"
 
-#: src/split-workspace.blp:105 src/window/split.rs:130
+#: src/split-workspace.blp:104 src/window/split.rs:132
 msgid "Every N Pages"
 msgstr "Cada N páginas"
 
-#: src/split-workspace.blp:110
+#: src/split-workspace.blp:108
 msgid "Output Name Prefix"
 msgstr "Prefijo del nombre de salida"
 
@@ -347,15 +347,15 @@ msgctxt "shortcut window"
 msgid "Quit"
 msgstr "Salir"
 
-#: src/window.rs:69 src/window.blp:98
+#: src/window.rs:69 src/window.blp:96
 msgid "Merge PDFs"
 msgstr "Combinar archivos PDF"
 
-#: src/window.rs:71 src/window.blp:53
+#: src/window.rs:71 src/window.blp:51
 msgid "Organize Pages"
 msgstr "Organizar páginas"
 
-#: src/window.rs:72 src/window.blp:60
+#: src/window.rs:72 src/window.blp:58
 msgid "Extract Pages"
 msgstr "Extraer páginas"
 
@@ -363,13 +363,13 @@ msgstr "Extraer páginas"
 msgid "Edit Metadata"
 msgstr "Editar metadatos"
 
-#: src/window.rs:80 src/window.blp:99 src/window/merge.rs:416
+#: src/window.rs:80 src/window.blp:97 src/window/merge.rs:416
 msgid "No files selected"
 msgstr "No hay archivos seleccionados"
 
 #: src/window.rs:82 src/window/compress.rs:251 src/window/extract.rs:417
 #: src/window/metadata.rs:287 src/window/organize.rs:379
-#: src/window/split.rs:368
+#: src/window/split.rs:370
 msgid "No PDF selected"
 msgstr "Ningún archivo PDF seleccionado"
 
@@ -377,53 +377,53 @@ msgstr "Ningún archivo PDF seleccionado"
 msgid "Main Menu"
 msgstr "Menú principal"
 
-#: src/window.blp:47
+#: src/window.blp:45
 msgid "Combine PDFs"
 msgstr "Combinar archivos PDF"
 
-#: src/window.blp:54
+#: src/window.blp:52
 msgid "Reorder or remove pages"
 msgstr "Reordenar o eliminar páginas"
 
-#: src/window.blp:61
+#: src/window.blp:59
 msgid "Save selected pages"
 msgstr "Guardar páginas seleccionadas"
 
-#: src/window.blp:68
+#: src/window.blp:66
 msgid "Split by page"
 msgstr "Dividir por página"
 
-#: src/window.blp:75
+#: src/window.blp:73
 msgid "Reduce PDF size"
 msgstr "Reducir el tamaño del PDF"
 
-#: src/window.blp:81
+#: src/window.blp:79
 msgid "Metadata"
 msgstr "Metadatos"
 
-#: src/window.blp:82
+#: src/window.blp:80
 msgid "View and edit details"
 msgstr "Ver y editar detalles"
 
-#: src/window.blp:108
+#: src/window.blp:106
 msgid "List View"
 msgstr "Vista de lista"
 
-#: src/window.blp:116
+#: src/window.blp:111
 msgid "Grid View"
 msgstr "Vista de cuadrícula"
 
-#: src/window.blp:141
+#: src/window.blp:133
 msgid "_Keyboard Shortcuts"
 msgstr "Atajos de teclado"
 
-#: src/window.blp:145
+#: src/window.blp:137
 msgid "_About Folios"
 msgstr "_Acerca de Folios"
 
 #: src/window/compress.rs:137 src/window/extract.rs:194
 #: src/window/metadata.rs:165 src/window/organize.rs:170
-#: src/window/split.rs:214
+#: src/window/split.rs:216
 msgid "Open"
 msgstr "Abrir"
 
@@ -441,7 +441,7 @@ msgstr "Comprimiendo archivo PDF..."
 
 #: src/window/compress.rs:247 src/window/extract.rs:413
 #: src/window/metadata.rs:283 src/window/organize.rs:375
-#: src/window/split.rs:364
+#: src/window/split.rs:366
 msgid "Loading PDF..."
 msgstr "Cargando archivo PDF..."
 
@@ -449,7 +449,7 @@ msgstr "Cargando archivo PDF..."
 msgid "Rotate Selected Pages"
 msgstr "Girar páginas seleccionadas"
 
-#: src/window/extract.rs:212 src/window/workspace.rs:644
+#: src/window/extract.rs:212 src/window/workspace.rs:695
 msgid "Choose at least one page"
 msgstr "Elija al menos una página"
 
@@ -465,28 +465,31 @@ msgstr "Páginas extraídas guardadas"
 msgid "Extracting pages..."
 msgstr "Extrayendo páginas..."
 
-#: src/window/extract.rs:444 src/window/extract.rs:506
+#: src/window/extract.rs:444 src/window/extract.rs:499
 msgid "Select Page"
 msgstr "Seleccionar página"
 
-#: src/window/extract.rs:448 src/window/extract.rs:495
-#: src/window/organize.rs:625
+#: src/window/extract.rs:448 src/window/extract.rs:488
+#: src/window/organize.rs:626
 msgid "Page"
 msgstr "Página"
 
-#: src/window/extract.rs:456 src/window/extract.rs:498
-#: src/window/extract.rs:539 src/window/workspace.rs:514
-#: src/window/workspace.rs:549
+#: src/window/extract.rs:456 src/window/extract.rs:491
+#: src/window/workspace.rs:524
 msgid "Rotate Clockwise"
 msgstr "Girar en sentido horario"
 
-#: src/window/extract.rs:543
-msgid "Unselect"
-msgstr "Deseleccionar"
+#: src/window/extract.rs:537 src/window/workspace.rs:559
+msgid "Rotate _Clockwise"
+msgstr "_Girar en sentido horario"
 
-#: src/window/extract.rs:545
-msgid "Select"
-msgstr "Seleccionar"
+#: src/window/extract.rs:541
+msgid "_Unselect"
+msgstr "_Deseleccionar"
+
+#: src/window/extract.rs:543
+msgid "_Select"
+msgstr "_Seleccionar"
 
 #: src/window/merge.rs:130
 msgid "Rotate All Files"
@@ -519,11 +522,11 @@ msgid_plural "{} PDFs selected"
 msgstr[0] "1 archivo PDF seleccionado"
 msgstr[1] "{} archivos PDF seleccionados"
 
-#: src/window/merge.rs:510 src/window/organize.rs:488
-msgid "Duplicate"
-msgstr "Duplicar"
+#: src/window/merge.rs:511 src/window/organize.rs:489
+msgid "Du_plicate"
+msgstr "_Duplicar"
 
-#: src/window/merge.rs:593
+#: src/window/merge.rs:594
 msgid "PDF removed"
 msgstr "PDF eliminado"
 
@@ -571,39 +574,39 @@ msgstr "Organizando páginas..."
 msgid "Position"
 msgstr "Posición"
 
-#: src/window/organize.rs:484
-msgid "Insert Blank Page After"
-msgstr "Insertar página en blanco"
+#: src/window/organize.rs:485
+msgid "Insert _Blank Page After"
+msgstr "_Insertar página en blanco"
 
-#: src/window/organize.rs:572
+#: src/window/organize.rs:573
 msgid "Page removed"
 msgstr "Página eliminada"
 
-#: src/window/organize.rs:623
+#: src/window/organize.rs:624
 msgid "Blank Page"
 msgstr "Página en blanco"
 
-#: src/window/split.rs:126
+#: src/window/split.rs:128
 msgid "Every Page"
 msgstr "Cada página"
 
-#: src/window/split.rs:127
+#: src/window/split.rs:129
 msgid "Even Pages"
 msgstr "Páginas pares"
 
-#: src/window/split.rs:128
+#: src/window/split.rs:130
 msgid "Odd Pages"
 msgstr "Páginas impares"
 
-#: src/window/split.rs:241
+#: src/window/split.rs:243
 msgid "Choose Output Folder"
 msgstr "Elegir carpeta de salida"
 
-#: src/window/split.rs:286
+#: src/window/split.rs:288
 msgid "Split PDFs saved"
 msgstr "Archivos PDF divididos guardados"
 
-#: src/window/split.rs:362
+#: src/window/split.rs:364
 msgid "Splitting PDF..."
 msgstr "Dividiendo archivo PDF..."
 
@@ -639,47 +642,59 @@ msgstr "Ajustar las páginas de salida al mayor tamaño de página"
 msgid "Could not open output"
 msgstr "No se pudo abrir la salida"
 
-#: src/window/workspace.rs:504 src/window/workspace.rs:537
+#: src/window/workspace.rs:514
 msgid "Move Up"
 msgstr "Mover hacia arriba"
 
-#: src/window/workspace.rs:509 src/window/workspace.rs:543
+#: src/window/workspace.rs:519
 msgid "Move Down"
 msgstr "Mover hacia abajo"
 
-#: src/window/workspace.rs:518 src/window/workspace.rs:555
+#: src/window/workspace.rs:528
 msgid "Remove"
 msgstr "Eliminar"
 
-#: src/window/workspace.rs:643
+#: src/window/workspace.rs:547
+msgid "Move _Up"
+msgstr "Mover hacia _arriba"
+
+#: src/window/workspace.rs:553
+msgid "Move _Down"
+msgstr "Mover hacia abaj_o"
+
+#: src/window/workspace.rs:565
+msgid "_Remove"
+msgstr "_Eliminar"
+
+#: src/window/workspace.rs:694
 msgid "Choose at least two PDFs"
 msgstr "Elija al menos dos archivos PDF"
 
-#: src/window/workspace.rs:646
+#: src/window/workspace.rs:697
 msgid "Choose a different output file"
 msgstr "Elija un archivo de salida diferente"
 
-#: src/window/workspace.rs:649
+#: src/window/workspace.rs:700
 msgid "Could not open PDF"
 msgstr "No se pudo abrir el archivo PDF"
 
-#: src/window/workspace.rs:650 src/window/workspace.rs:662
+#: src/window/workspace.rs:701 src/window/workspace.rs:713
 msgid "Password required"
 msgstr "Se requiere contraseña"
 
-#: src/window/workspace.rs:652
+#: src/window/workspace.rs:703
 msgid "Could not process PDF"
 msgstr "No se pudo procesar el archivo PDF"
 
-#: src/window/workspace.rs:654
+#: src/window/workspace.rs:705
 msgid "Could not save PDF"
 msgstr "No se pudo guardar el archivo PDF"
 
-#: src/window/workspace.rs:656
+#: src/window/workspace.rs:707
 msgid "Could not finish operation"
 msgstr "No se pudo finalizar la operación"
 
-#: src/window/workspace.rs:664
+#: src/window/workspace.rs:715
 msgid "Could not preview PDF"
 msgstr "No se pudo generar la vista previa del PDF"
 
@@ -708,7 +723,7 @@ msgstr "Introduzca un número de páginas de 1 o más."
 msgid "Size unavailable"
 msgstr "Tamaño no disponible"
 
-#: src/window/ui.rs:471
+#: src/window/ui.rs:488
 #, rust-format
 msgid "1 page"
 msgid_plural "{} pages"
