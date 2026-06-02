@@ -62,6 +62,14 @@
   </branding>
 
   <releases>
+    <release version="0.2.1" date="2026-06-02">
+      <description translate="no">
+        <p>Changes</p>
+        <ul>
+          <li>Improved keyboard navigation throughout the app</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-06-01">
       <description translate="no">
         <p>New</p>
@@ -115,18 +123,6 @@
         <ul>
           <li>Improved the sidebar layout and navigation on smaller windows</li>
           <li>Centered the empty state shown before a file is selected</li>
-        </ul>
-      </description>
-    </release>
-    <release version="0.1.5" date="2026-05-23">
-      <description translate="no">
-        <p>New</p>
-        <ul>
-          <li>Added a metadata tool for viewing and editing PDF details</li>
-        </ul>
-        <p>Optimizations</p>
-        <ul>
-          <li>Added more preview checks for PDF loading reliability</li>
         </ul>
       </description>
     </release>
