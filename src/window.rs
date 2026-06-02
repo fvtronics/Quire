@@ -110,6 +110,8 @@ mod imp {
         #[template_child]
         pub view_mode_box: TemplateChild<gtk::Box>,
         #[template_child]
+        pub workspace_stack: TemplateChild<gtk::Stack>,
+        #[template_child]
         pub content_title: TemplateChild<adw::WindowTitle>,
         #[template_child]
         pub list_view_button: TemplateChild<gtk::ToggleButton>,
@@ -256,15 +258,15 @@ impl FoliosWindow {
     fn switch_tool(&self, tool: PdfTool) {
         let imp = self.imp();
         imp.active_tool.set(tool);
-        imp.merge_workspace.set_visible(tool == PdfTool::Merge);
-        imp.compress_workspace
-            .set_visible(tool == PdfTool::Compress);
-        imp.organize_workspace
-            .set_visible(tool == PdfTool::Organize);
-        imp.extract_workspace.set_visible(tool == PdfTool::Extract);
-        imp.split_workspace.set_visible(tool == PdfTool::Split);
-        imp.metadata_workspace
-            .set_visible(tool == PdfTool::Metadata);
+        let workspace: &gtk::Widget = match tool {
+            PdfTool::Merge => imp.merge_workspace.upcast_ref(),
+            PdfTool::Compress => imp.compress_workspace.upcast_ref(),
+            PdfTool::Organize => imp.organize_workspace.upcast_ref(),
+            PdfTool::Extract => imp.extract_workspace.upcast_ref(),
+            PdfTool::Split => imp.split_workspace.upcast_ref(),
+            PdfTool::Metadata => imp.metadata_workspace.upcast_ref(),
+        };
+        imp.workspace_stack.set_visible_child(workspace);
 
         let selected_row: &gtk::ListBoxRow = match tool {
             PdfTool::Merge => imp.merge_tool_row.upcast_ref(),

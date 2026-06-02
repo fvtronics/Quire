@@ -46,6 +46,7 @@ impl SplitMode {
 mod imp {
     use super::super::state::SplitState;
     use adw::subclass::prelude::*;
+    use gtk::prelude::EditableExt;
     use gtk::{glib, TemplateChild};
     use std::cell::Cell;
 
@@ -103,6 +104,7 @@ mod imp {
     impl ObjectImpl for SplitWorkspace {
         fn constructed(&self) {
             self.parent_constructed();
+            self.split_pages_entry.set_text("1");
             let obj = self.obj();
             obj.setup_callbacks();
             obj.update_view();

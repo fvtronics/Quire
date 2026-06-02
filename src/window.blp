@@ -32,9 +32,7 @@ template $FoliosWindow: Adw.ApplicationWindow {
             }
           }
 
-          content: Gtk.Box {
-            orientation: vertical;
-
+          content: Adw.Bin {
             Gtk.ListBox sidebar_list {
               selection-mode: single;
               margin-start: 12;
@@ -106,23 +104,17 @@ template $FoliosWindow: Adw.ApplicationWindow {
               Gtk.ToggleButton list_view_button {
                 active: true;
                 tooltip-text: _("List View");
-
-                child: Gtk.Image {
-                  icon-name: "view-list-symbolic";
-                };
+                icon-name: "view-list-symbolic";
               }
 
               Gtk.ToggleButton grid_view_button {
                 tooltip-text: _("Grid View");
-
-                child: Gtk.Image {
-                  icon-name: "view-grid-symbolic";
-                };
+                icon-name: "view-grid-symbolic";
               }
             }
           }
 
-          content: Gtk.Box {
+          content: Gtk.Stack workspace_stack {
             $MergeWorkspace merge_workspace {}
             $CompressWorkspace compress_workspace {}
             $OrganizeWorkspace organize_workspace {}

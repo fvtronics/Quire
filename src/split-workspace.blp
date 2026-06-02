@@ -5,7 +5,6 @@ template $SplitWorkspace: Gtk.Box {
   orientation: vertical;
   spacing: 18;
   hexpand: true;
-  visible: false;
   margin-start: 36;
   margin-end: 36;
   margin-top: 30;
@@ -103,12 +102,10 @@ template $SplitWorkspace: Gtk.Box {
 
         Adw.EntryRow split_pages_entry {
           title: _("Every N Pages");
-          text: "1";
         }
 
         Adw.EntryRow split_prefix_entry {
           title: _("Output Name Prefix");
-          text: "";
         }
       }
     }
