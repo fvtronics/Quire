@@ -4,7 +4,9 @@ use super::ui::{
 };
 use super::workspace::{
     load_single_processable_pdf, open_output, output_option_callback, parent_window,
-    run_output_job, setup_advanced_options_menu, update_shell_title, update_shell_view_mode,
+    run_output_job, setup_advanced_options_menu, setup_compact_workspace_margins,
+    setup_default_height_breakpoint, setup_default_width_breakpoint,
+    setup_vertical_layout_breakpoint, update_shell_title, update_shell_view_mode,
     AdvancedOptionsMenu, SinglePdfLoadHandlers,
 };
 use super::PdfTool;
@@ -32,7 +34,7 @@ mod imp {
         #[template_child]
         pub metadata_empty_choose_button: TemplateChild<gtk::Button>,
         #[template_child]
-        pub metadata_actions: TemplateChild<gtk::Box>,
+        pub metadata_actions: TemplateChild<adw::WrapBox>,
         #[template_child]
         pub metadata_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
@@ -146,6 +148,14 @@ impl MetadataWorkspace {
         self.connect_metadata_changed(&imp.metadata_author_entry);
         self.connect_metadata_changed(&imp.metadata_subject_entry);
         self.connect_metadata_changed(&imp.metadata_keywords_entry);
+    }
+
+    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
+        let imp = self.imp();
+        setup_compact_workspace_margins(breakpoint, self);
+        setup_vertical_layout_breakpoint(breakpoint, &imp.metadata_content);
+        setup_default_width_breakpoint(breakpoint, &*imp.metadata_preview_box);
+        setup_default_height_breakpoint(breakpoint, &*imp.metadata_preview_box);
     }
 
     fn connect_metadata_changed(&self, entry: &adw::EntryRow) {

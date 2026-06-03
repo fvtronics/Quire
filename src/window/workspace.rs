@@ -8,8 +8,62 @@ use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+const ADAPTIVE_WIDTH_SP: f64 = 800.0;
+const COMPACT_MARGIN: i32 = 18;
+const DEFAULT_SIZE_REQUEST: i32 = -1;
+
 pub(super) fn parent_window(widget: &impl IsA<gtk::Widget>) -> Option<gtk::Window> {
     widget.root().and_downcast::<gtk::Window>()
+}
+
+pub(super) fn setup_compact_workspace_margins<Widget>(
+    breakpoint: &adw::Breakpoint,
+    workspace: &Widget,
+) where
+    Widget: IsA<gtk::Widget> + IsA<glib::Object>,
+{
+    breakpoint.add_setter(workspace, "margin-start", Some(&COMPACT_MARGIN.to_value()));
+    breakpoint.add_setter(workspace, "margin-end", Some(&COMPACT_MARGIN.to_value()));
+    breakpoint.add_setter(workspace, "margin-top", Some(&COMPACT_MARGIN.to_value()));
+    breakpoint.add_setter(workspace, "margin-bottom", Some(&COMPACT_MARGIN.to_value()));
+}
+
+pub(super) fn setup_vertical_layout_breakpoint(breakpoint: &adw::Breakpoint, container: &gtk::Box) {
+    breakpoint.add_setter(
+        container,
+        "orientation",
+        Some(&gtk::Orientation::Vertical.to_value()),
+    );
+}
+
+pub(super) fn setup_default_width_breakpoint<Widget>(breakpoint: &adw::Breakpoint, widget: &Widget)
+where
+    Widget: IsA<gtk::Widget> + IsA<glib::Object>,
+{
+    breakpoint.add_setter(
+        widget,
+        "width-request",
+        Some(&DEFAULT_SIZE_REQUEST.to_value()),
+    );
+}
+
+pub(super) fn setup_default_height_breakpoint<Widget>(breakpoint: &adw::Breakpoint, widget: &Widget)
+where
+    Widget: IsA<gtk::Widget> + IsA<glib::Object>,
+{
+    breakpoint.add_setter(
+        widget,
+        "height-request",
+        Some(&DEFAULT_SIZE_REQUEST.to_value()),
+    );
+}
+
+pub(super) fn adaptive_width_breakpoint() -> adw::Breakpoint {
+    adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+        adw::BreakpointConditionLengthType::MaxWidth,
+        ADAPTIVE_WIDTH_SP,
+        adw::LengthUnit::Sp,
+    ))
 }
 
 pub(super) fn show_toast(widget: &impl IsA<gtk::Widget>, message: &str) {

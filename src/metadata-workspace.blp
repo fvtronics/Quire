@@ -10,13 +10,12 @@ template $MetadataWorkspace: Gtk.Box {
   margin-top: 30;
   margin-bottom: 30;
 
-  Gtk.Box metadata_actions {
+  Adw.WrapBox metadata_actions {
     orientation: horizontal;
-    spacing: 12;
-
-    Gtk.Box {
-      hexpand: true;
-    }
+    hexpand: true;
+    child-spacing: 12;
+    line-spacing: 12;
+    align: 1.0;
 
     Gtk.Button metadata_choose_button {
       visible: false;
@@ -75,10 +74,12 @@ template $MetadataWorkspace: Gtk.Box {
     visible: false;
 
     Gtk.Box metadata_preview_box {
-      width-request: 180;
+      halign: center;
+      width-request: 90;
+      height-request: 124;
     }
 
-    Gtk.Box {
+    Gtk.Box metadata_options_box {
       orientation: vertical;
       spacing: 18;
       hexpand: true;

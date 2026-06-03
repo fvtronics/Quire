@@ -7,9 +7,9 @@ use super::workspace::{
     open_output, ordered_item_context_menu_items, ordered_item_controls, output_option_callback,
     parent_window, preserve_collection_scroll_position, replace_collection_item,
     restore_collection_scroll_position, run_output_job, setup_advanced_options_menu,
-    show_pdf_load_error, update_shell_title, update_shell_view_mode, AdvancedOptionsMenu,
-    CollectionScrollPosition, ContextMenuItem, OrderedItemActions, OrderedItemControlOptions,
-    PdfLoadResult, PendingUndo,
+    setup_compact_workspace_margins, show_pdf_load_error, update_shell_title,
+    update_shell_view_mode, AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem,
+    OrderedItemActions, OrderedItemControlOptions, PdfLoadResult, PendingUndo,
 };
 use super::PdfTool;
 use adw::prelude::*;
@@ -33,7 +33,7 @@ mod imp {
         #[template_child]
         pub empty_add_button: TemplateChild<gtk::Button>,
         #[template_child]
-        pub merge_actions: TemplateChild<gtk::Box>,
+        pub merge_actions: TemplateChild<adw::WrapBox>,
         #[template_child]
         pub empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
@@ -158,6 +158,10 @@ impl MergeWorkspace {
         imp.open_output_button.connect_clicked(move |_| {
             workspace.open_last_output();
         });
+    }
+
+    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
+        setup_compact_workspace_margins(breakpoint, self);
     }
 
     fn choose_pdf_files(&self) {
@@ -433,6 +437,8 @@ impl MergeWorkspace {
         let row = adw::ActionRow::builder()
             .title(file_title(path))
             .subtitle(file_subtitle(path))
+            .title_lines(1)
+            .subtitle_lines(1)
             .activatable(true)
             .build();
         row.add_prefix(&list_preview_widget(preview, rotation));

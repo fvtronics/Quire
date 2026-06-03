@@ -10,13 +10,12 @@ template $OrganizeWorkspace: Gtk.Box {
   margin-top: 30;
   margin-bottom: 30;
 
-  Gtk.Box organize_actions {
+  Adw.WrapBox organize_actions {
     orientation: horizontal;
-    spacing: 12;
-
-    Gtk.Box {
-      hexpand: true;
-    }
+    hexpand: true;
+    child-spacing: 12;
+    line-spacing: 12;
+    align: 1.0;
 
     Gtk.Button organize_choose_button {
       visible: false;
@@ -87,6 +86,8 @@ template $OrganizeWorkspace: Gtk.Box {
       icon-name: "view-list-symbolic";
 
       child: Gtk.ScrolledWindow organize_list_scrolled_window {
+        min-content-height: 120;
+
         child: Gtk.ListBox organize_page_list {
           selection-mode: none;
           styles ["boxed-list"]
@@ -100,6 +101,8 @@ template $OrganizeWorkspace: Gtk.Box {
       icon-name: "view-grid-symbolic";
 
       child: Gtk.ScrolledWindow organize_grid_scrolled_window {
+        min-content-height: 120;
+
         child: Gtk.FlowBox organize_page_grid {
           column-spacing: 12;
           row-spacing: 12;

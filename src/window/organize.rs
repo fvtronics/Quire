@@ -8,9 +8,9 @@ use super::workspace::{
     open_output, ordered_item_context_menu_items, ordered_item_controls, output_option_callback,
     parent_window, preserve_collection_scroll_position, replace_collection_item,
     restore_collection_scroll_position, run_output_job, setup_advanced_options_menu,
-    update_shell_title, update_shell_view_mode, AdvancedOptionsMenu, CollectionScrollPosition,
-    ContextMenuItem, OrderedItemActions, OrderedItemControlOptions, PendingUndo,
-    SinglePdfLoadHandlers,
+    setup_compact_workspace_margins, update_shell_title, update_shell_view_mode,
+    AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem, OrderedItemActions,
+    OrderedItemControlOptions, PendingUndo, SinglePdfLoadHandlers,
 };
 use super::PdfTool;
 use adw::prelude::*;
@@ -34,7 +34,7 @@ mod imp {
         #[template_child]
         pub organize_empty_choose_button: TemplateChild<gtk::Button>,
         #[template_child]
-        pub organize_actions: TemplateChild<gtk::Box>,
+        pub organize_actions: TemplateChild<adw::WrapBox>,
         #[template_child]
         pub organize_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
@@ -159,6 +159,10 @@ impl OrganizeWorkspace {
         imp.organize_open_output_button.connect_clicked(move |_| {
             workspace.open_last_output();
         });
+    }
+
+    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
+        setup_compact_workspace_margins(breakpoint, self);
     }
 
     fn choose_file(&self) {
@@ -392,6 +396,8 @@ impl OrganizeWorkspace {
         let row = adw::ActionRow::builder()
             .title(page_title(page))
             .subtitle(format!("{} {}/{}", gettext("Position"), index + 1, count))
+            .title_lines(1)
+            .subtitle_lines(1)
             .activatable(true)
             .build();
 

@@ -172,7 +172,7 @@ mod imp {
             self.parent_constructed();
             let obj = self.obj();
             obj.setup_callbacks();
-            obj.setup_responsive_navigation();
+            obj.setup_responsive_layout();
             obj.switch_tool(PdfTool::Merge);
         }
     }
@@ -240,18 +240,20 @@ impl FoliosWindow {
         });
     }
 
-    fn setup_responsive_navigation(&self) {
+    fn setup_responsive_layout(&self) {
         let imp = self.imp();
-        let breakpoint = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
-            adw::BreakpointConditionLengthType::MaxWidth,
-            800.0,
-            adw::LengthUnit::Sp,
-        ));
+        let breakpoint = workspace::adaptive_width_breakpoint();
         breakpoint.add_setter(
             &imp.navigation_split_view.get(),
             "collapsed",
             Some(&true.to_value()),
         );
+        imp.merge_workspace.setup_responsive_layout(&breakpoint);
+        imp.compress_workspace.setup_responsive_layout(&breakpoint);
+        imp.organize_workspace.setup_responsive_layout(&breakpoint);
+        imp.extract_workspace.setup_responsive_layout(&breakpoint);
+        imp.split_workspace.setup_responsive_layout(&breakpoint);
+        imp.metadata_workspace.setup_responsive_layout(&breakpoint);
         self.add_breakpoint(breakpoint);
     }
 

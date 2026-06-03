@@ -10,13 +10,12 @@ template $ExtractWorkspace: Gtk.Box {
   margin-top: 30;
   margin-bottom: 30;
 
-  Gtk.Box extract_actions {
+  Adw.WrapBox extract_actions {
     orientation: horizontal;
-    spacing: 12;
-
-    Gtk.Box {
-      hexpand: true;
-    }
+    hexpand: true;
+    child-spacing: 12;
+    line-spacing: 12;
+    align: 1.0;
 
     Gtk.Button extract_choose_button {
       visible: false;
@@ -73,7 +72,7 @@ template $ExtractWorkspace: Gtk.Box {
     spacing: 18;
     visible: false;
 
-    Gtk.Box {
+    Gtk.Box extract_selection_box {
       orientation: horizontal;
       spacing: 12;
 
@@ -83,7 +82,7 @@ template $ExtractWorkspace: Gtk.Box {
         styles ["boxed-list"]
       }
 
-      Gtk.ListBox {
+      Gtk.ListBox extract_ranges_list {
         selection-mode: none;
         width-request: 280;
         styles ["boxed-list"]
@@ -103,6 +102,8 @@ template $ExtractWorkspace: Gtk.Box {
         icon-name: "view-list-symbolic";
 
         child: Gtk.ScrolledWindow extract_list_scrolled_window {
+          min-content-height: 120;
+
           child: Gtk.ListBox extract_page_list {
             selection-mode: none;
             styles ["boxed-list"]
@@ -116,6 +117,8 @@ template $ExtractWorkspace: Gtk.Box {
         icon-name: "view-grid-symbolic";
 
         child: Gtk.ScrolledWindow extract_grid_scrolled_window {
+          min-content-height: 120;
+
           child: Gtk.FlowBox extract_page_grid {
             column-spacing: 12;
             row-spacing: 12;

@@ -7,7 +7,8 @@ use super::workspace::{
     add_item_context_menu, collection_scroll_position, flow_box_item, load_single_processable_pdf,
     open_output, output_option_callback, parent_window, preserve_collection_scroll_position,
     replace_collection_item, restore_collection_scroll_position, run_output_job,
-    setup_advanced_options_menu, show_backend_error, show_toast, update_shell_title,
+    setup_advanced_options_menu, setup_compact_workspace_margins, setup_default_width_breakpoint,
+    setup_vertical_layout_breakpoint, show_backend_error, show_toast, update_shell_title,
     update_shell_view_mode, AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem,
     SinglePdfLoadHandlers,
 };
@@ -32,13 +33,17 @@ mod imp {
         #[template_child]
         pub extract_empty_choose_button: TemplateChild<gtk::Button>,
         #[template_child]
-        pub extract_actions: TemplateChild<gtk::Box>,
+        pub extract_actions: TemplateChild<adw::WrapBox>,
         #[template_child]
         pub extract_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub extract_content: TemplateChild<gtk::Box>,
         #[template_child]
+        pub extract_selection_box: TemplateChild<gtk::Box>,
+        #[template_child]
         pub extract_file_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub extract_ranges_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub extract_ranges_entry: TemplateChild<adw::EntryRow>,
         #[template_child]
@@ -183,6 +188,13 @@ impl ExtractWorkspace {
                 workspace.refresh_items(&changed_pages);
             }
         });
+    }
+
+    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
+        let imp = self.imp();
+        setup_compact_workspace_margins(breakpoint, self);
+        setup_vertical_layout_breakpoint(breakpoint, &imp.extract_selection_box);
+        setup_default_width_breakpoint(breakpoint, &*imp.extract_ranges_list);
     }
 
     fn choose_file(&self) {
@@ -446,6 +458,7 @@ impl ExtractWorkspace {
             .build();
         let row = adw::ActionRow::builder()
             .title(format!("{} {page_number}", gettext("Page")))
+            .title_lines(1)
             .activatable(true)
             .activatable_widget(&check_button)
             .build();

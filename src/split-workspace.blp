@@ -10,13 +10,12 @@ template $SplitWorkspace: Gtk.Box {
   margin-top: 30;
   margin-bottom: 30;
 
-  Gtk.Box split_actions {
+  Adw.WrapBox split_actions {
     orientation: horizontal;
-    spacing: 12;
-
-    Gtk.Box {
-      hexpand: true;
-    }
+    hexpand: true;
+    child-spacing: 12;
+    line-spacing: 12;
+    align: 1.0;
 
     Gtk.Button split_choose_button {
       visible: false;
@@ -75,10 +74,12 @@ template $SplitWorkspace: Gtk.Box {
     visible: false;
 
     Gtk.Box split_preview_box {
-      width-request: 180;
+      halign: center;
+      width-request: 90;
+      height-request: 124;
     }
 
-    Gtk.Box {
+    Gtk.Box split_options_box {
       orientation: vertical;
       spacing: 18;
       hexpand: true;

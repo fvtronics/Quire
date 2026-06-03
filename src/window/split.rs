@@ -5,7 +5,9 @@ use super::ui::{
 };
 use super::workspace::{
     load_single_processable_pdf, open_output, output_option_callback, parent_window,
-    run_output_job, setup_advanced_options_menu, show_backend_error, update_shell_title,
+    run_output_job, setup_advanced_options_menu, setup_compact_workspace_margins,
+    setup_default_height_breakpoint, setup_default_width_breakpoint,
+    setup_vertical_layout_breakpoint, show_backend_error, update_shell_title,
     update_shell_view_mode, AdvancedOptionsMenu, SinglePdfLoadHandlers,
 };
 use super::PdfTool;
@@ -58,7 +60,7 @@ mod imp {
         #[template_child]
         pub split_empty_choose_button: TemplateChild<gtk::Button>,
         #[template_child]
-        pub split_actions: TemplateChild<gtk::Box>,
+        pub split_actions: TemplateChild<adw::WrapBox>,
         #[template_child]
         pub split_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
@@ -205,6 +207,14 @@ impl SplitWorkspace {
             workspace.imp().split.job.clear_last_output();
             workspace.update_view();
         });
+    }
+
+    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
+        let imp = self.imp();
+        setup_compact_workspace_margins(breakpoint, self);
+        setup_vertical_layout_breakpoint(breakpoint, &imp.split_content);
+        setup_default_width_breakpoint(breakpoint, &*imp.split_preview_box);
+        setup_default_height_breakpoint(breakpoint, &*imp.split_preview_box);
     }
 
     fn choose_file(&self) {

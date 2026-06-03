@@ -4,7 +4,9 @@ use super::ui::{
 };
 use super::workspace::{
     load_single_processable_pdf, open_output, output_option_callback, parent_window,
-    run_output_job, setup_advanced_options_menu, update_shell_title, update_shell_view_mode,
+    run_output_job, setup_advanced_options_menu, setup_compact_workspace_margins,
+    setup_default_height_breakpoint, setup_default_width_breakpoint,
+    setup_vertical_layout_breakpoint, update_shell_title, update_shell_view_mode,
     AdvancedOptionsMenu, SinglePdfLoadHandlers,
 };
 use super::PdfTool;
@@ -28,7 +30,7 @@ mod imp {
         #[template_child]
         pub compress_empty_choose_button: TemplateChild<gtk::Button>,
         #[template_child]
-        pub compress_actions: TemplateChild<gtk::Box>,
+        pub compress_actions: TemplateChild<adw::WrapBox>,
         #[template_child]
         pub compress_empty_status: TemplateChild<adw::StatusPage>,
         #[template_child]
@@ -126,6 +128,14 @@ impl CompressWorkspace {
         imp.compress_open_output_button.connect_clicked(move |_| {
             workspace.open_last_output();
         });
+    }
+
+    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
+        let imp = self.imp();
+        setup_compact_workspace_margins(breakpoint, self);
+        setup_vertical_layout_breakpoint(breakpoint, &imp.compress_content);
+        setup_default_width_breakpoint(breakpoint, &*imp.compress_preview_box);
+        setup_default_height_breakpoint(breakpoint, &*imp.compress_preview_box);
     }
 
     fn choose_file(&self) {

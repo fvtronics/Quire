@@ -7,8 +7,14 @@ use std::path::{Path, PathBuf};
 
 const LIST_COLLECTION_PREVIEW_WIDTH: i32 = 128;
 const LIST_COLLECTION_PREVIEW_HEIGHT: i32 = 128;
+const LIST_COLLECTION_PREVIEW_MIN_SIZE: i32 = 72;
 const GRID_COLLECTION_PREVIEW_WIDTH: i32 = 200;
 const GRID_COLLECTION_PREVIEW_HEIGHT: i32 = 220;
+const GRID_COLLECTION_PREVIEW_MIN_WIDTH: i32 = 120;
+const GRID_COLLECTION_PREVIEW_MIN_HEIGHT: i32 = 132;
+const SINGLE_FILE_PREVIEW_MIN_WIDTH: i32 = 40;
+const SINGLE_FILE_PREVIEW_MIN_HEIGHT: i32 = 54;
+const PREVIEW_TILE_MIN_WIDTH: i32 = 150;
 
 pub(super) fn pdf_filters() -> gio::ListStore {
     let filter = gtk::FileFilter::new();
@@ -155,6 +161,8 @@ pub(super) fn pdf_file_row(path: &Path, subtitle: String) -> adw::ActionRow {
     let row = adw::ActionRow::builder()
         .title(file_title(path))
         .subtitle(subtitle)
+        .title_lines(1)
+        .subtitle_lines(1)
         .focusable(false)
         .build();
 
@@ -218,11 +226,17 @@ pub(super) fn single_file_preview_widget(
 ) -> gtk::Widget {
     if let Some(preview) = preview {
         let picture = preview_picture(preview);
-        picture.set_size_request(180, 248);
+        picture.set_size_request(
+            SINGLE_FILE_PREVIEW_MIN_WIDTH,
+            SINGLE_FILE_PREVIEW_MIN_HEIGHT,
+        );
         picture.upcast()
     } else {
         let placeholder = gtk::Image::from_icon_name("view-paged-symbolic");
-        placeholder.set_size_request(180, 248);
+        placeholder.set_size_request(
+            SINGLE_FILE_PREVIEW_MIN_WIDTH,
+            SINGLE_FILE_PREVIEW_MIN_HEIGHT,
+        );
         placeholder.upcast()
     }
 }
@@ -231,7 +245,7 @@ pub(super) fn preview_tile() -> gtk::Box {
     gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(6)
-        .width_request(220)
+        .width_request(PREVIEW_TILE_MIN_WIDTH)
         .build()
 }
 
@@ -304,7 +318,8 @@ fn collection_blank_preview_widget(
 
 fn collection_preview_slot(width: i32, height: i32, child: &gtk::Widget) -> gtk::Widget {
     let slot = gtk::AspectFrame::new(0.5, 0.5, width as f32 / height as f32, false);
-    slot.set_size_request(width, height);
+    let (request_width, request_height) = collection_preview_size_request(width, height);
+    slot.set_size_request(request_width, request_height);
     slot.set_halign(gtk::Align::Center);
     slot.set_valign(gtk::Align::Center);
     slot.set_child(Some(child));
@@ -314,8 +329,23 @@ fn collection_preview_slot(width: i32, height: i32, child: &gtk::Widget) -> gtk:
 fn collection_preview_placeholder(width: i32, height: i32) -> gtk::Widget {
     let placeholder = gtk::Image::from_icon_name("view-paged-symbolic");
     placeholder.set_pixel_size((width.min(height) / 2).max(16));
-    placeholder.set_size_request(width, height);
+    let (request_width, request_height) = collection_preview_size_request(width, height);
+    placeholder.set_size_request(request_width, request_height);
     placeholder.upcast()
+}
+
+fn collection_preview_size_request(width: i32, height: i32) -> (i32, i32) {
+    if width <= LIST_COLLECTION_PREVIEW_WIDTH {
+        (
+            LIST_COLLECTION_PREVIEW_MIN_SIZE,
+            LIST_COLLECTION_PREVIEW_MIN_SIZE,
+        )
+    } else {
+        (
+            GRID_COLLECTION_PREVIEW_MIN_WIDTH,
+            GRID_COLLECTION_PREVIEW_MIN_HEIGHT.min(height),
+        )
+    }
 }
 
 fn blank_page_texture(width: i32, height: i32) -> Option<gtk::gdk::Texture> {
