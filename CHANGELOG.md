@@ -1,11 +1,7 @@
-# v0.2.2
-
-<p>New</p>
-<ul>
-  <li>Added an undo action for clearing the document list in the merge section</li>
-</ul>
+# v0.2.3
 
 <p>Changes</p>
 <ul>
-  <li>Improved app usability in small windows</li>
+  <li>Rename app from Folios to Quire</li>
+  <li>Modify app icon</li>
 </ul>

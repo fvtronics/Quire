@@ -31,27 +31,27 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.2/data/screenshots/merge.png</image>
+      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.3/data/screenshots/merge.png</image>
       <caption>Merge multiple PDF files into a single document</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.2/data/screenshots/organize.png</image>
+      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.3/data/screenshots/organize.png</image>
       <caption>Reorder and remove pages before saving a new PDF</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.2/data/screenshots/extract.png</image>
+      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.3/data/screenshots/extract.png</image>
       <caption>Extract selected pages into a new document</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.2/data/screenshots/split.png</image>
+      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.3/data/screenshots/split.png</image>
       <caption>Split a PDF into multiple documents</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.2/data/screenshots/compress.png</image>
+      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.3/data/screenshots/compress.png</image>
       <caption>Compress PDF files for smaller output</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.2/data/screenshots/metadata.png</image>
+      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.3/data/screenshots/metadata.png</image>
       <caption>View and edit PDF metadata</caption>
     </screenshot>
   </screenshots>
@@ -62,6 +62,15 @@
   </branding>
 
   <releases>
+    <release version="0.2.3" date="2026-06-03">
+      <description>
+        <p>Changes</p>
+        <ul>
+          <li>Rename app from Folios to Quire</li>
+          <li>Modify app icon</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.2" date="2026-06-03">
       <description>
         <p>New</p>
@@ -116,16 +125,6 @@
           <li>Added right-click menus for items that can be reordered</li>
           <li>Added options to duplicate PDFs and pages while organizing documents</li>
           <li>Added an option to insert blank pages while organizing a PDF</li>
-        </ul>
-      </description>
-    </release>
-    <release version="0.1.7" date="2026-05-25">
-      <description translate="no">
-        <p>Changes</p>
-        <ul>
-          <li>Added clearer hints and error feedback when a field needs attention</li>
-          <li>Improved validation when editing PDF keywords</li>
-          <li>Fixed page ranges so repeated pages are handled correctly</li>
         </ul>
       </description>
     </release>
