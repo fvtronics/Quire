@@ -63,7 +63,7 @@
 
   <releases>
     <release version="0.2.2" date="2026-06-03">
-      <description translate="no">
+      <description>
         <p>New</p>
         <ul>
           <li>Added an undo action for clearing the document list in the merge section</li>
@@ -75,7 +75,7 @@
       </description>
     </release>
     <release version="0.2.1" date="2026-06-02">
-      <description translate="no">
+      <description>
         <p>Changes</p>
         <ul>
           <li>Improved keyboard navigation throughout the app</li>
@@ -83,7 +83,7 @@
       </description>
     </release>
     <release version="0.2.0" date="2026-06-01">
-      <description translate="no">
+      <description>
         <p>New</p>
         <ul>
           <li>Added undo options when removing PDFs, clearing the merge list, removing pages, or resetting the page order</li>
@@ -100,7 +100,7 @@
       </description>
     </release>
     <release version="0.1.9" date="2026-05-31">
-      <description translate="no">
+      <description>
         <p>Optimizations</p>
         <ul>
           <li>Improved preview sizing in list and grid views</li>
@@ -110,7 +110,7 @@
       </description>
     </release>
     <release version="0.1.8" date="2026-05-26">
-      <description translate="no">
+      <description>
         <p>New</p>
         <ul>
           <li>Added right-click menus for items that can be reordered</li>
@@ -119,7 +119,7 @@
         </ul>
       </description>
     </release>
-    <release version="0.1.7" date="2026-05-25">
+    <release version="0.1.7">
       <description translate="no">
         <p>Changes</p>
         <ul>

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: folios\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-03 07:53-0400\n"
+"POT-Creation-Date: 2026-06-03 09:36-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -71,6 +71,80 @@ msgstr ""
 
 #: data/com.fvtronics.folios.metainfo.xml.in:55
 msgid "View and edit PDF metadata"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:67
+#: data/com.fvtronics.folios.metainfo.xml.in:87
+#: data/com.fvtronics.folios.metainfo.xml.in:114
+msgid "New"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:69
+msgid ""
+"Added an undo action for clearing the document list in the merge section"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:71
+#: data/com.fvtronics.folios.metainfo.xml.in:79
+#: data/com.fvtronics.folios.metainfo.xml.in:92
+msgid "Changes"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:73
+msgid "Improved app usability in small windows"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:81
+msgid "Improved keyboard navigation throughout the app"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:89
+msgid ""
+"Added undo options when removing PDFs, clearing the merge list, removing "
+"pages, or resetting the page order"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:90
+msgid "Added an option to open keyboard shortcuts from the app menu"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:94
+msgid "Fixed right-click menus sometimes becoming unavailable"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:96
+#: data/com.fvtronics.folios.metainfo.xml.in:104
+msgid "Optimizations"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:98
+msgid ""
+"Improved responsiveness when reordering PDFs and pages in large documents"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:106
+msgid "Improved preview sizing in list and grid views"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:107
+msgid "Improved responsiveness when working with large PDFs"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:108
+msgid ""
+"Preserved the scroll position while editing items in list and grid views"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:116
+msgid "Added right-click menus for items that can be reordered"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:117
+msgid "Added options to duplicate PDFs and pages while organizing documents"
+msgstr ""
+
+#: data/com.fvtronics.folios.metainfo.xml.in:118
+msgid "Added an option to insert blank pages while organizing a PDF"
 msgstr ""
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
