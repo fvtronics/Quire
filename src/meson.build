@@ -32,26 +32,6 @@ gnome.compile_resources('folios',
   install_dir: pkgdatadir,
 )
 
-conf = configuration_data()
-conf.set_quoted('VERSION', meson.project_version())
-conf.set_quoted('GETTEXT_PACKAGE', 'folios')
-conf.set_quoted('LOCALEDIR', get_option('prefix') / get_option('localedir'))
-conf.set_quoted('PKGDATADIR', pkgdatadir)
-
-configure_file(
-    input: 'config.rs.in',
-    output: 'config.rs',
-    configuration: conf
-)
-
-# Copy the config.rs output to the source directory.
-run_command(
-  'cp',
-  meson.project_build_root() / 'src' / 'config.rs',
-  meson.project_source_root() / 'src' / 'config.rs',
-  check: true
-)
-
 cargo_bin = find_program('cargo')
 sh = find_program('sh')
 cargo_home = get_option('cargo-home')
@@ -59,6 +39,10 @@ cargo_target_dir = meson.project_build_root() / 'src'
 
 cargo_env = environment()
 cargo_env.set('CARGO_TARGET_DIR', cargo_target_dir)
+cargo_env.set('FOLIOS_VERSION', meson.project_version())
+cargo_env.set('FOLIOS_GETTEXT_PACKAGE', 'folios')
+cargo_env.set('FOLIOS_LOCALEDIR', get_option('prefix') / get_option('localedir'))
+cargo_env.set('FOLIOS_PKGDATADIR', pkgdatadir)
 
 if cargo_home != ''
   cargo_env.set('CARGO_HOME', cargo_home)

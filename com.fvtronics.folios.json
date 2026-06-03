@@ -81,8 +81,9 @@
             "buildsystem" : "meson",
             "sources" : [
                 {
-                    "type" : "dir",
-                    "path" : "."
+                    "type" : "git",
+                    "url" : "https://gitlab.com/fvtronics/folios.git",
+                    "tag" : "v0.2.2"
                 },
                 "cargo-sources.json"
             ],

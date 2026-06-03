@@ -17,7 +17,7 @@
 
   <translation type="gettext">folios</translation>
   <launchable type="desktop-id">com.fvtronics.folios.desktop</launchable>
-  <url type="homepage">https://gitlab.com/fvtronics/folios</url>
+  <url type="homepage">https://www.fvtronics.com/en/project/folios</url>
   <url type="bugtracker">https://gitlab.com/fvtronics/folios/-/issues</url>
   <url type="vcs-browser">https://gitlab.com/fvtronics/folios</url>
   <provides>

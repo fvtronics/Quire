@@ -19,7 +19,9 @@
  */
 
 mod application;
-mod config;
+mod config {
+    include!(concat!(env!("OUT_DIR"), "/config.rs"));
+}
 mod pdf;
 mod preview;
 mod window;
