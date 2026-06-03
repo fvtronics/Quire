@@ -83,7 +83,7 @@
 				{
 					"type": "git",
 					"url": "https://gitlab.com/fvtronics/quire.git",
-					"tag": "v0.2.2"
+					"tag": "v0.2.3"
 				},
 				"cargo-sources.json"
 			],
