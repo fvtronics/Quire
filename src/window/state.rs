@@ -157,6 +157,13 @@ pub struct MergeItem {
 }
 
 #[derive(Debug)]
+pub(super) struct MergeClearUndo {
+    files: Vec<MergeItem>,
+    passwords: BTreeMap<PathBuf, String>,
+    previews: BTreeMap<PathBuf, crate::preview::PagePreview>,
+}
+
+#[derive(Debug)]
 pub(super) struct MergeRemoveUndo {
     index: usize,
     item: MergeItem,
@@ -236,10 +243,20 @@ pub struct MetadataState {
 }
 
 impl MergeState {
-    pub(super) fn clear(&self) {
-        self.files.borrow_mut().clear();
-        self.passwords.borrow_mut().clear();
-        self.previews.borrow_mut().clear();
+    pub(super) fn clear(&self) -> MergeClearUndo {
+        let undo = MergeClearUndo {
+            files: std::mem::take(&mut *self.files.borrow_mut()),
+            passwords: std::mem::take(&mut *self.passwords.borrow_mut()),
+            previews: std::mem::take(&mut *self.previews.borrow_mut()),
+        };
+        self.job.clear_last_output();
+        undo
+    }
+
+    pub(super) fn restore_clear(&self, undo: MergeClearUndo) {
+        *self.files.borrow_mut() = undo.files;
+        *self.passwords.borrow_mut() = undo.passwords;
+        *self.previews.borrow_mut() = undo.previews;
         self.job.clear_last_output();
     }
 
@@ -904,7 +921,7 @@ mod tests {
     }
 
     #[test]
-    fn merge_clear_removes_cached_data_and_clears_output() {
+    fn merge_clear_and_restore_recovers_cached_data_and_clears_output() {
         let state = MergeState::default();
         let locked = PathBuf::from("locked.pdf");
         state.finish_loading(
@@ -914,11 +931,22 @@ mod tests {
         );
         state.job.set_last_output(PathBuf::from("merged.pdf"));
 
-        state.clear();
+        let undo = state.clear();
 
         assert!(state.files.borrow().is_empty());
         assert!(state.passwords.borrow().is_empty());
         assert!(state.previews.borrow().is_empty());
+        assert_eq!(state.job.last_output(), None);
+
+        state.job.set_last_output(PathBuf::from("stale.pdf"));
+        state.restore_clear(undo);
+
+        assert_eq!(merge_paths(&state.files.borrow()), vec![locked.clone()]);
+        assert_eq!(
+            state.passwords.borrow().get(&locked).map(String::as_str),
+            Some("secret")
+        );
+        assert_eq!(state.previews.borrow()[&locked].png_data, vec![1]);
         assert_eq!(state.job.last_output(), None);
     }
 
