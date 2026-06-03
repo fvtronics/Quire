@@ -62,6 +62,18 @@
   </branding>
 
   <releases>
+    <release version="0.2.2" date="2026-06-03">
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>Added an undo action for clearing the document list in the merge section</li>
+        </ul>
+        <p>Changes</p>
+        <ul>
+          <li>Improved app usability in small windows</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.1" date="2026-06-02">
       <description translate="no">
         <p>Changes</p>
@@ -114,15 +126,6 @@
           <li>Added clearer hints and error feedback when a field needs attention</li>
           <li>Improved validation when editing PDF keywords</li>
           <li>Fixed page ranges so repeated pages are handled correctly</li>
-        </ul>
-      </description>
-    </release>
-    <release version="0.1.6" date="2026-05-24">
-      <description translate="no">
-        <p>Changes</p>
-        <ul>
-          <li>Improved the sidebar layout and navigation on smaller windows</li>
-          <li>Centered the empty state shown before a file is selected</li>
         </ul>
       </description>
     </release>
