@@ -27,7 +27,7 @@ mod imp {
     use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
-    #[template(resource = "/com/fvtronics/folios/metadata-workspace.ui")]
+    #[template(resource = "/com/fvtronics/Quire/metadata-workspace.ui")]
     pub struct MetadataWorkspace {
         #[template_child]
         pub metadata_choose_button: TemplateChild<gtk::Button>,

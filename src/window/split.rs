@@ -53,7 +53,7 @@ mod imp {
     use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
-    #[template(resource = "/com/fvtronics/folios/split-workspace.ui")]
+    #[template(resource = "/com/fvtronics/Quire/split-workspace.ui")]
     pub struct SplitWorkspace {
         #[template_child]
         pub split_choose_button: TemplateChild<gtk::Button>,

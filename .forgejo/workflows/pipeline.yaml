@@ -1,4 +1,4 @@
-name: Folios Pipeline
+name: Quire Pipeline
 
 on:
   push:
@@ -87,15 +87,15 @@ jobs:
 
           test "$VERSION" = "$CARGO_VERSION"
           test "$VERSION" = "$MESON_VERSION"
-          grep -q "<release version=\"$VERSION\"" data/com.fvtronics.folios.metainfo.xml.in
+          grep -q "<release version=\"$VERSION\"" data/com.fvtronics.Quire.metainfo.xml.in
 
       - name: Validate App Metadata
         run: |
-          python3 -m json.tool com.fvtronics.folios.json >/dev/null
+          python3 -m json.tool com.fvtronics.Quire.json >/dev/null
           python3 -m json.tool cargo-sources.json >/dev/null
-          appstreamcli validate --no-net --explain data/com.fvtronics.folios.metainfo.xml.in
-          cp data/com.fvtronics.folios.desktop.in /tmp/com.fvtronics.folios.desktop
-          desktop-file-validate /tmp/com.fvtronics.folios.desktop
+          appstreamcli validate --no-net --explain data/com.fvtronics.Quire.metainfo.xml.in
+          cp data/com.fvtronics.Quire.desktop.in /tmp/com.fvtronics.Quire.desktop
+          desktop-file-validate /tmp/com.fvtronics.Quire.desktop
 
       - name: Create Forgejo Release
         uses: https://github.com/softprops/action-gh-release@v2

@@ -1,8 +1,8 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $FoliosWindow: Adw.ApplicationWindow {
-  title: _("Folios");
+template $QuireWindow: Adw.ApplicationWindow {
+  title: _("Quire");
   default-width: 1200;
   default-height: 840;
   width-request: 410;
@@ -14,13 +14,13 @@ template $FoliosWindow: Adw.ApplicationWindow {
       max-sidebar-width: 280;
 
       sidebar: Adw.NavigationPage {
-        title: _("Folios");
+        title: _("Quire");
 
         child: Adw.ToolbarView {
           [top]
           Adw.HeaderBar {
             title-widget: Adw.WindowTitle {
-              title: _("Folios");
+              title: _("Quire");
             };
 
             [end]
@@ -87,7 +87,7 @@ template $FoliosWindow: Adw.ApplicationWindow {
       };
 
       content: Adw.NavigationPage {
-        title: _("Folios");
+        title: _("Quire");
 
         child: Adw.ToolbarView {
           [top]
@@ -134,6 +134,6 @@ menu primary_menu {
   }
 
   section {
-    item (_("_About Folios"), "app.about")
+    item (_("_About Quire"), "app.about")
   }
 }

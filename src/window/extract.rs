@@ -26,7 +26,7 @@ mod imp {
     use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
-    #[template(resource = "/com/fvtronics/folios/extract-workspace.ui")]
+    #[template(resource = "/com/fvtronics/Quire/extract-workspace.ui")]
     pub struct ExtractWorkspace {
         #[template_child]
         pub extract_choose_button: TemplateChild<gtk::Button>,

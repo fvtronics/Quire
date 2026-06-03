@@ -23,7 +23,7 @@ mod imp {
     use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
-    #[template(resource = "/com/fvtronics/folios/compress-workspace.ui")]
+    #[template(resource = "/com/fvtronics/Quire/compress-workspace.ui")]
     pub struct CompressWorkspace {
         #[template_child]
         pub compress_choose_button: TemplateChild<gtk::Button>,

@@ -80,18 +80,18 @@ flatpak_bundle:
         --disable-updates \
         --force-clean \
         build-dir \
-        com.fvtronics.folios.json
+        com.fvtronics.Quire.json
     - |
-      FLATPAK_BUNDLE="folios-${CI_COMMIT_TAG}.flatpak"
+      FLATPAK_BUNDLE="quire-${CI_COMMIT_TAG}.flatpak"
       flatpak build-bundle \
         repo \
         "$FLATPAK_BUNDLE" \
         --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo \
-        com.fvtronics.folios
+        com.fvtronics.Quire
       echo "FLATPAK_BUNDLE_URL=$CI_PROJECT_URL/-/jobs/$CI_JOB_ID/artifacts/file/$FLATPAK_BUNDLE" > flatpak.env
   artifacts:
     paths:
-      - folios-$CI_COMMIT_TAG.flatpak
+      - quire-$CI_COMMIT_TAG.flatpak
     reports:
       dotenv: flatpak.env
     expire_in: never
@@ -114,13 +114,13 @@ release:
 
       test "$VERSION" = "$CARGO_VERSION"
       test "$VERSION" = "$MESON_VERSION"
-      grep -q "<release version=\"$VERSION\"" data/com.fvtronics.folios.metainfo.xml.in
+      grep -q "<release version=\"$VERSION\"" data/com.fvtronics.Quire.metainfo.xml.in
     - |
-      python3 -m json.tool com.fvtronics.folios.json >/dev/null
+      python3 -m json.tool com.fvtronics.Quire.json >/dev/null
       python3 -m json.tool cargo-sources.json >/dev/null
-      appstreamcli validate --no-net --explain data/com.fvtronics.folios.metainfo.xml.in
-      cp data/com.fvtronics.folios.desktop.in /tmp/com.fvtronics.folios.desktop
-      desktop-file-validate /tmp/com.fvtronics.folios.desktop
+      appstreamcli validate --no-net --explain data/com.fvtronics.Quire.metainfo.xml.in
+      cp data/com.fvtronics.Quire.desktop.in /tmp/com.fvtronics.Quire.desktop
+      desktop-file-validate /tmp/com.fvtronics.Quire.desktop
   release:
     tag_name: $CI_COMMIT_TAG
     description: './CHANGELOG.md'
@@ -128,7 +128,7 @@ release:
       links:
         - name: "Flatpak bundle"
           url: "$FLATPAK_BUNDLE_URL"
-          filepath: "/folios-$CI_COMMIT_TAG.flatpak"
+          filepath: "/quire-$CI_COMMIT_TAG.flatpak"
           link_type: package
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v/'

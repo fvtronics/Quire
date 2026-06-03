@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-  <gresource prefix="/com/fvtronics/folios">
+  <gresource prefix="/com/fvtronics/Quire">
     <file preprocess="xml-stripblanks">window.ui</file>
     <file preprocess="xml-stripblanks">merge-workspace.ui</file>
     <file preprocess="xml-stripblanks">compress-workspace.ui</file>

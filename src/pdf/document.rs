@@ -319,10 +319,10 @@ pub(super) fn temporary_output_file(
     let name = output_file
         .file_stem()
         .and_then(|stem| stem.to_str())
-        .unwrap_or("folios");
+        .unwrap_or("quire");
 
     tempfile::Builder::new()
-        .prefix(&format!(".{name}.folios-"))
+        .prefix(&format!(".{name}.quire-"))
         .suffix(".pdf")
         .tempfile()
         .map_err(PdfBackendError::Save)

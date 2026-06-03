@@ -1,8 +1,8 @@
 # List of source files containing translatable strings.
 # Please keep this file sorted alphabetically.
-data/com.fvtronics.folios.desktop.in
-data/com.fvtronics.folios.metainfo.xml.in
-data/com.fvtronics.folios.gschema.xml
+data/com.fvtronics.Quire.desktop.in
+data/com.fvtronics.Quire.metainfo.xml.in
+data/com.fvtronics.Quire.gschema.xml
 src/application.rs
 src/compress-workspace.blp
 src/extract-workspace.blp

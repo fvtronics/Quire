@@ -24,8 +24,8 @@ blueprints = custom_target('blueprints',
   ],
 )
 
-gnome.compile_resources('folios',
-  'folios.gresource.xml',
+gnome.compile_resources('quire',
+  'quire.gresource.xml',
   gresource_bundle: true,
   dependencies: blueprints,
   install: true,
@@ -39,10 +39,10 @@ cargo_target_dir = meson.project_build_root() / 'src'
 
 cargo_env = environment()
 cargo_env.set('CARGO_TARGET_DIR', cargo_target_dir)
-cargo_env.set('FOLIOS_VERSION', meson.project_version())
-cargo_env.set('FOLIOS_GETTEXT_PACKAGE', 'folios')
-cargo_env.set('FOLIOS_LOCALEDIR', get_option('prefix') / get_option('localedir'))
-cargo_env.set('FOLIOS_PKGDATADIR', pkgdatadir)
+cargo_env.set('QUIRE_VERSION', meson.project_version())
+cargo_env.set('QUIRE_GETTEXT_PACKAGE', 'quire')
+cargo_env.set('QUIRE_LOCALEDIR', get_option('prefix') / get_option('localedir'))
+cargo_env.set('QUIRE_PKGDATADIR', pkgdatadir)
 
 if cargo_home != ''
   cargo_env.set('CARGO_HOME', cargo_home)
@@ -69,7 +69,7 @@ cargo_build = custom_target(
   command: [
     sh,
     '-c',
-    'cargo build $1 --manifest-path "$2" && cp "$3/$4/folios" "$5"',
+    'cargo build $1 --manifest-path "$2" && cp "$3/$4/quire" "$5"',
     'sh',
     cargo_build_type,
     meson.project_source_root() / 'Cargo.toml',

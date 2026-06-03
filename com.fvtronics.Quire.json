@@ -1,12 +1,12 @@
 {
-	"id": "com.fvtronics.folios",
+	"id": "com.fvtronics.Quire",
 	"runtime": "org.gnome.Platform",
 	"runtime-version": "50",
 	"sdk": "org.gnome.Sdk",
 	"sdk-extensions": [
 		"org.freedesktop.Sdk.Extension.rust-stable"
 	],
-	"command": "folios",
+	"command": "quire",
 	"finish-args": [
 		"--share=ipc",
 		"--socket=fallback-x11",
@@ -76,13 +76,13 @@
 			]
 		},
 		{
-			"name": "folios",
+			"name": "quire",
 			"builddir": true,
 			"buildsystem": "meson",
 			"sources": [
 				{
 					"type": "git",
-					"url": "https://gitlab.com/fvtronics/folios.git",
+					"url": "https://gitlab.com/fvtronics/quire.git",
 					"tag": "v0.2.2"
 				},
 				"cargo-sources.json"
@@ -90,7 +90,7 @@
 			"config-opts": [
 				"--libdir=lib",
 				"-Dbuildtype=release",
-				"-Dcargo-home=/run/build/folios/cargo"
+				"-Dcargo-home=/run/build/quire/cargo"
 			]
 		}
 	]

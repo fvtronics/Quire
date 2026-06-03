@@ -27,7 +27,7 @@ mod imp {
     use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
-    #[template(resource = "/com/fvtronics/folios/organize-workspace.ui")]
+    #[template(resource = "/com/fvtronics/Quire/organize-workspace.ui")]
     pub struct OrganizeWorkspace {
         #[template_child]
         pub organize_choose_button: TemplateChild<gtk::Button>,

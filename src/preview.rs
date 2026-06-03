@@ -380,8 +380,8 @@ mod tests {
         document.trailer.set(
             "ID",
             Object::Array(vec![
-                Object::string_literal(b"folios-test-id-1"),
-                Object::string_literal(b"folios-test-id-2"),
+                Object::string_literal(b"quire-test-id-1"),
+                Object::string_literal(b"quire-test-id-2"),
             ]),
         );
         document.compress();

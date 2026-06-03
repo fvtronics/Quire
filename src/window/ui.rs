@@ -96,7 +96,7 @@ pub(super) async fn ask_pdf_password(
     path: &Path,
     reason: PasswordPromptReason,
 ) -> Option<String> {
-    let builder = gtk::Builder::from_resource("/com/fvtronics/folios/password-dialog.ui");
+    let builder = gtk::Builder::from_resource("/com/fvtronics/Quire/password-dialog.ui");
     let dialog: adw::AlertDialog = builder
         .object("password_dialog")
         .expect("password dialog resource should define password_dialog");

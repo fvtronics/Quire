@@ -1,4 +1,4 @@
-project('folios', 'rust', 
+project('quire', 'rust', 
           version: '0.2.2',
     meson_version: '>= 1.0.0',
   default_options: [ 'warning_level=2', 'werror=false', ],

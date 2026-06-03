@@ -28,7 +28,7 @@ impl TestDir {
             .duration_since(UNIX_EPOCH)
             .expect("system time should be after unix epoch")
             .as_nanos();
-        let directory_name = format!("folios-{name}-{}-{unique}", std::process::id());
+        let directory_name = format!("quire-{name}-{}-{unique}", std::process::id());
         let path = std::env::temp_dir().join(directory_name);
 
         fs::create_dir(&path).expect("test directory should be created");
@@ -1036,8 +1036,8 @@ fn write_test_pdf(path: &Path, page_markers: &[i64]) {
     document.trailer.set(
         "ID",
         Object::Array(vec![
-            Object::string_literal(b"folios-test-id-1"),
-            Object::string_literal(b"folios-test-id-2"),
+            Object::string_literal(b"quire-test-id-1"),
+            Object::string_literal(b"quire-test-id-2"),
         ]),
     );
     document.compress();

@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=com.fvtronics.folios
-Exec=@bindir@/folios --gapplication-service

@@ -25,22 +25,22 @@ use gtk::{gio, glib};
 use crate::config::VERSION;
 
 mod imp {
-    use crate::FoliosWindow;
+    use crate::QuireWindow;
     use adw::prelude::*;
     use adw::subclass::prelude::*;
     use gtk::glib;
 
     #[derive(Debug, Default)]
-    pub struct FoliosApplication {}
+    pub struct QuireApplication {}
 
     #[glib::object_subclass]
-    impl ObjectSubclass for FoliosApplication {
-        const NAME: &'static str = "FoliosApplication";
-        type Type = super::FoliosApplication;
+    impl ObjectSubclass for QuireApplication {
+        const NAME: &'static str = "QuireApplication";
+        type Type = super::QuireApplication;
         type ParentType = adw::Application;
     }
 
-    impl ObjectImpl for FoliosApplication {
+    impl ObjectImpl for QuireApplication {
         fn constructed(&self) {
             self.parent_constructed();
             let obj = self.obj();
@@ -50,7 +50,7 @@ mod imp {
         }
     }
 
-    impl ApplicationImpl for FoliosApplication {
+    impl ApplicationImpl for QuireApplication {
         // We connect to the activate callback to create a window when the application
         // has been launched. Additionally, this callback notifies us when the user
         // tries to launch a "second instance" of the application. When they try
@@ -59,7 +59,7 @@ mod imp {
             let application = self.obj();
             // Get the current window or create one if necessary
             let window = application.active_window().unwrap_or_else(|| {
-                let window = FoliosWindow::new(&*application);
+                let window = QuireWindow::new(&*application);
                 window.upcast()
             });
 
@@ -68,22 +68,22 @@ mod imp {
         }
     }
 
-    impl GtkApplicationImpl for FoliosApplication {}
-    impl AdwApplicationImpl for FoliosApplication {}
+    impl GtkApplicationImpl for QuireApplication {}
+    impl AdwApplicationImpl for QuireApplication {}
 }
 
 glib::wrapper! {
-    pub struct FoliosApplication(ObjectSubclass<imp::FoliosApplication>)
+    pub struct QuireApplication(ObjectSubclass<imp::QuireApplication>)
         @extends gio::Application, gtk::Application, adw::Application,
         @implements gio::ActionGroup, gio::ActionMap;
 }
 
-impl FoliosApplication {
+impl QuireApplication {
     pub fn new(application_id: &str, flags: &gio::ApplicationFlags) -> Self {
         glib::Object::builder()
             .property("application-id", application_id)
             .property("flags", flags)
-            .property("resource-base-path", "/com/fvtronics/folios")
+            .property("resource-base-path", "/com/fvtronics/Quire")
             .build()
     }
 
@@ -102,7 +102,7 @@ impl FoliosApplication {
 
     fn show_shortcuts(&self) {
         let window = self.active_window().unwrap();
-        let builder = gtk::Builder::from_resource("/com/fvtronics/folios/shortcuts-dialog.ui");
+        let builder = gtk::Builder::from_resource("/com/fvtronics/Quire/shortcuts-dialog.ui");
         let dialog: adw::ShortcutsDialog = builder
             .object("shortcuts_dialog")
             .expect("shortcuts dialog resource should define shortcuts_dialog");
@@ -113,8 +113,8 @@ impl FoliosApplication {
     fn show_about(&self) {
         let window = self.active_window().unwrap();
         let about = adw::AboutDialog::builder()
-            .application_name("Folios")
-            .application_icon("com.fvtronics.folios")
+            .application_name("Quire")
+            .application_icon("com.fvtronics.Quire")
             .developer_name("Francisco Vásquez Cuevas")
             .version(VERSION)
             .developers(vec!["Francisco Vásquez Cuevas"])

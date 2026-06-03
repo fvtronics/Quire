@@ -26,7 +26,7 @@ mod imp {
     use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
-    #[template(resource = "/com/fvtronics/folios/merge-workspace.ui")]
+    #[template(resource = "/com/fvtronics/Quire/merge-workspace.ui")]
     pub struct MergeWorkspace {
         #[template_child]
         pub add_button: TemplateChild<gtk::Button>,

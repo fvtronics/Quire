@@ -1,1 +1,1 @@
-i18n.gettext('folios', preset: 'glib')
+i18n.gettext('quire', preset: 'glib')

@@ -99,8 +99,8 @@ mod imp {
     use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
-    #[template(resource = "/com/fvtronics/folios/window.ui")]
-    pub struct FoliosWindow {
+    #[template(resource = "/com/fvtronics/Quire/window.ui")]
+    pub struct QuireWindow {
         #[template_child]
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
         #[template_child]
@@ -147,9 +147,9 @@ mod imp {
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for FoliosWindow {
-        const NAME: &'static str = "FoliosWindow";
-        type Type = super::FoliosWindow;
+    impl ObjectSubclass for QuireWindow {
+        const NAME: &'static str = "QuireWindow";
+        type Type = super::QuireWindow;
         type ParentType = adw::ApplicationWindow;
 
         fn class_init(klass: &mut Self::Class) {
@@ -167,7 +167,7 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for FoliosWindow {
+    impl ObjectImpl for QuireWindow {
         fn constructed(&self) {
             self.parent_constructed();
             let obj = self.obj();
@@ -176,20 +176,20 @@ mod imp {
             obj.switch_tool(PdfTool::Merge);
         }
     }
-    impl WidgetImpl for FoliosWindow {}
-    impl WindowImpl for FoliosWindow {}
-    impl ApplicationWindowImpl for FoliosWindow {}
-    impl AdwApplicationWindowImpl for FoliosWindow {}
+    impl WidgetImpl for QuireWindow {}
+    impl WindowImpl for QuireWindow {}
+    impl ApplicationWindowImpl for QuireWindow {}
+    impl AdwApplicationWindowImpl for QuireWindow {}
 }
 
 glib::wrapper! {
-    pub struct FoliosWindow(ObjectSubclass<imp::FoliosWindow>)
+    pub struct QuireWindow(ObjectSubclass<imp::QuireWindow>)
         @extends gtk::Widget, gtk::Window, gtk::ApplicationWindow, adw::ApplicationWindow,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Native,
             gtk::Root, gtk::ShortcutManager, gio::ActionGroup, gio::ActionMap;
 }
 
-impl FoliosWindow {
+impl QuireWindow {
     pub fn new<P: IsA<gtk::Application>>(application: &P) -> Self {
         glib::Object::builder()
             .property("application", application)

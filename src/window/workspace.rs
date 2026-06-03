@@ -1,5 +1,5 @@
 use super::ui::{ask_pdf_password, icon_button, PasswordPromptReason};
-use super::{FoliosWindow, PdfTool};
+use super::{PdfTool, QuireWindow};
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
@@ -74,7 +74,7 @@ fn add_toast(widget: &impl IsA<gtk::Widget>, toast: adw::Toast) {
     let Some(window) = widget
         .root()
         .and_downcast::<gtk::Window>()
-        .and_then(|window| window.downcast::<FoliosWindow>().ok())
+        .and_then(|window| window.downcast::<QuireWindow>().ok())
     else {
         return;
     };
@@ -134,7 +134,7 @@ pub(super) fn update_shell_title(widget: &impl IsA<gtk::Widget>, tool: PdfTool, 
     let Some(window) = widget
         .root()
         .and_downcast::<gtk::Window>()
-        .and_then(|window| window.downcast::<FoliosWindow>().ok())
+        .and_then(|window| window.downcast::<QuireWindow>().ok())
     else {
         return;
     };
@@ -292,7 +292,7 @@ pub(super) fn update_shell_view_mode(widget: &impl IsA<gtk::Widget>) {
     let Some(window) = widget
         .root()
         .and_downcast::<gtk::Window>()
-        .and_then(|window| window.downcast::<FoliosWindow>().ok())
+        .and_then(|window| window.downcast::<QuireWindow>().ok())
     else {
         return;
     };

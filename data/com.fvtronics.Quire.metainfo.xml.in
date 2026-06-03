@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.fvtronics.folios</id>
+  <id>com.fvtronics.Quire</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
 
-  <name>Folios</name>
+  <name>Quire</name>
   <summary>Combine and edit PDF files</summary>
   <description>
-    <p>Folios is a simple GNOME utility for working with local PDF files without a complex document suite.</p>
+    <p>Quire is a simple GNOME utility for working with local PDF files without a complex document suite.</p>
     <p>Merge multiple PDFs, organize pages, extract page ranges, split documents, compress files, and edit metadata without sending them to an online service.</p>
   </description>
 
@@ -15,13 +15,13 @@
     <name>Francisco Vásquez Cuevas</name>
   </developer>
 
-  <translation type="gettext">folios</translation>
-  <launchable type="desktop-id">com.fvtronics.folios.desktop</launchable>
-  <url type="homepage">https://www.fvtronics.com/en/project/folios</url>
-  <url type="bugtracker">https://gitlab.com/fvtronics/folios/-/work_items</url>
-  <url type="vcs-browser">https://gitlab.com/fvtronics/folios</url>
+  <translation type="gettext">quire</translation>
+  <launchable type="desktop-id">com.fvtronics.Quire.desktop</launchable>
+  <url type="homepage">https://www.fvtronics.com/en/project/quire</url>
+  <url type="bugtracker">https://gitlab.com/fvtronics/quire/-/work_items</url>
+  <url type="vcs-browser">https://gitlab.com/fvtronics/quire</url>
   <provides>
-    <binary>folios</binary>
+    <binary>quire</binary>
   </provides>
   <supports>
     <control>keyboard</control>
@@ -31,27 +31,27 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://gitlab.com/fvtronics/folios/-/raw/v0.2.2/data/screenshots/merge.png</image>
+      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.2/data/screenshots/merge.png</image>
       <caption>Merge multiple PDF files into a single document</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/folios/-/raw/v0.2.2/data/screenshots/organize.png</image>
+      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.2/data/screenshots/organize.png</image>
       <caption>Reorder and remove pages before saving a new PDF</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/folios/-/raw/v0.2.2/data/screenshots/extract.png</image>
+      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.2/data/screenshots/extract.png</image>
       <caption>Extract selected pages into a new document</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/folios/-/raw/v0.2.2/data/screenshots/split.png</image>
+      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.2/data/screenshots/split.png</image>
       <caption>Split a PDF into multiple documents</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/folios/-/raw/v0.2.2/data/screenshots/compress.png</image>
+      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.2/data/screenshots/compress.png</image>
       <caption>Compress PDF files for smaller output</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/folios/-/raw/v0.2.2/data/screenshots/metadata.png</image>
+      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.2/data/screenshots/metadata.png</image>
       <caption>View and edit PDF metadata</caption>
     </screenshot>
   </screenshots>
@@ -119,7 +119,7 @@
         </ul>
       </description>
     </release>
-    <release version="0.1.7">
+    <release version="0.1.7" date="2026-05-25">
       <description translate="no">
         <p>Changes</p>
         <ul>

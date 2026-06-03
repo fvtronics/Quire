@@ -1,12 +1,12 @@
-# Folios translations.
+# Quire translations.
 # Copyright (C) 2026 Francisco Vásquez Cuevas
-# This file is distributed under the same license as the folios package.
+# This file is distributed under the same license as the quire package.
 # FVtronics <fvasquez.public@fvtronics.com>, 2026.
 # Francisco <fvasquez>, 2026.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Folios 0.1.1\n"
+"Project-Id-Version: Quire 0.1.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-06-03 09:36-0400\n"
 "PO-Revision-Date: 2026-06-03 09:44-0400\n"
@@ -19,30 +19,30 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Gtranslator 50.0\n"
 
-#: data/com.fvtronics.folios.desktop.in:2
-#: data/com.fvtronics.folios.metainfo.xml.in:7 src/window.blp:5
+#: data/com.fvtronics.Quire.desktop.in:2
+#: data/com.fvtronics.Quire.metainfo.xml.in:7 src/window.blp:5
 #: src/window.blp:17 src/window.blp:23 src/window.blp:90
-msgid "Folios"
-msgstr "Folios"
+msgid "Quire"
+msgstr "Quire"
 
-#: data/com.fvtronics.folios.desktop.in:3
-#: data/com.fvtronics.folios.metainfo.xml.in:8
+#: data/com.fvtronics.Quire.desktop.in:3
+#: data/com.fvtronics.Quire.metainfo.xml.in:8
 msgid "Combine and edit PDF files"
 msgstr "Combinar y editar archivos PDF"
 
-#: data/com.fvtronics.folios.desktop.in:9
+#: data/com.fvtronics.Quire.desktop.in:9
 msgid "PDF;Merge;Split;Compress;Extract;Organize;Page;Document;GTK;"
 msgstr "PDF;Combinar;Dividir;Comprimir;Extraer;Organizar;Página;Documento;GTK;"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:10
+#: data/com.fvtronics.Quire.metainfo.xml.in:10
 msgid ""
-"Folios is a simple GNOME utility for working with local PDF files without a "
+"Quire is a simple GNOME utility for working with local PDF files without a "
 "complex document suite."
 msgstr ""
-"Folios es una utilidad sencilla de GNOME para trabajar con archivos PDF "
+"Quire es una utilidad sencilla de GNOME para trabajar con archivos PDF "
 "locales sin una suite ofimática compleja."
 
-#: data/com.fvtronics.folios.metainfo.xml.in:11
+#: data/com.fvtronics.Quire.metainfo.xml.in:11
 msgid ""
 "Merge multiple PDFs, organize pages, extract page ranges, split documents, "
 "compress files, and edit metadata without sending them to an online service."
@@ -51,63 +51,63 @@ msgstr ""
 "documentos, comprima archivos y edite los metadatos sin enviarlos a un "
 "servicio en línea."
 
-#: data/com.fvtronics.folios.metainfo.xml.in:15
+#: data/com.fvtronics.Quire.metainfo.xml.in:15
 msgid "Francisco Vásquez Cuevas"
 msgstr "Francisco Vásquez Cuevas"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:35
+#: data/com.fvtronics.Quire.metainfo.xml.in:35
 msgid "Merge multiple PDF files into a single document"
 msgstr "Combinar varios archivos PDF en un solo documento"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:39
+#: data/com.fvtronics.Quire.metainfo.xml.in:39
 msgid "Reorder and remove pages before saving a new PDF"
 msgstr "Reordenar y eliminar páginas antes de guardar un nuevo PDF"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:43
+#: data/com.fvtronics.Quire.metainfo.xml.in:43
 msgid "Extract selected pages into a new document"
 msgstr "Extraer páginas seleccionadas en un nuevo documento"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:47
+#: data/com.fvtronics.Quire.metainfo.xml.in:47
 msgid "Split a PDF into multiple documents"
 msgstr "Dividir un PDF en varios documentos"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:51
+#: data/com.fvtronics.Quire.metainfo.xml.in:51
 msgid "Compress PDF files for smaller output"
 msgstr "Comprimir archivos PDF para obtener un tamaño más reducido"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:55
+#: data/com.fvtronics.Quire.metainfo.xml.in:55
 msgid "View and edit PDF metadata"
 msgstr "Ver y editar metadatos del PDF"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:67
-#: data/com.fvtronics.folios.metainfo.xml.in:87
-#: data/com.fvtronics.folios.metainfo.xml.in:114
+#: data/com.fvtronics.Quire.metainfo.xml.in:67
+#: data/com.fvtronics.Quire.metainfo.xml.in:87
+#: data/com.fvtronics.Quire.metainfo.xml.in:114
 msgid "New"
 msgstr "Nuevo"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:69
+#: data/com.fvtronics.Quire.metainfo.xml.in:69
 msgid ""
 "Added an undo action for clearing the document list in the merge section"
 msgstr ""
 "Se añadió una acción de deshacer al limpiar los documentos en la sección de "
 "combinar"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:71
-#: data/com.fvtronics.folios.metainfo.xml.in:79
-#: data/com.fvtronics.folios.metainfo.xml.in:92
+#: data/com.fvtronics.Quire.metainfo.xml.in:71
+#: data/com.fvtronics.Quire.metainfo.xml.in:79
+#: data/com.fvtronics.Quire.metainfo.xml.in:92
 msgid "Changes"
 msgstr "Cambios"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:73
+#: data/com.fvtronics.Quire.metainfo.xml.in:73
 msgid "Improved app usability in small windows"
 msgstr ""
 "Mejoras de usabilidad de la aplicación con tamaños de ventana reducidos"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:81
+#: data/com.fvtronics.Quire.metainfo.xml.in:81
 msgid "Improved keyboard navigation throughout the app"
 msgstr "Mejoras de navegación con teclado en la aplicación"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:89
+#: data/com.fvtronics.Quire.metainfo.xml.in:89
 msgid ""
 "Added undo options when removing PDFs, clearing the merge list, removing "
 "pages, or resetting the page order"
@@ -115,58 +115,58 @@ msgstr ""
 "Se añadieron opciones de deshacer al remover archivos PDF, remover páginas o "
 "restablecer el orden de las páginas."
 
-#: data/com.fvtronics.folios.metainfo.xml.in:90
+#: data/com.fvtronics.Quire.metainfo.xml.in:90
 msgid "Added an option to open keyboard shortcuts from the app menu"
 msgstr ""
 "Se añadió una opción para abrir los atajos de teclado desde el menú de la "
 "aplicación"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:94
+#: data/com.fvtronics.Quire.metainfo.xml.in:94
 msgid "Fixed right-click menus sometimes becoming unavailable"
 msgstr "Se corrigió el comportamiento de los menús de clic derecho"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:96
-#: data/com.fvtronics.folios.metainfo.xml.in:104
+#: data/com.fvtronics.Quire.metainfo.xml.in:96
+#: data/com.fvtronics.Quire.metainfo.xml.in:104
 msgid "Optimizations"
 msgstr "Optimizaciones"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:98
+#: data/com.fvtronics.Quire.metainfo.xml.in:98
 msgid ""
 "Improved responsiveness when reordering PDFs and pages in large documents"
 msgstr ""
 "Se mejoró la responsividad al reordenar documentos y páginas en documentos "
 "grandes."
 
-#: data/com.fvtronics.folios.metainfo.xml.in:106
+#: data/com.fvtronics.Quire.metainfo.xml.in:106
 msgid "Improved preview sizing in list and grid views"
 msgstr ""
 "Se mejoró el tamaño de las previsualizaciones en las vistas de lista y "
 "cuadrícula"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:107
+#: data/com.fvtronics.Quire.metainfo.xml.in:107
 msgid "Improved responsiveness when working with large PDFs"
 msgstr "Se mejoró la responsividad al trabajar con archivos PDF grandes"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:108
+#: data/com.fvtronics.Quire.metainfo.xml.in:108
 msgid ""
 "Preserved the scroll position while editing items in list and grid views"
 msgstr ""
 "Se mantuvo la posición del scroll al editar elementos en las vistas de lista "
 "y cuadrícula"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:116
+#: data/com.fvtronics.Quire.metainfo.xml.in:116
 msgid "Added right-click menus for items that can be reordered"
 msgstr ""
 "Se añadieron menús de clic derecho para los elementos que pueden ser "
 "reordenados"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:117
+#: data/com.fvtronics.Quire.metainfo.xml.in:117
 msgid "Added options to duplicate PDFs and pages while organizing documents"
 msgstr ""
 "Se añadieron opciones para duplicar archivos PDF y páginas al organizar "
 "documentos"
 
-#: data/com.fvtronics.folios.metainfo.xml.in:118
+#: data/com.fvtronics.Quire.metainfo.xml.in:118
 msgid "Added an option to insert blank pages while organizing a PDF"
 msgstr ""
 "Se añadió la opción de insertar una página en blanco al organizar un archivo "
@@ -511,8 +511,8 @@ msgid "_Keyboard Shortcuts"
 msgstr "Atajos de teclado"
 
 #: src/window.blp:137
-msgid "_About Folios"
-msgstr "_Acerca de Folios"
+msgid "_About Quire"
+msgstr "_Acerca de Quire"
 
 #: src/window/compress.rs:147 src/window/extract.rs:206
 #: src/window/metadata.rs:175 src/window/organize.rs:174

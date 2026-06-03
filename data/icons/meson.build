@@ -1,4 +1,4 @@
-application_id = 'com.fvtronics.folios'
+application_id = 'com.fvtronics.Quire'
 
 full_color_dir = 'hicolor' / 'scalable' / 'apps'
 install_data(

@@ -151,5 +151,5 @@ pub(super) fn set_app_producer_metadata(document: &mut Document) {
 }
 
 pub(super) fn app_producer_metadata() -> String {
-    format!("Folios {}", crate::config::VERSION)
+    format!("Quire {}", crate::config::VERSION)
 }
