@@ -57,18 +57,18 @@ jobs:
         run: cargo test --locked
 
       - name: Install Coverage Tool
-        if: vars.SONAR_ENABLED == 'true' && (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/'))
+        if: vars.SONAR_ENABLED == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
         run: cargo install cargo-llvm-cov --locked
 
       - name: Generate Sonar Reports
-        if: vars.SONAR_ENABLED == 'true' && (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/'))
+        if: vars.SONAR_ENABLED == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
         run: |
           mkdir -p target/sonar
           cargo clippy --locked --message-format=json > target/sonar/clippy.json
           cargo llvm-cov --locked --lcov --output-path target/sonar/lcov.info
 
       - name: Upload Sonar Reports
-        if: vars.SONAR_ENABLED == 'true' && (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/'))
+        if: vars.SONAR_ENABLED == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
         uses: actions/upload-artifact@v3
         with:
           name: sonar-reports
@@ -79,7 +79,7 @@ jobs:
   sonarqube:
     name: SonarQube Cloud
     needs: checks
-    if: vars.SONAR_ENABLED == 'true' && (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/'))
+    if: vars.SONAR_ENABLED == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
     runs-on: fedora
     container:
       image: sonarsource/sonar-scanner-cli:latest
