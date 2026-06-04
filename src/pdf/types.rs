@@ -90,6 +90,7 @@ pub enum PdfBackendError {
     NoPagesSelected,
     OutputMatchesInput,
     Load { path: PathBuf, message: String },
+    ImageLoad { path: PathBuf, message: String },
     PasswordRequired { path: PathBuf },
     InvalidPassword { path: PathBuf },
     InvalidPageRange(String),
@@ -115,6 +116,29 @@ pub enum SplitRule {
     EveryNPages(u32),
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WatermarkLayer {
+    Background,
+    Foreground,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum WatermarkTarget {
+    AllPages,
+    FirstPage,
+    LastPage,
+    SpecificPages(Vec<u32>),
+}
+
+#[derive(Clone, Debug)]
+pub struct WatermarkOptions {
+    pub image_file: PathBuf,
+    pub layer: WatermarkLayer,
+    pub target: WatermarkTarget,
+    pub opacity: f32,
+    pub save: PdfSaveOptions,
+}
+
 impl fmt::Display for PdfBackendError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -129,6 +153,13 @@ impl fmt::Display for PdfBackendError {
                 path.file_name()
                     .and_then(|name| name.to_str())
                     .unwrap_or("PDF")
+            ),
+            Self::ImageLoad { path, message } => write!(
+                f,
+                "Could not read {}: {message}",
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("image")
             ),
             Self::PasswordRequired { path } => write!(
                 f,

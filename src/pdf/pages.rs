@@ -122,6 +122,18 @@ pub(super) fn normalize_page_sizes(
     Ok(())
 }
 
+pub(super) fn inherited_visible_page_box(
+    document: &Document,
+    object_id: ObjectId,
+) -> Result<(f32, f32, f32, f32), PdfBackendError> {
+    let page_box = inherited_page_object(document, object_id, b"CropBox")
+        .or_else(|| inherited_page_object(document, object_id, b"MediaBox"))
+        .ok_or_else(|| PdfBackendError::InvalidDocument("MediaBox not found".to_string()))
+        .and_then(parse_page_box)?;
+
+    Ok((page_box.left, page_box.bottom, page_box.width, page_box.height))
+}
+
 #[derive(Clone)]
 struct PageBox {
     left: f32,

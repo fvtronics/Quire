@@ -75,6 +75,13 @@ template $QuireWindow: Adw.ApplicationWindow {
                 activatable: true;
               }
 
+              Adw.ActionRow watermark_tool_row {
+                title: _("Add Watermark");
+                subtitle: _("Overlay an image");
+                icon-name: "insert-image-symbolic";
+                activatable: true;
+              }
+
               Adw.ActionRow metadata_tool_row {
                 title: _("Metadata");
                 subtitle: _("View and edit details");
@@ -121,6 +128,7 @@ template $QuireWindow: Adw.ApplicationWindow {
             $ExtractWorkspace extract_workspace {}
             $SplitWorkspace split_workspace {}
             $MetadataWorkspace metadata_workspace {}
+            $WatermarkWorkspace watermark_workspace {}
           };
         };
       };

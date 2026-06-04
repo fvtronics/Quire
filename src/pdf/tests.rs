@@ -8,10 +8,12 @@
 use super::{
     app_producer_metadata, compress_pdf_blocking, edit_pdf_metadata_blocking, load_document,
     merge_pdfs_blocking, parse_page_numbers, parse_page_ranges, split_breaks, split_pdf_blocking,
-    write_selected_pages, CompressOptions, PageSelection, PdfBackendError, PdfDocumentMetadata,
-    PdfEditableMetadata, PdfInput, PdfOutputOptions, PdfSaveOptions, SplitRule,
+    watermark_pdf_blocking, write_selected_pages, CompressOptions, PageSelection, PdfBackendError,
+    PdfDocumentMetadata, PdfEditableMetadata, PdfInput, PdfOutputOptions, PdfSaveOptions,
+    SplitRule, WatermarkLayer, WatermarkOptions, WatermarkTarget,
 };
 use lopdf::{
+    content::Content,
     dictionary, Document, EncryptionState, EncryptionVersion, Object, Permissions, Stream,
 };
 use std::fs;
@@ -853,6 +855,255 @@ fn edit_pdf_metadata_modern_pdf_uses_full_modern_save() {
 }
 
 #[test]
+fn watermark_pdf_adds_foreground_stream_to_all_pages() {
+    let dir = TestDir::new("watermark-all");
+    let input = dir.join("input.pdf");
+    let image = dir.join("watermark.png");
+    let output = dir.join("watermarked.pdf");
+    write_test_pdf(&input, &[10, 20]);
+    write_test_png(&image);
+
+    let result = watermark_pdf_blocking(
+        input,
+        None,
+        output.clone(),
+        watermark_options(image, WatermarkLayer::Foreground, WatermarkTarget::AllPages),
+    );
+
+    assert_eq!(result.unwrap(), output);
+    assert_eq!(watermarked_pages(&output), vec![1, 2]);
+    assert_eq!(page_content_counts(&output), vec![2, 2]);
+    assert!(page_watermark_is_last(&output, 1));
+    assert!(page_watermark_is_last(&output, 2));
+    assert!(first_page_has_watermark_xobject(&output));
+}
+
+#[test]
+fn watermark_pdf_adds_background_stream_before_existing_contents() {
+    let dir = TestDir::new("watermark-background");
+    let input = dir.join("input.pdf");
+    let image = dir.join("watermark.png");
+    let output = dir.join("watermarked.pdf");
+    write_test_pdf(&input, &[10, 20]);
+    write_test_png(&image);
+
+    let result = watermark_pdf_blocking(
+        input,
+        None,
+        output.clone(),
+        watermark_options(
+            image,
+            WatermarkLayer::Background,
+            WatermarkTarget::FirstPage,
+        ),
+    );
+
+    assert_eq!(result.unwrap(), output);
+    assert_eq!(watermarked_pages(&output), vec![1]);
+    assert_eq!(page_content_counts(&output), vec![2, 1]);
+    assert!(page_watermark_is_first(&output, 1));
+}
+
+#[test]
+fn watermark_pdf_targets_last_page() {
+    let dir = TestDir::new("watermark-last");
+    let input = dir.join("input.pdf");
+    let image = dir.join("watermark.png");
+    let output = dir.join("watermarked.pdf");
+    write_test_pdf(&input, &[10, 20, 30]);
+    write_test_png(&image);
+
+    let result = watermark_pdf_blocking(
+        input,
+        None,
+        output.clone(),
+        watermark_options(image, WatermarkLayer::Foreground, WatermarkTarget::LastPage),
+    );
+
+    assert_eq!(result.unwrap(), output);
+    assert_eq!(watermarked_pages(&output), vec![3]);
+    assert_eq!(page_content_counts(&output), vec![1, 1, 2]);
+}
+
+#[test]
+fn watermark_pdf_targets_specific_pages() {
+    let dir = TestDir::new("watermark-specific");
+    let input = dir.join("input.pdf");
+    let image = dir.join("watermark.png");
+    let output = dir.join("watermarked.pdf");
+    write_test_pdf(&input, &[10, 20, 30, 40]);
+    write_test_png(&image);
+
+    let result = watermark_pdf_blocking(
+        input,
+        None,
+        output.clone(),
+        watermark_options(
+            image,
+            WatermarkLayer::Foreground,
+            WatermarkTarget::SpecificPages(vec![2, 4]),
+        ),
+    );
+
+    assert_eq!(result.unwrap(), output);
+    assert_eq!(watermarked_pages(&output), vec![2, 4]);
+    assert_eq!(page_content_counts(&output), vec![1, 2, 1, 2]);
+}
+
+#[test]
+fn watermark_pdf_normalizes_specific_pages() {
+    let dir = TestDir::new("watermark-specific-normalized");
+    let input = dir.join("input.pdf");
+    let image = dir.join("watermark.png");
+    let output = dir.join("watermarked.pdf");
+    write_test_pdf(&input, &[10, 20, 30, 40]);
+    write_test_png(&image);
+
+    let result = watermark_pdf_blocking(
+        input,
+        None,
+        output.clone(),
+        watermark_options(
+            image,
+            WatermarkLayer::Foreground,
+            WatermarkTarget::SpecificPages(vec![4, 2, 4, 2]),
+        ),
+    );
+
+    assert_eq!(result.unwrap(), output);
+    assert_eq!(watermarked_pages(&output), vec![2, 4]);
+    assert_eq!(page_content_counts(&output), vec![1, 2, 1, 2]);
+}
+
+#[test]
+fn watermark_pdf_sets_opacity_graphics_state() {
+    let dir = TestDir::new("watermark-opacity");
+    let input = dir.join("input.pdf");
+    let image = dir.join("watermark.png");
+    let output = dir.join("watermarked.pdf");
+    write_test_pdf(&input, &[10]);
+    write_test_png(&image);
+
+    let result = watermark_pdf_blocking(
+        input,
+        None,
+        output.clone(),
+        watermark_options_with_opacity(
+            image,
+            WatermarkLayer::Foreground,
+            WatermarkTarget::AllPages,
+            0.45,
+        ),
+    );
+
+    assert_eq!(result.unwrap(), output);
+    assert_eq!(first_page_watermark_opacity(&output), Some((0.45, 0.45)));
+}
+
+#[test]
+fn watermark_pdf_flattens_indirect_contents_array() {
+    let dir = TestDir::new("watermark-indirect-contents");
+    let input = dir.join("input.pdf");
+    let image = dir.join("watermark.png");
+    let output = dir.join("watermarked.pdf");
+    write_test_pdf_with_indirect_contents_array(&input);
+    write_test_png(&image);
+
+    let result = watermark_pdf_blocking(
+        input,
+        None,
+        output.clone(),
+        watermark_options(image, WatermarkLayer::Foreground, WatermarkTarget::AllPages),
+    );
+
+    assert_eq!(result.unwrap(), output);
+    assert_eq!(page_content_counts(&output), vec![3]);
+    assert!(page_watermark_is_last(&output, 1));
+    assert!(first_page_contents_are_flat(&output));
+}
+
+#[test]
+fn watermark_pdf_preserves_inherited_xobjects() {
+    let dir = TestDir::new("watermark-inherited-resources");
+    let input = dir.join("input.pdf");
+    let image = dir.join("watermark.png");
+    let output = dir.join("watermarked.pdf");
+    write_test_pdf_with_inherited_xobject(&input);
+    write_test_png(&image);
+
+    let result = watermark_pdf_blocking(
+        input,
+        None,
+        output.clone(),
+        watermark_options(image, WatermarkLayer::Foreground, WatermarkTarget::AllPages),
+    );
+
+    assert_eq!(result.unwrap(), output);
+    assert!(first_page_has_xobject(&output, b"ExistingImage"));
+    assert!(first_page_has_xobject(&output, b"QuireWatermark1"));
+}
+
+#[test]
+fn watermark_pdf_centers_inside_visible_crop_box() {
+    let dir = TestDir::new("watermark-visible-box");
+    let input = dir.join("input.pdf");
+    let image = dir.join("watermark.png");
+    let output = dir.join("watermarked.pdf");
+    write_test_pdf_with_visible_crop_box(&input);
+    write_test_png(&image);
+
+    let result = watermark_pdf_blocking(
+        input,
+        None,
+        output.clone(),
+        watermark_options(image, WatermarkLayer::Foreground, WatermarkTarget::AllPages),
+    );
+
+    assert_eq!(result.unwrap(), output);
+    assert_eq!(
+        first_page_watermark_transform(&output),
+        Some([84.0, 0.0, 0.0, 84.0, 38.0, 108.0])
+    );
+}
+
+#[test]
+fn watermark_pdf_rejects_input_overwrite_and_invalid_specific_pages() {
+    let dir = TestDir::new("watermark-invalid");
+    let input = dir.join("input.pdf");
+    let image = dir.join("watermark.png");
+    let output = dir.join("watermarked.pdf");
+    write_test_pdf(&input, &[10, 20]);
+    write_test_png(&image);
+
+    assert_error(
+        watermark_pdf_blocking(
+            input.clone(),
+            None,
+            input.clone(),
+            watermark_options(
+                image.clone(),
+                WatermarkLayer::Foreground,
+                WatermarkTarget::AllPages,
+            ),
+        ),
+        "Save the PDF as a new file, not over the input file.",
+    );
+    assert_error(
+        watermark_pdf_blocking(
+            input,
+            None,
+            output,
+            watermark_options(
+                image,
+                WatermarkLayer::Foreground,
+                WatermarkTarget::SpecificPages(vec![3]),
+            ),
+        ),
+        "Page 3 is not in this PDF.",
+    );
+}
+
+#[test]
 fn save_options_control_modern_pdf_output() {
     let dir = TestDir::new("save-options");
     let first = dir.join("first.pdf");
@@ -1044,6 +1295,102 @@ fn write_test_pdf(path: &Path, page_markers: &[i64]) {
     document.save(path).expect("test PDF should be saved");
 }
 
+fn write_test_pdf_with_indirect_contents_array(path: &Path) {
+    let mut document = Document::with_version("1.5");
+    let pages_id = document.new_object_id();
+    let first_content_id = document.add_object(Stream::new(dictionary! {}, b"q Q".to_vec()));
+    let second_content_id = document.add_object(Stream::new(dictionary! {}, b"q Q".to_vec()));
+    let contents_id = document.add_object(vec![
+        Object::Reference(first_content_id),
+        Object::Reference(second_content_id),
+    ]);
+    let page_id = document.add_object(dictionary! {
+        "Type" => "Page",
+        "Parent" => pages_id,
+        "Contents" => contents_id,
+        "Resources" => dictionary! {},
+        "MediaBox" => vec![0.into(), 0.into(), 100.into(), 100.into()],
+    });
+
+    save_test_pdf(document, pages_id, vec![page_id.into()], path);
+}
+
+fn write_test_pdf_with_inherited_xobject(path: &Path) {
+    let mut document = Document::with_version("1.5");
+    let pages_id = document.new_object_id();
+    let content_id = document.add_object(Stream::new(dictionary! {}, Vec::new()));
+    let existing_image_id = document.add_object(Stream::new(
+        dictionary! {
+            "Type" => "XObject",
+            "Subtype" => "Image",
+            "Width" => 1,
+            "Height" => 1,
+            "ColorSpace" => "DeviceRGB",
+            "BitsPerComponent" => 8,
+        },
+        vec![0, 0, 0],
+    ));
+    let page_id = document.add_object(dictionary! {
+        "Type" => "Page",
+        "Parent" => pages_id,
+        "Contents" => content_id,
+        "MediaBox" => vec![0.into(), 0.into(), 100.into(), 100.into()],
+    });
+
+    document.objects.insert(
+        pages_id,
+        Object::Dictionary(dictionary! {
+            "Type" => "Pages",
+            "Kids" => vec![page_id.into()],
+            "Count" => 1,
+            "Resources" => dictionary! {
+                "XObject" => dictionary! {
+                    "ExistingImage" => existing_image_id,
+                },
+            },
+        }),
+    );
+    let catalog_id = document.add_object(dictionary! {
+        "Type" => "Catalog",
+        "Pages" => pages_id,
+    });
+    document.trailer.set("Root", catalog_id);
+    document.save(path).expect("test PDF should be saved");
+}
+
+fn write_test_pdf_with_visible_crop_box(path: &Path) {
+    let mut document = Document::with_version("1.5");
+    let pages_id = document.new_object_id();
+    let content_id = document.add_object(Stream::new(dictionary! {}, Vec::new()));
+    let page_id = document.add_object(dictionary! {
+        "Type" => "Page",
+        "Parent" => pages_id,
+        "Contents" => content_id,
+        "Resources" => dictionary! {},
+        "MediaBox" => vec![10.into(), 20.into(), 210.into(), 320.into()],
+        "CropBox" => vec![30.into(), 50.into(), 130.into(), 250.into()],
+    });
+
+    save_test_pdf(document, pages_id, vec![page_id.into()], path);
+}
+
+fn save_test_pdf(mut document: Document, pages_id: lopdf::ObjectId, kids: Vec<Object>, path: &Path) {
+    document.objects.insert(
+        pages_id,
+        Object::Dictionary(dictionary! {
+            "Type" => "Pages",
+            "Kids" => kids.clone(),
+            "Count" => kids.len() as i64,
+        }),
+    );
+    let catalog_id = document.add_object(dictionary! {
+        "Type" => "Catalog",
+        "Pages" => pages_id,
+    });
+    document.trailer.set("Root", catalog_id);
+    document.save(path).expect("test PDF should be saved");
+}
+
 fn write_encrypted_test_pdf(path: &Path, page_markers: &[i64], password: &str) {
     write_test_pdf(path, page_markers);
 
@@ -1059,6 +1406,23 @@ fn write_encrypted_test_pdf(path: &Path, page_markers: &[i64], password: &str) {
     document
         .save(path)
         .expect("encrypted test PDF should be saved");
+}
+
+fn write_test_png(path: &Path) {
+    let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, 4, 4)
+        .expect("test image surface should be created");
+    let context = cairo::Context::new(&surface).expect("test image context should be created");
+    context.set_source_rgba(0.0, 0.0, 0.0, 0.0);
+    context.paint().expect("test image should be cleared");
+    context.set_source_rgba(0.1, 0.4, 0.8, 0.5);
+    context.rectangle(0.0, 0.0, 4.0, 4.0);
+    context.fill().expect("test image should be painted");
+    surface.flush();
+
+    let mut file = fs::File::create(path).expect("test image should be created");
+    surface
+        .write_to_png(&mut file)
+        .expect("test image should be saved");
 }
 
 fn add_test_metadata(path: &Path) {
@@ -1164,6 +1528,219 @@ fn page_has_contents(path: &Path) -> Vec<bool> {
                 .is_ok()
         })
         .collect()
+}
+
+fn page_content_counts(path: &Path) -> Vec<usize> {
+    let document = Document::load(path).expect("test PDF should load");
+    document
+        .get_pages()
+        .into_values()
+        .map(|object_id| document.get_page_contents(object_id).len())
+        .collect()
+}
+
+fn watermarked_pages(path: &Path) -> Vec<u32> {
+    let document = Document::load(path).expect("test PDF should load");
+    document
+        .get_pages()
+        .into_iter()
+        .filter_map(|(page_number, object_id)| {
+            page_contains_watermark(&document, object_id).then_some(page_number)
+        })
+        .collect()
+}
+
+fn first_page_has_watermark_xobject(path: &Path) -> bool {
+    first_page_has_xobject(path, b"QuireWatermark1")
+}
+
+fn first_page_has_xobject(path: &Path, name: &[u8]) -> bool {
+    let document = Document::load(path).expect("test PDF should load");
+    let page_id = document
+        .get_pages()
+        .into_values()
+        .next()
+        .expect("test PDF should have a first page");
+    let page = document
+        .get_object(page_id)
+        .expect("page object should exist")
+        .as_dict()
+        .expect("page should be a dictionary");
+    let resources = page
+        .get(b"Resources")
+        .expect("watermarked page should have resources")
+        .as_dict()
+        .expect("resources should be a dictionary");
+    let xobjects = resources
+        .get(b"XObject")
+        .expect("resources should have xobjects")
+        .as_dict()
+        .expect("xobjects should be a dictionary");
+
+    xobjects.has(name)
+}
+
+fn first_page_watermark_opacity(path: &Path) -> Option<(f32, f32)> {
+    let document = Document::load(path).expect("test PDF should load");
+    let page_id = document.get_pages().into_values().next()?;
+    let page = document.get_object(page_id).ok()?.as_dict().ok()?;
+    let resources = page.get(b"Resources").ok()?.as_dict().ok()?;
+    let ext_gstates = resources.get(b"ExtGState").ok()?.as_dict().ok()?;
+    let opacity = ext_gstates
+        .get(b"QuireWatermarkOpacity1")
+        .ok()?
+        .as_dict()
+        .ok()?;
+    let stroke = opacity.get(b"CA").ok()?.as_float().ok()?;
+    let non_stroke = opacity.get(b"ca").ok()?.as_float().ok()?;
+
+    Some((stroke, non_stroke))
+}
+
+fn page_contains_watermark(document: &Document, page_id: lopdf::ObjectId) -> bool {
+    document
+        .get_page_contents(page_id)
+        .iter()
+        .any(|content_id| content_stream_contains(document, *content_id, b"QuireWatermark"))
+}
+
+fn page_watermark_is_first(path: &Path, page_number: u32) -> bool {
+    page_watermark_position(path, page_number).is_some_and(|position| position == 0)
+}
+
+fn page_watermark_is_last(path: &Path, page_number: u32) -> bool {
+    let document = Document::load(path).expect("test PDF should load");
+    let page_id = document
+        .get_pages()
+        .get(&page_number)
+        .copied()
+        .expect("test page should exist");
+    let contents = document.get_page_contents(page_id);
+
+    page_watermark_position(path, page_number)
+        .is_some_and(|position| position + 1 == contents.len())
+}
+
+fn page_watermark_position(path: &Path, page_number: u32) -> Option<usize> {
+    let document = Document::load(path).expect("test PDF should load");
+    let page_id = document
+        .get_pages()
+        .get(&page_number)
+        .copied()
+        .expect("test page should exist");
+
+    document
+        .get_page_contents(page_id)
+        .iter()
+        .position(|content_id| content_stream_contains(&document, *content_id, b"QuireWatermark"))
+}
+
+fn first_page_contents_are_flat(path: &Path) -> bool {
+    let document = Document::load(path).expect("test PDF should load");
+    let Some(page_id) = document.get_pages().into_values().next() else {
+        return false;
+    };
+    let Ok(page) = document.get_object(page_id).and_then(Object::as_dict) else {
+        return false;
+    };
+    let Ok(contents) = page.get(b"Contents").and_then(Object::as_array) else {
+        return false;
+    };
+
+    contents
+        .iter()
+        .all(|content| !matches!(content, Object::Array(_)))
+}
+
+fn first_page_watermark_transform(path: &Path) -> Option<[f32; 6]> {
+    let document = Document::load(path).expect("test PDF should load");
+    let page_id = document.get_pages().into_values().next()?;
+
+    page_content_ids(&document, page_id)
+        .into_iter()
+        .filter_map(|content_id| content_stream_transform(&document, content_id))
+        .next()
+}
+
+fn page_content_ids(document: &Document, page_id: lopdf::ObjectId) -> Vec<lopdf::ObjectId> {
+    let Some(contents) = document
+        .get_object(page_id)
+        .ok()
+        .and_then(|page| page.as_dict().ok())
+        .and_then(|page| page.get(b"Contents").ok())
+    else {
+        return Vec::new();
+    };
+
+    match contents {
+        Object::Array(contents) => contents
+            .iter()
+            .filter_map(|content| content.as_reference().ok())
+            .collect(),
+        Object::Reference(object_id) => vec![*object_id],
+        _ => Vec::new(),
+    }
+}
+
+fn content_stream_transform(document: &Document, object_id: lopdf::ObjectId) -> Option<[f32; 6]> {
+    let stream = document
+        .get_object(object_id)
+        .ok()?
+        .as_stream()
+        .ok()?;
+    let content = stream
+        .decompressed_content()
+        .unwrap_or_else(|_| stream.content.clone());
+    let content = Content::decode(&content).ok()?;
+    let transform = content
+        .operations
+        .iter()
+        .find(|operation| operation.operator == "cm")?;
+
+    Some([
+        transform.operands.first()?.as_float().ok()?,
+        transform.operands.get(1)?.as_float().ok()?,
+        transform.operands.get(2)?.as_float().ok()?,
+        transform.operands.get(3)?.as_float().ok()?,
+        transform.operands.get(4)?.as_float().ok()?,
+        transform.operands.get(5)?.as_float().ok()?,
+    ])
+}
+
+fn content_stream_contains(document: &Document, object_id: lopdf::ObjectId, needle: &[u8]) -> bool {
+    document
+        .get_object(object_id)
+        .and_then(Object::as_stream)
+        .ok()
+        .map(|stream| {
+            stream
+                .decompressed_content()
+                .unwrap_or_else(|_| stream.content.clone())
+        })
+        .is_some_and(|content| content.windows(needle.len()).any(|window| window == needle))
+}
+
+fn watermark_options(
+    image_file: PathBuf,
+    layer: WatermarkLayer,
+    target: WatermarkTarget,
+) -> WatermarkOptions {
+    watermark_options_with_opacity(image_file, layer, target, 1.0)
+}
+
+fn watermark_options_with_opacity(
+    image_file: PathBuf,
+    layer: WatermarkLayer,
+    target: WatermarkTarget,
+    opacity: f32,
+) -> WatermarkOptions {
+    WatermarkOptions {
+        image_file,
+        layer,
+        target,
+        opacity,
+        save: PdfSaveOptions::default(),
+    }
 }
 
 fn metadata_field(path: &Path, key: &[u8]) -> String {

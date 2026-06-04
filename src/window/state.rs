@@ -242,6 +242,17 @@ pub struct MetadataState {
     pub job: JobState,
 }
 
+#[derive(Debug, Default)]
+pub struct WatermarkState {
+    pub file: RefCell<Option<PathBuf>>,
+    pub password: RefCell<Option<String>>,
+    pub page_count: Cell<usize>,
+    pub preview: RefCell<Option<crate::preview::PagePreview>>,
+    pub image_file: RefCell<Option<PathBuf>>,
+    pub options: SaveOptionsState,
+    pub job: JobState,
+}
+
 impl MergeState {
     pub(super) fn clear(&self) -> MergeClearUndo {
         let undo = MergeClearUndo {
@@ -695,6 +706,38 @@ impl MetadataState {
     }
 }
 
+impl WatermarkState {
+    pub fn input_file(&self) -> Option<(PathBuf, Option<String>)> {
+        self.file
+            .borrow()
+            .clone()
+            .map(|path| (path, self.password.borrow().clone()))
+    }
+
+    pub fn image_file(&self) -> Option<PathBuf> {
+        self.image_file.borrow().clone()
+    }
+
+    pub fn set_image_file(&self, path: PathBuf) {
+        self.image_file.borrow_mut().replace(path);
+        self.job.clear_last_output();
+    }
+
+    pub fn finish_loading(
+        &self,
+        path: PathBuf,
+        password: Option<String>,
+        preview: Option<crate::preview::PagePreview>,
+        page_count: usize,
+    ) {
+        self.job.finish_loading();
+        self.file.borrow_mut().replace(path);
+        *self.password.borrow_mut() = password;
+        self.page_count.set(page_count);
+        *self.preview.borrow_mut() = preview;
+    }
+}
+
 fn rotate_entry<Key>(rotations: &RefCell<BTreeMap<Key, i64>>, key: Key)
 where
     Key: Ord,
@@ -732,7 +775,7 @@ fn move_vec_item<T>(items: &mut Vec<T>, from: usize, to: usize) -> bool {
 mod tests {
     use super::{
         CompressState, ExtractState, JobState, MergeItem, MergeState, MetadataState, OrganizeState,
-        OutputOptionsState, SaveOptionsState, SplitState,
+        OutputOptionsState, SaveOptionsState, SplitState, WatermarkState,
     };
     use std::path::PathBuf;
 
@@ -1297,6 +1340,24 @@ mod tests {
         metadata.finish_loading(PathBuf::from("plain.pdf"), None, None);
         assert_eq!(
             metadata.input_file().unwrap(),
+            (PathBuf::from("plain.pdf"), None)
+        );
+
+        let watermark = WatermarkState::default();
+        watermark.finish_loading(
+            PathBuf::from("locked.pdf"),
+            Some("secret".to_string()),
+            None,
+            3,
+        );
+        assert_eq!(
+            watermark.input_file().unwrap(),
+            (PathBuf::from("locked.pdf"), Some("secret".to_string()))
+        );
+
+        watermark.finish_loading(PathBuf::from("plain.pdf"), None, None, 2);
+        assert_eq!(
+            watermark.input_file().unwrap(),
             (PathBuf::from("plain.pdf"), None)
         );
     }

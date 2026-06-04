@@ -31,6 +31,7 @@ mod organize;
 mod split;
 mod state;
 mod ui;
+mod watermark;
 mod workspace;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -42,6 +43,7 @@ pub(super) enum PdfTool {
     Extract,
     Split,
     Metadata,
+    Watermark,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -72,15 +74,19 @@ impl PdfTool {
             Self::Extract => gettext("Extract Pages"),
             Self::Split => gettext("Split PDF"),
             Self::Metadata => gettext("Edit Metadata"),
+            Self::Watermark => gettext("Add Watermark"),
         }
     }
 
     fn default_subtitle(self) -> String {
         match self {
             Self::Merge => gettext("No files selected"),
-            Self::Compress | Self::Organize | Self::Extract | Self::Split | Self::Metadata => {
-                gettext("No PDF selected")
-            }
+            Self::Compress
+            | Self::Organize
+            | Self::Extract
+            | Self::Split
+            | Self::Metadata
+            | Self::Watermark => gettext("No PDF selected"),
         }
     }
 }
@@ -92,6 +98,7 @@ mod imp {
     use super::metadata::MetadataWorkspace;
     use super::organize::OrganizeWorkspace;
     use super::split::SplitWorkspace;
+    use super::watermark::WatermarkWorkspace;
     use super::{PdfTool, ViewMode};
     use adw::subclass::prelude::*;
     use gtk::prelude::*;
@@ -130,6 +137,8 @@ mod imp {
         #[template_child]
         pub metadata_tool_row: TemplateChild<adw::ActionRow>,
         #[template_child]
+        pub watermark_tool_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
         pub merge_workspace: TemplateChild<MergeWorkspace>,
         #[template_child]
         pub compress_workspace: TemplateChild<CompressWorkspace>,
@@ -141,6 +150,8 @@ mod imp {
         pub split_workspace: TemplateChild<SplitWorkspace>,
         #[template_child]
         pub metadata_workspace: TemplateChild<MetadataWorkspace>,
+        #[template_child]
+        pub watermark_workspace: TemplateChild<WatermarkWorkspace>,
 
         pub(super) active_tool: Cell<PdfTool>,
         pub(super) view_mode: Cell<ViewMode>,
@@ -159,6 +170,7 @@ mod imp {
             ExtractWorkspace::static_type();
             SplitWorkspace::static_type();
             MetadataWorkspace::static_type();
+            WatermarkWorkspace::static_type();
             klass.bind_template();
         }
 
@@ -238,6 +250,11 @@ impl QuireWindow {
         imp.metadata_tool_row.connect_activated(move |_| {
             window.switch_tool(PdfTool::Metadata);
         });
+
+        let window = self.clone();
+        imp.watermark_tool_row.connect_activated(move |_| {
+            window.switch_tool(PdfTool::Watermark);
+        });
     }
 
     fn setup_responsive_layout(&self) {
@@ -254,6 +271,7 @@ impl QuireWindow {
         imp.extract_workspace.setup_responsive_layout(&breakpoint);
         imp.split_workspace.setup_responsive_layout(&breakpoint);
         imp.metadata_workspace.setup_responsive_layout(&breakpoint);
+        imp.watermark_workspace.setup_responsive_layout(&breakpoint);
         self.add_breakpoint(breakpoint);
     }
 
@@ -267,6 +285,7 @@ impl QuireWindow {
             PdfTool::Extract => imp.extract_workspace.upcast_ref(),
             PdfTool::Split => imp.split_workspace.upcast_ref(),
             PdfTool::Metadata => imp.metadata_workspace.upcast_ref(),
+            PdfTool::Watermark => imp.watermark_workspace.upcast_ref(),
         };
         imp.workspace_stack.set_visible_child(workspace);
 
@@ -277,6 +296,7 @@ impl QuireWindow {
             PdfTool::Extract => imp.extract_tool_row.upcast_ref(),
             PdfTool::Split => imp.split_tool_row.upcast_ref(),
             PdfTool::Metadata => imp.metadata_tool_row.upcast_ref(),
+            PdfTool::Watermark => imp.watermark_tool_row.upcast_ref(),
         };
         imp.sidebar_list.select_row(Some(selected_row));
         imp.navigation_split_view.set_show_content(true);
@@ -306,6 +326,7 @@ impl QuireWindow {
             PdfTool::Extract => imp.extract_workspace.refresh_view_state(),
             PdfTool::Split => imp.split_workspace.update_view(),
             PdfTool::Metadata => imp.metadata_workspace.update_view(),
+            PdfTool::Watermark => imp.watermark_workspace.update_view(),
         }
     }
 
@@ -330,7 +351,7 @@ impl QuireWindow {
         let imp = self.imp();
         match imp.active_tool.get() {
             PdfTool::Merge => imp.merge_workspace.has_view_mode_content(),
-            PdfTool::Compress | PdfTool::Split | PdfTool::Metadata => false,
+            PdfTool::Compress | PdfTool::Split | PdfTool::Metadata | PdfTool::Watermark => false,
             PdfTool::Organize => imp.organize_workspace.has_view_mode_content(),
             PdfTool::Extract => imp.extract_workspace.has_view_mode_content(),
         }

@@ -752,6 +752,7 @@ fn backend_error_message(error: &crate::pdf::PdfBackendError) -> String {
         }
         crate::pdf::PdfBackendError::InvalidPageRange(message) => message.clone(),
         crate::pdf::PdfBackendError::Load { .. } => gettext("Could not open PDF"),
+        crate::pdf::PdfBackendError::ImageLoad { .. } => gettext("Could not open image"),
         crate::pdf::PdfBackendError::PasswordRequired { .. } => gettext("Password required"),
         crate::pdf::PdfBackendError::InvalidPassword { .. } => gettext("Invalid password"),
         crate::pdf::PdfBackendError::InvalidDocument(_) => gettext("Could not process PDF"),

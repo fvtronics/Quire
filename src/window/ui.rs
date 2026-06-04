@@ -31,12 +31,40 @@ pub(super) fn pdf_filters() -> gio::ListStore {
     filters
 }
 
+#[allow(deprecated)]
+pub(super) fn image_filters() -> gio::ListStore {
+    let filter = gtk::FileFilter::new();
+    filter.set_name(Some(&gettext("Images")));
+    filter.add_pixbuf_formats();
+
+    let filters = gio::ListStore::new::<gtk::FileFilter>();
+    filters.append(&filter);
+    filters
+}
+
 pub(super) async fn open_pdf_file(
     parent: &impl IsA<gtk::Window>,
     title: &str,
     accept_label: &str,
 ) -> Option<PathBuf> {
     pdf_file_dialog(title, accept_label, None)
+        .open_future(Some(parent))
+        .await
+        .ok()
+        .and_then(|file| file.path())
+}
+
+pub(super) async fn open_image_file(
+    parent: &impl IsA<gtk::Window>,
+    title: &str,
+    accept_label: &str,
+) -> Option<PathBuf> {
+    gtk::FileDialog::builder()
+        .title(title)
+        .accept_label(accept_label)
+        .modal(true)
+        .filters(&image_filters())
+        .build()
         .open_future(Some(parent))
         .await
         .ok()

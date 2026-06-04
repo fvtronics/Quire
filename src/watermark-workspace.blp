@@ -1,0 +1,138 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $WatermarkWorkspace: Gtk.Box {
+  orientation: vertical;
+  spacing: 18;
+  hexpand: true;
+  margin-start: 36;
+  margin-end: 36;
+  margin-top: 30;
+  margin-bottom: 30;
+
+  Adw.WrapBox watermark_actions {
+    orientation: horizontal;
+    hexpand: true;
+    child-spacing: 12;
+    line-spacing: 12;
+    align: 1.0;
+
+    Gtk.Button watermark_choose_button {
+      visible: false;
+      valign: center;
+      tooltip-text: _("Open PDF");
+      label: _("Open PDF");
+    }
+
+    Gtk.Button watermark_open_output_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Open Output File");
+
+      label: _("Open Output");
+    }
+
+    Gtk.Button watermark_save_button {
+      visible: false;
+      sensitive: false;
+      valign: center;
+      tooltip-text: _("Add Watermark");
+      styles ["suggested-action"]
+
+      label: _("Add Watermark");
+    }
+
+    Gtk.MenuButton watermark_advanced_options_button {
+      visible: false;
+      valign: center;
+      icon-name: "view-more-symbolic";
+      tooltip-text: _("Advanced Options");
+      styles ["flat"]
+    }
+  }
+
+  Adw.StatusPage watermark_empty_status {
+    vexpand: true;
+    icon-name: "insert-image-symbolic";
+    title: _("Open a PDF to Add a Watermark");
+    description: _("Choose an image watermark, then save a new document.");
+
+    child: Gtk.Button watermark_empty_choose_button {
+      halign: center;
+      tooltip-text: _("Open PDF");
+      styles ["suggested-action"]
+
+      label: _("Open PDF");
+    };
+  }
+
+  Gtk.Box watermark_content {
+    orientation: horizontal;
+    spacing: 18;
+    vexpand: true;
+    visible: false;
+
+    Gtk.Box watermark_preview_box {
+      halign: center;
+      width-request: 90;
+      height-request: 124;
+    }
+
+    Gtk.Box watermark_options_box {
+      orientation: vertical;
+      spacing: 18;
+      hexpand: true;
+
+      Gtk.ListBox watermark_file_list {
+        selection-mode: none;
+        styles ["boxed-list"]
+      }
+
+      Gtk.ListBox {
+        selection-mode: none;
+        styles ["boxed-list"]
+
+        Adw.ActionRow watermark_image_row {
+          title: _("Watermark Image");
+          subtitle: _("No image selected");
+          activatable: true;
+        }
+
+        Adw.ComboRow watermark_layer_row {
+          title: _("Layer");
+        }
+
+        Adw.SpinRow watermark_opacity_row {
+          title: _("Opacity");
+          subtitle: _("Percent");
+        }
+
+        Adw.ComboRow watermark_pages_row {
+          title: _("Pages");
+        }
+
+        Adw.EntryRow watermark_specific_pages_entry {
+          title: _("Specific Pages");
+        }
+
+        Gtk.ListBoxRow watermark_specific_pages_error_row {
+          visible: false;
+          selectable: false;
+          activatable: false;
+
+          child: Gtk.Label watermark_specific_pages_error_label {
+            xalign: 0;
+            wrap: true;
+            margin-start: 12;
+            margin-end: 12;
+            margin-top: 6;
+            margin-bottom: 6;
+
+            styles ["error"]
+          };
+        }
+      }
+    }
+  }
+}

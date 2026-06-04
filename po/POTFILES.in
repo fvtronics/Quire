@@ -12,6 +12,7 @@ src/organize-workspace.blp
 src/password-dialog.blp
 src/split-workspace.blp
 src/shortcuts-dialog.blp
+src/watermark-workspace.blp
 src/window.rs
 src/window.blp
 src/window/compress.rs
@@ -22,3 +23,4 @@ src/window/organize.rs
 src/window/split.rs
 src/window/workspace.rs
 src/window/ui.rs
+src/window/watermark.rs
