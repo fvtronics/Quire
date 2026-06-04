@@ -13,8 +13,8 @@ use super::{
     SplitRule, WatermarkLayer, WatermarkOptions, WatermarkTarget,
 };
 use lopdf::{
-    content::Content,
-    dictionary, Document, EncryptionState, EncryptionVersion, Object, Permissions, Stream,
+    content::Content, dictionary, Document, EncryptionState, EncryptionVersion, Object,
+    Permissions, Stream,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -1374,7 +1374,12 @@ fn write_test_pdf_with_visible_crop_box(path: &Path) {
     save_test_pdf(document, pages_id, vec![page_id.into()], path);
 }
 
-fn save_test_pdf(mut document: Document, pages_id: lopdf::ObjectId, kids: Vec<Object>, path: &Path) {
+fn save_test_pdf(
+    mut document: Document,
+    pages_id: lopdf::ObjectId,
+    kids: Vec<Object>,
+    path: &Path,
+) {
     document.objects.insert(
         pages_id,
         Object::Dictionary(dictionary! {
@@ -1683,11 +1688,7 @@ fn page_content_ids(document: &Document, page_id: lopdf::ObjectId) -> Vec<lopdf:
 }
 
 fn content_stream_transform(document: &Document, object_id: lopdf::ObjectId) -> Option<[f32; 6]> {
-    let stream = document
-        .get_object(object_id)
-        .ok()?
-        .as_stream()
-        .ok()?;
+    let stream = document.get_object(object_id).ok()?.as_stream().ok()?;
     let content = stream
         .decompressed_content()
         .unwrap_or_else(|_| stream.content.clone());

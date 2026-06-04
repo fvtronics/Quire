@@ -361,8 +361,14 @@ fn add_watermark_to_page(
 ) -> Result<(), PdfBackendError> {
     let (page_x, page_y, page_width, page_height) = inherited_visible_page_box(document, page_id)?;
     let (image_width, image_height) = watermark_image_dimensions(document, image_id)?;
-    let transform =
-        centered_fit_transform(page_x, page_y, page_width, page_height, image_width, image_height);
+    let transform = centered_fit_transform(
+        page_x,
+        page_y,
+        page_width,
+        page_height,
+        image_width,
+        image_height,
+    );
     let (image_name, opacity_name) = add_watermark_resources(document, page_id, image_id, opacity)?;
     let content_id = watermark_content_stream(document, &image_name, &opacity_name, transform)?;
     insert_page_content(document, page_id, content_id, layer)

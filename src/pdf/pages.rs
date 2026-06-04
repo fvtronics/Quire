@@ -131,7 +131,12 @@ pub(super) fn inherited_visible_page_box(
         .ok_or_else(|| PdfBackendError::InvalidDocument("MediaBox not found".to_string()))
         .and_then(parse_page_box)?;
 
-    Ok((page_box.left, page_box.bottom, page_box.width, page_box.height))
+    Ok((
+        page_box.left,
+        page_box.bottom,
+        page_box.width,
+        page_box.height,
+    ))
 }
 
 #[derive(Clone)]
