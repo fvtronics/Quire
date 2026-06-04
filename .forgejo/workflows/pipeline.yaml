@@ -51,10 +51,6 @@ jobs:
       - name: Test
         run: cargo test --locked
 
-      - name: Install Coverage Tool
-        if: vars.SONAR_ENABLED == 'true' && forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/heads/')
-        run: cargo install cargo-llvm-cov --locked
-
       - name: Generate Sonar Reports
         if: vars.SONAR_ENABLED == 'true' && forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/heads/')
         run: |
