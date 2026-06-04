@@ -1,7 +1,6 @@
-# v0.2.3
+# v0.2.4
 
 <p>Changes</p>
 <ul>
-  <li>Rename app from Folios to Quire</li>
-  <li>Modify app icon</li>
+  <li>Improved icon scalability and shadows</li>
 </ul>

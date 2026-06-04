@@ -18,8 +18,8 @@
   <translation type="gettext">quire</translation>
   <launchable type="desktop-id">com.fvtronics.Quire.desktop</launchable>
   <url type="homepage">https://www.fvtronics.com/en/project/quire</url>
-  <url type="bugtracker">https://gitlab.com/fvtronics/quire/-/work_items</url>
-  <url type="vcs-browser">https://gitlab.com/fvtronics/quire</url>
+  <url type="bugtracker">https://codeberg.org/fvtronics/quire/issues</url>
+  <url type="vcs-browser">https://codeberg.org/fvtronics/quire</url>
   <provides>
     <binary>quire</binary>
   </provides>
@@ -31,27 +31,27 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.3/data/screenshots/merge.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.4/data/screenshots/merge.png</image>
       <caption>Merge multiple PDF files into a single document</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.3/data/screenshots/organize.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.4/data/screenshots/organize.png</image>
       <caption>Reorder and remove pages before saving a new PDF</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.3/data/screenshots/extract.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.4/data/screenshots/extract.png</image>
       <caption>Extract selected pages into a new document</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.3/data/screenshots/split.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.4/data/screenshots/split.png</image>
       <caption>Split a PDF into multiple documents</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.3/data/screenshots/compress.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.4/data/screenshots/compress.png</image>
       <caption>Compress PDF files for smaller output</caption>
     </screenshot>
     <screenshot>
-      <image>https://gitlab.com/fvtronics/quire/-/raw/v0.2.3/data/screenshots/metadata.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.4/data/screenshots/metadata.png</image>
       <caption>View and edit PDF metadata</caption>
     </screenshot>
   </screenshots>
@@ -62,6 +62,14 @@
   </branding>
 
   <releases>
+    <release version="0.2.4" date="2026-06-04">
+      <description>
+        <p>Changes</p>
+        <ul>
+          <li>Improved icon scalability and shadows</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.3" date="2026-06-03">
       <description>
         <p>Changes</p>
@@ -115,16 +123,6 @@
           <li>Improved preview sizing in list and grid views</li>
           <li>Improved responsiveness when working with large PDFs</li>
           <li>Preserved the scroll position while editing items in list and grid views</li>
-        </ul>
-      </description>
-    </release>
-    <release version="0.1.8" date="2026-05-26">
-      <description>
-        <p>New</p>
-        <ul>
-          <li>Added right-click menus for items that can be reordered</li>
-          <li>Added options to duplicate PDFs and pages while organizing documents</li>
-          <li>Added an option to insert blank pages while organizing a PDF</li>
         </ul>
       </description>
     </release>

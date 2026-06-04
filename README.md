@@ -40,7 +40,7 @@ Quire uses the [meson build system](http://mesonbuild.com/). Run the following
 commands to clone Quire and initialize the build:
 
 ```sh
-git clone https://gitlab.com/fvtronics/quire.git
+git clone https://codeberg.org/fvtronics/quire.git
 cd quire
 meson setup build
 ```
