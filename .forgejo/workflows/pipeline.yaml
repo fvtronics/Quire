@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  SONAR_USER_HOME: ${{ github.workspace }}/.sonar
+  SONAR_USER_HOME: ${{ forgejo.workspace }}/.sonar
 
 jobs:
   checks:
@@ -17,19 +17,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: https://data.forgejo.org/actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Install Rust
-        uses: https://github.com/dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          components: clippy, rustfmt
-
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: https://data.forgejo.org/actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -58,19 +52,19 @@ jobs:
         run: cargo test --locked
 
       - name: Install Coverage Tool
-        if: vars.SONAR_ENABLED == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        if: vars.SONAR_ENABLED == 'true' && forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/heads/')
         run: cargo install cargo-llvm-cov --locked
 
       - name: Generate Sonar Reports
-        if: vars.SONAR_ENABLED == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        if: vars.SONAR_ENABLED == 'true' && forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/heads/')
         run: |
           mkdir -p target/sonar
           cargo clippy --locked --message-format=json > target/sonar/clippy.json
           cargo llvm-cov --locked --lcov --output-path target/sonar/lcov.info
 
       - name: Upload Sonar Reports
-        if: vars.SONAR_ENABLED == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-        uses: actions/upload-artifact@v3
+        if: vars.SONAR_ENABLED == 'true' && forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/heads/')
+        uses: https://data.forgejo.org/actions/upload-artifact@v3
         with:
           name: sonar-reports
           path: target/sonar
@@ -80,18 +74,18 @@ jobs:
   sonarqube:
     name: SonarQube Cloud
     needs: checks
-    if: vars.SONAR_ENABLED == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+    if: vars.SONAR_ENABLED == 'true' && forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/heads/')
     runs-on: sonar
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: https://data.forgejo.org/actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Cache Sonar
-        uses: actions/cache@v4
+        uses: https://data.forgejo.org/actions/cache@v4
         with:
           path: .sonar/cache
           key: ${{ runner.os }}-sonar
@@ -99,17 +93,17 @@ jobs:
             ${{ runner.os }}-sonar-
 
       - name: Download Sonar Reports
-        uses: actions/download-artifact@v3
+        uses: https://data.forgejo.org/actions/download-artifact@v3
         with:
           name: sonar-reports
           path: target/sonar
 
       - name: Prepare Sonar Cache
-        run: mkdir -p "$GITHUB_WORKSPACE/.sonar/cache"
+        run: mkdir -p "$FORGEJO_WORKSPACE/.sonar/cache"
 
       - name: SonarQube Cloud Scan
         run: |
-          export SONAR_USER_HOME="$GITHUB_WORKSPACE/.sonar"
+          export SONAR_USER_HOME="$FORGEJO_WORKSPACE/.sonar"
           sonar-scanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -117,17 +111,17 @@ jobs:
 
   flatpak-bundle:
     name: Flatpak Bundle
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/tags/v')
     runs-on: flatpak-builder
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: https://data.forgejo.org/actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Cache Flatpak Sources
-        uses: actions/cache@v4
+        uses: https://data.forgejo.org/actions/cache@v4
         with:
           path: |
             .flatpak-builder/downloads
@@ -137,7 +131,7 @@ jobs:
             ${{ runner.os }}-flatpak-sources-
 
       - name: Cache Flatpak Builds
-        uses: actions/cache@v4
+        uses: https://data.forgejo.org/actions/cache@v4
         with:
           path: .flatpak-builder/cache
           key: ${{ runner.os }}-flatpak-builds-${{ hashFiles('com.fvtronics.Quire.json', 'cargo-sources.json', 'Cargo.lock') }}
@@ -171,16 +165,16 @@ jobs:
             build-dir \
             com.fvtronics.Quire.json
 
-          FLATPAK_BUNDLE="quire-${GITHUB_REF#refs/tags/}.flatpak"
+          FLATPAK_BUNDLE="quire-${FORGEJO_REF#refs/tags/}.flatpak"
           flatpak build-bundle \
             repo \
             "$FLATPAK_BUNDLE" \
             --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo \
             com.fvtronics.Quire
-          echo "FLATPAK_BUNDLE=$FLATPAK_BUNDLE" >> "$GITHUB_ENV"
+          echo "FLATPAK_BUNDLE=$FLATPAK_BUNDLE" >> "$FORGEJO_ENV"
 
       - name: Upload Flatpak Bundle
-        uses: actions/upload-artifact@v3
+        uses: https://data.forgejo.org/actions/upload-artifact@v3
         with:
           name: flatpak-bundle
           path: quire-*.flatpak
@@ -190,23 +184,18 @@ jobs:
   release:
     name: Create Forgejo Release
     needs: [checks, flatpak-bundle]
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/tags/v')
     runs-on: fedora
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: https://data.forgejo.org/actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Install Rust
-        uses: https://github.com/dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: https://data.forgejo.org/actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -218,7 +207,7 @@ jobs:
 
       - name: Validate Release Version
         run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
+          VERSION="${FORGEJO_REF#refs/tags/v}"
           CARGO_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
           MESON_VERSION="$(sed -n "s/^ *version: '\(.*\)',/\1/p" meson.build | head -n 1)"
 
@@ -235,15 +224,14 @@ jobs:
           desktop-file-validate /tmp/com.fvtronics.Quire.desktop
 
       - name: Download Flatpak Bundle
-        uses: actions/download-artifact@v3
+        uses: https://data.forgejo.org/actions/download-artifact@v3
         with:
           name: flatpak-bundle
-          path: .
+          path: dist/release
 
       - name: Create Forgejo Release
-        uses: https://github.com/softprops/action-gh-release@v2
+        uses: https://data.forgejo.org/actions/forgejo-release@v2.12.1
         with:
-          body_path: CHANGELOG.md
-          files: quire-*.flatpak
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          direction: upload
+          release-dir: dist/release
+          release-notes-file: CHANGELOG.md
