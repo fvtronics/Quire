@@ -104,8 +104,13 @@ jobs:
           name: sonar-reports
           path: target/sonar
 
+      - name: Prepare Sonar Cache
+        run: mkdir -p "$GITHUB_WORKSPACE/.sonar/cache"
+
       - name: SonarQube Cloud Scan
-        run: sonar-scanner
+        run: |
+          export SONAR_USER_HOME="$GITHUB_WORKSPACE/.sonar"
+          sonar-scanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
