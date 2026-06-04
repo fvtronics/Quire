@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install Rust
         uses: https://github.com/dtolnay/rust-toolchain@stable
@@ -80,16 +81,14 @@ jobs:
     name: SonarQube Cloud
     needs: checks
     if: vars.SONAR_ENABLED == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-    runs-on: fedora
-    container:
-      image: sonarsource/sonar-scanner-cli:latest
-      options: --entrypoint ""
+    runs-on: sonar
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Cache Sonar
         uses: actions/cache@v4
@@ -119,13 +118,13 @@ jobs:
   flatpak-bundle:
     name: Flatpak Bundle
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    runs-on: fedora
-    container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+    runs-on: flatpak-builder
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Use Checkout Sources
         run: |
@@ -184,6 +183,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install Rust
         uses: https://github.com/dtolnay/rust-toolchain@stable
