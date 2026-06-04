@@ -126,6 +126,16 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Cache Flatpak Sources
+        uses: actions/cache@v4
+        with:
+          path: |
+            .flatpak-builder/downloads
+            .flatpak-builder/git
+          key: ${{ runner.os }}-flatpak-sources-${{ hashFiles('com.fvtronics.Quire.json', 'cargo-sources.json', 'Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-flatpak-sources-
+
       - name: Use Checkout Sources
         run: |
           python3 - <<'PY'
@@ -145,10 +155,8 @@ jobs:
 
       - name: Build Flatpak Bundle
         run: |
-          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak-builder \
             --repo=repo \
-            --user \
             --install-deps-from=flathub \
             --disable-rofiles-fuse \
             --disable-updates \
