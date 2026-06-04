@@ -136,6 +136,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-flatpak-sources-
 
+      - name: Cache Flatpak Builds
+        uses: actions/cache@v4
+        with:
+          path: .flatpak-builder/cache
+          key: ${{ runner.os }}-flatpak-builds-${{ hashFiles('com.fvtronics.Quire.json', 'cargo-sources.json', 'Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-flatpak-builds-
+
       - name: Use Checkout Sources
         run: |
           python3 - <<'PY'
