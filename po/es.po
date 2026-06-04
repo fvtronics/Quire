@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Quire 0.1.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-03 12:23-0400\n"
-"PO-Revision-Date: 2026-06-03 12:25-0400\n"
+"POT-Creation-Date: 2026-06-04 09:49-0400\n"
+"PO-Revision-Date: 2026-06-04 09:52-0400\n"
 "Last-Translator: Francisco <fvasquez>\n"
 "Language-Team: es_DO\n"
 "Language: es\n"
@@ -80,43 +80,47 @@ msgid "View and edit PDF metadata"
 msgstr "Ver y editar metadatos del PDF"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:67
-#: data/com.fvtronics.Quire.metainfo.xml.in:80
+#: data/com.fvtronics.Quire.metainfo.xml.in:75
 #: data/com.fvtronics.Quire.metainfo.xml.in:88
-#: data/com.fvtronics.Quire.metainfo.xml.in:101
+#: data/com.fvtronics.Quire.metainfo.xml.in:96
+#: data/com.fvtronics.Quire.metainfo.xml.in:109
 msgid "Changes"
 msgstr "Cambios"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:69
+msgid "Improved icon scalability and shadows"
+msgstr "Se mejoró la escalabilidad del ícono y sus sombras"
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:77
 msgid "Rename app from Folios to Quire"
 msgstr "Renombrar app de Folios a Quire"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:70
+#: data/com.fvtronics.Quire.metainfo.xml.in:78
 msgid "Modify app icon"
 msgstr "Modificar ícono de aplicación"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:76
-#: data/com.fvtronics.Quire.metainfo.xml.in:96
-#: data/com.fvtronics.Quire.metainfo.xml.in:123
+#: data/com.fvtronics.Quire.metainfo.xml.in:84
+#: data/com.fvtronics.Quire.metainfo.xml.in:104
 msgid "New"
 msgstr "Nuevo"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:78
+#: data/com.fvtronics.Quire.metainfo.xml.in:86
 msgid ""
 "Added an undo action for clearing the document list in the merge section"
 msgstr ""
 "Se añadió una acción de deshacer al limpiar los documentos en la sección de "
 "combinar"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:82
+#: data/com.fvtronics.Quire.metainfo.xml.in:90
 msgid "Improved app usability in small windows"
 msgstr ""
 "Mejoras de usabilidad de la aplicación con tamaños de ventana reducidos"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:90
+#: data/com.fvtronics.Quire.metainfo.xml.in:98
 msgid "Improved keyboard navigation throughout the app"
 msgstr "Mejoras de navegación con teclado en la aplicación"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:98
+#: data/com.fvtronics.Quire.metainfo.xml.in:106
 msgid ""
 "Added undo options when removing PDFs, clearing the merge list, removing "
 "pages, or resetting the page order"
@@ -124,62 +128,44 @@ msgstr ""
 "Se añadieron opciones de deshacer al remover archivos PDF, remover páginas o "
 "restablecer el orden de las páginas."
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:99
+#: data/com.fvtronics.Quire.metainfo.xml.in:107
 msgid "Added an option to open keyboard shortcuts from the app menu"
 msgstr ""
 "Se añadió una opción para abrir los atajos de teclado desde el menú de la "
 "aplicación"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:103
+#: data/com.fvtronics.Quire.metainfo.xml.in:111
 msgid "Fixed right-click menus sometimes becoming unavailable"
 msgstr "Se corrigió el comportamiento de los menús de clic derecho"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:105
 #: data/com.fvtronics.Quire.metainfo.xml.in:113
+#: data/com.fvtronics.Quire.metainfo.xml.in:121
 msgid "Optimizations"
 msgstr "Optimizaciones"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:107
+#: data/com.fvtronics.Quire.metainfo.xml.in:115
 msgid ""
 "Improved responsiveness when reordering PDFs and pages in large documents"
 msgstr ""
 "Se mejoró la responsividad al reordenar documentos y páginas en documentos "
 "grandes."
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:115
+#: data/com.fvtronics.Quire.metainfo.xml.in:123
 msgid "Improved preview sizing in list and grid views"
 msgstr ""
 "Se mejoró el tamaño de las previsualizaciones en las vistas de lista y "
 "cuadrícula"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:116
+#: data/com.fvtronics.Quire.metainfo.xml.in:124
 msgid "Improved responsiveness when working with large PDFs"
 msgstr "Se mejoró la responsividad al trabajar con archivos PDF grandes"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:117
+#: data/com.fvtronics.Quire.metainfo.xml.in:125
 msgid ""
 "Preserved the scroll position while editing items in list and grid views"
 msgstr ""
 "Se mantuvo la posición del scroll al editar elementos en las vistas de lista "
 "y cuadrícula"
-
-#: data/com.fvtronics.Quire.metainfo.xml.in:125
-msgid "Added right-click menus for items that can be reordered"
-msgstr ""
-"Se añadieron menús de clic derecho para los elementos que pueden ser "
-"reordenados"
-
-#: data/com.fvtronics.Quire.metainfo.xml.in:126
-msgid "Added options to duplicate PDFs and pages while organizing documents"
-msgstr ""
-"Se añadieron opciones para duplicar archivos PDF y páginas al organizar "
-"documentos"
-
-#: data/com.fvtronics.Quire.metainfo.xml.in:127
-msgid "Added an option to insert blank pages while organizing a PDF"
-msgstr ""
-"Se añadió la opción de insertar una página en blanco al organizar un archivo "
-"PDF"
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
 #: src/application.rs:122
@@ -835,6 +821,21 @@ msgid "1 page"
 msgid_plural "{} pages"
 msgstr[0] "1 página"
 msgstr[1] "{} páginas"
+
+#~ msgid "Added right-click menus for items that can be reordered"
+#~ msgstr ""
+#~ "Se añadieron menús de clic derecho para los elementos que pueden ser "
+#~ "reordenados"
+
+#~ msgid "Added options to duplicate PDFs and pages while organizing documents"
+#~ msgstr ""
+#~ "Se añadieron opciones para duplicar archivos PDF y páginas al organizar "
+#~ "documentos"
+
+#~ msgid "Added an option to insert blank pages while organizing a PDF"
+#~ msgstr ""
+#~ "Se añadió la opción de insertar una página en blanco al organizar un "
+#~ "archivo PDF"
 
 #~ msgid "of"
 #~ msgstr "de"
