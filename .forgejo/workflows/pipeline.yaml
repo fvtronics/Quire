@@ -57,28 +57,29 @@ jobs:
         run: cargo test --locked
 
       - name: Install Coverage Tool
-        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/')
+        if: vars.SONAR_ENABLED == 'true' && (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/'))
         run: cargo install cargo-llvm-cov --locked
 
       - name: Generate Sonar Reports
-        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/')
+        if: vars.SONAR_ENABLED == 'true' && (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/'))
         run: |
           mkdir -p target/sonar
           cargo clippy --locked --message-format=json > target/sonar/clippy.json
           cargo llvm-cov --locked --lcov --output-path target/sonar/lcov.info
 
       - name: Upload Sonar Reports
-        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/')
+        if: vars.SONAR_ENABLED == 'true' && (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/'))
         uses: actions/upload-artifact@v3
         with:
           name: sonar-reports
           path: target/sonar
           if-no-files-found: error
+          retention-days: 1
 
   sonarqube:
     name: SonarQube Cloud
     needs: checks
-    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/')
+    if: vars.SONAR_ENABLED == 'true' && (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/'))
     runs-on: fedora
     container:
       image: sonarsource/sonar-scanner-cli:latest
@@ -117,6 +118,7 @@ jobs:
 
   flatpak-bundle:
     name: Flatpak Bundle
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: fedora
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
@@ -155,7 +157,7 @@ jobs:
             build-dir \
             com.fvtronics.Quire.json
 
-          FLATPAK_BUNDLE="quire-${GITHUB_SHA}.flatpak"
+          FLATPAK_BUNDLE="quire-${GITHUB_REF#refs/tags/}.flatpak"
           flatpak build-bundle \
             repo \
             "$FLATPAK_BUNDLE" \
@@ -167,8 +169,9 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: flatpak-bundle
-          path: quire-${{ github.sha }}.flatpak
+          path: quire-*.flatpak
           if-no-files-found: error
+          retention-days: 1
 
   release:
     name: Create Forgejo Release
@@ -216,9 +219,16 @@ jobs:
           cp data/com.fvtronics.Quire.desktop.in /tmp/com.fvtronics.Quire.desktop
           desktop-file-validate /tmp/com.fvtronics.Quire.desktop
 
+      - name: Download Flatpak Bundle
+        uses: actions/download-artifact@v3
+        with:
+          name: flatpak-bundle
+          path: .
+
       - name: Create Forgejo Release
         uses: https://github.com/softprops/action-gh-release@v2
         with:
           body_path: CHANGELOG.md
+          files: quire-*.flatpak
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
