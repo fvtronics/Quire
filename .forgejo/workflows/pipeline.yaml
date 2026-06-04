@@ -181,7 +181,7 @@ jobs:
     name: Create Forgejo Release
     needs: [checks, flatpak-bundle]
     if: forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/tags/v')
-    runs-on: fedora
+    runs-on: linux-amd64
 
     steps:
       - name: Checkout
@@ -189,17 +189,6 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Cache Cargo
-        uses: https://data.forgejo.org/actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
 
       - name: Validate Release Version
         run: |
