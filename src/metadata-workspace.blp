@@ -109,6 +109,23 @@ template $MetadataWorkspace: Gtk.Box {
           title: _("Keywords");
         }
 
+        Gtk.ListBoxRow metadata_keywords_error_row {
+          visible: false;
+          selectable: false;
+          activatable: false;
+
+          child: Gtk.Label metadata_keywords_error_label {
+            xalign: 0;
+            wrap: true;
+            margin-start: 12;
+            margin-end: 12;
+            margin-top: 6;
+            margin-bottom: 6;
+
+            styles ["error"]
+          };
+        }
+
         Adw.ActionRow metadata_creator_row {
           title: _("Creator");
         }

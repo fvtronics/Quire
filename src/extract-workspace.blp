@@ -90,6 +90,23 @@ template $ExtractWorkspace: Gtk.Box {
         Adw.EntryRow extract_ranges_entry {
           title: _("Pages");
         }
+
+        Gtk.ListBoxRow extract_ranges_error_row {
+          visible: false;
+          selectable: false;
+          activatable: false;
+
+          child: Gtk.Label extract_ranges_error_label {
+            xalign: 0;
+            wrap: true;
+            margin-start: 12;
+            margin-end: 12;
+            margin-top: 6;
+            margin-bottom: 6;
+
+            styles ["error"]
+          };
+        }
       }
     }
 

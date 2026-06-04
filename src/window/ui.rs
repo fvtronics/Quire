@@ -2,8 +2,11 @@ use adw::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::gdk_pixbuf::{InterpType, Pixbuf, PixbufRotation};
 use gtk::{gio, glib};
+use std::cell::{Cell, RefCell};
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
+use std::time::Duration;
 
 const LIST_COLLECTION_PREVIEW_WIDTH: i32 = 128;
 const LIST_COLLECTION_PREVIEW_HEIGHT: i32 = 128;
@@ -15,6 +18,7 @@ const GRID_COLLECTION_PREVIEW_MIN_HEIGHT: i32 = 132;
 const SINGLE_FILE_PREVIEW_MIN_WIDTH: i32 = 40;
 const SINGLE_FILE_PREVIEW_MIN_HEIGHT: i32 = 54;
 const PREVIEW_TILE_MIN_WIDTH: i32 = 150;
+const ENTRY_VALIDATION_DELAY: Duration = Duration::from_secs(1);
 
 pub(super) fn pdf_filters() -> gio::ListStore {
     let filter = gtk::FileFilter::new();
@@ -135,14 +139,135 @@ pub(super) fn icon_button(icon_name: &str, tooltip: &str) -> gtk::Button {
     button
 }
 
-pub(super) fn set_entry_validation_error(entry: &adw::EntryRow, has_error: bool, message: &str) {
-    if has_error {
-        entry.add_css_class("error");
-        entry.set_tooltip_text(Some(message));
-    } else {
-        entry.remove_css_class("error");
-        entry.set_tooltip_text(None);
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(super) enum EntryValidationDisplay {
+    #[default]
+    Hidden,
+    StyleOnly,
+    Message,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct DelayedEntryValidationState {
+    display: Cell<EntryValidationDisplay>,
+}
+
+impl DelayedEntryValidationState {
+    pub(super) fn reset(&self) {
+        self.display.set(EntryValidationDisplay::Hidden);
     }
+
+    fn show_style(&self) {
+        self.display.set(EntryValidationDisplay::StyleOnly);
+    }
+
+    fn show_message(&self) {
+        self.display.set(EntryValidationDisplay::Message);
+    }
+
+    pub(super) fn display(&self, has_error: bool) -> EntryValidationDisplay {
+        if has_error {
+            self.display.get()
+        } else {
+            EntryValidationDisplay::Hidden
+        }
+    }
+}
+
+pub(super) struct EntryValidation<'a> {
+    entry: &'a adw::EntryRow,
+    error_row: &'a gtk::ListBoxRow,
+    error_label: &'a gtk::Label,
+}
+
+impl<'a> EntryValidation<'a> {
+    pub(super) fn new(
+        entry: &'a adw::EntryRow,
+        error_row: &'a gtk::ListBoxRow,
+        error_label: &'a gtk::Label,
+    ) -> Self {
+        Self {
+            entry,
+            error_row,
+            error_label,
+        }
+    }
+
+    pub(super) fn set_error(&self, display: EntryValidationDisplay, message: &str) {
+        if display != EntryValidationDisplay::Hidden {
+            self.entry.add_css_class("error");
+            self.entry
+                .update_property(&[gtk::accessible::Property::Description(message)]);
+            self.entry.update_state(&[gtk::accessible::State::Invalid(
+                gtk::AccessibleInvalidState::True,
+            )]);
+            self.error_label
+                .set_label(if display == EntryValidationDisplay::Message {
+                    message
+                } else {
+                    ""
+                });
+            self.error_row
+                .set_visible(display == EntryValidationDisplay::Message);
+        } else {
+            self.entry.remove_css_class("error");
+            self.entry
+                .reset_property(gtk::AccessibleProperty::Description);
+            self.entry.update_state(&[gtk::accessible::State::Invalid(
+                gtk::AccessibleInvalidState::False,
+            )]);
+            self.error_label.set_label("");
+            self.error_row.set_visible(false);
+        }
+    }
+}
+
+pub(super) fn connect_delayed_entry_validation(
+    entry: &adw::EntryRow,
+    validation_state: Rc<DelayedEntryValidationState>,
+    changed: impl Fn() + 'static,
+    refresh: impl Fn() + 'static,
+) {
+    let pending_validation = Rc::new(RefCell::new(None::<glib::SourceId>));
+    let refresh = Rc::new(refresh);
+
+    let pending_validation_for_changed = pending_validation.clone();
+    let validation_state_for_changed = validation_state.clone();
+    let refresh_for_changed = refresh.clone();
+    entry.connect_changed(move |_| {
+        if let Some(source_id) = pending_validation_for_changed.borrow_mut().take() {
+            source_id.remove();
+        }
+
+        validation_state_for_changed.reset();
+        changed();
+
+        let pending_validation_for_timeout = pending_validation_for_changed.clone();
+        let validation_state_for_timeout = validation_state_for_changed.clone();
+        let refresh = refresh_for_changed.clone();
+        let source_id = glib::timeout_add_local_once(ENTRY_VALIDATION_DELAY, move || {
+            pending_validation_for_timeout.borrow_mut().take();
+            validation_state_for_timeout.show_style();
+            refresh();
+        });
+        pending_validation_for_changed
+            .borrow_mut()
+            .replace(source_id);
+    });
+
+    let focus = gtk::EventControllerFocus::new();
+    let pending_validation_for_focus = pending_validation.clone();
+    let validation_state_for_focus = validation_state.clone();
+    let refresh_for_focus = refresh.clone();
+    focus.connect_leave(move |_| {
+        if let Some(source_id) = pending_validation_for_focus.borrow_mut().take() {
+            source_id.remove();
+        }
+
+        validation_state_for_focus.show_message();
+        refresh_for_focus();
+    });
+    entry.add_controller(focus);
 }
 
 pub(super) fn page_ranges_error_message() -> String {
@@ -584,7 +709,10 @@ fn format_page_range(start: u32, end: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{fit_size, format_page_ranges, rotated_size, tile_control_focus_direction};
+    use super::{
+        fit_size, format_page_ranges, rotated_size, tile_control_focus_direction,
+        DelayedEntryValidationState, EntryValidationDisplay,
+    };
 
     #[test]
     fn format_page_ranges_groups_contiguous_pages() {
@@ -596,6 +724,23 @@ mod tests {
         assert_eq!(format_page_ranges(&[]), "");
         assert_eq!(format_page_ranges(&[4]), "4");
         assert_eq!(format_page_ranges(&[1, 3, 5]), "1,3,5");
+    }
+
+    #[test]
+    fn delayed_entry_validation_state_tracks_visible_error_level() {
+        let state = DelayedEntryValidationState::default();
+
+        assert_eq!(state.display(true), EntryValidationDisplay::Hidden);
+
+        state.show_style();
+        assert_eq!(state.display(true), EntryValidationDisplay::StyleOnly);
+        assert_eq!(state.display(false), EntryValidationDisplay::Hidden);
+
+        state.show_message();
+        assert_eq!(state.display(true), EntryValidationDisplay::Message);
+
+        state.reset();
+        assert_eq!(state.display(true), EntryValidationDisplay::Hidden);
     }
 
     #[test]

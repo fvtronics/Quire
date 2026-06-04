@@ -1,7 +1,7 @@
 use super::ui::{
-    clear_box, file_subtitle, open_pdf_file, page_count_error_message, page_count_label,
-    page_numbers_error_message, pdf_file_row, select_folder, set_entry_validation_error,
-    single_file_preview_widget,
+    clear_box, connect_delayed_entry_validation, file_subtitle, open_pdf_file,
+    page_count_error_message, page_count_label, page_numbers_error_message, pdf_file_row,
+    select_folder, single_file_preview_widget, DelayedEntryValidationState, EntryValidation,
 };
 use super::workspace::{
     load_single_processable_pdf, open_output, output_option_callback, parent_window,
@@ -47,10 +47,12 @@ impl SplitMode {
 
 mod imp {
     use super::super::state::SplitState;
+    use super::DelayedEntryValidationState;
     use adw::subclass::prelude::*;
     use gtk::prelude::EditableExt;
     use gtk::{glib, TemplateChild};
     use std::cell::Cell;
+    use std::rc::Rc;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/fvtronics/Quire/split-workspace.ui")]
@@ -74,7 +76,15 @@ mod imp {
         #[template_child]
         pub split_specific_pages_entry: TemplateChild<adw::EntryRow>,
         #[template_child]
+        pub split_specific_pages_error_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub split_specific_pages_error_label: TemplateChild<gtk::Label>,
+        #[template_child]
         pub split_pages_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub split_pages_error_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub split_pages_error_label: TemplateChild<gtk::Label>,
         #[template_child]
         pub split_prefix_entry: TemplateChild<adw::EntryRow>,
         #[template_child]
@@ -86,6 +96,8 @@ mod imp {
 
         pub split: SplitState,
         pub is_running: Cell<bool>,
+        pub(super) specific_pages_validation: Rc<DelayedEntryValidationState>,
+        pub(super) every_n_pages_validation: Rc<DelayedEntryValidationState>,
     }
 
     #[glib::object_subclass]
@@ -191,16 +203,38 @@ impl SplitWorkspace {
         });
 
         let workspace = self.clone();
-        imp.split_specific_pages_entry.connect_changed(move |_| {
+        let specific_pages_changed = move || {
             workspace.imp().split.job.clear_last_output();
             workspace.update_view();
-        });
+        };
 
         let workspace = self.clone();
-        imp.split_pages_entry.connect_changed(move |_| {
+        let refresh_specific_pages_validation = move || {
+            workspace.update_view();
+        };
+        connect_delayed_entry_validation(
+            &imp.split_specific_pages_entry,
+            imp.specific_pages_validation.clone(),
+            specific_pages_changed,
+            refresh_specific_pages_validation,
+        );
+
+        let workspace = self.clone();
+        let every_n_pages_changed = move || {
             workspace.imp().split.job.clear_last_output();
             workspace.update_view();
-        });
+        };
+
+        let workspace = self.clone();
+        let refresh_every_n_pages_validation = move || {
+            workspace.update_view();
+        };
+        connect_delayed_entry_validation(
+            &imp.split_pages_entry,
+            imp.every_n_pages_validation.clone(),
+            every_n_pages_changed,
+            refresh_every_n_pages_validation,
+        );
 
         let workspace = self.clone();
         imp.split_prefix_entry.connect_changed(move |_| {
@@ -359,14 +393,22 @@ impl SplitWorkspace {
         imp.split_pages_entry
             .set_sensitive(has_file && split_mode == Some(SplitMode::EveryNPages) && !is_busy);
         imp.split_prefix_entry.set_sensitive(has_file && !is_busy);
-        set_entry_validation_error(
+        EntryValidation::new(
             &imp.split_specific_pages_entry,
-            specific_pages_error,
+            &imp.split_specific_pages_error_row,
+            &imp.split_specific_pages_error_label,
+        )
+        .set_error(
+            imp.specific_pages_validation.display(specific_pages_error),
             &page_numbers_error_message(),
         );
-        set_entry_validation_error(
+        EntryValidation::new(
             &imp.split_pages_entry,
-            every_n_pages_error,
+            &imp.split_pages_error_row,
+            &imp.split_pages_error_label,
+        )
+        .set_error(
+            imp.every_n_pages_validation.display(every_n_pages_error),
             &page_count_error_message(),
         );
 

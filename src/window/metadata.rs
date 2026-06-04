@@ -1,6 +1,6 @@
 use super::ui::{
-    clear_box, file_subtitle, open_pdf_file, pdf_file_row, save_pdf_file,
-    set_entry_validation_error, single_file_preview_widget,
+    clear_box, connect_delayed_entry_validation, file_subtitle, open_pdf_file, pdf_file_row,
+    save_pdf_file, single_file_preview_widget, DelayedEntryValidationState, EntryValidation,
 };
 use super::workspace::{
     load_single_processable_pdf, open_output, output_option_callback, parent_window,
@@ -22,9 +22,11 @@ fn keywords_error_message() -> String {
 
 mod imp {
     use super::super::state::MetadataState;
+    use super::DelayedEntryValidationState;
     use adw::subclass::prelude::*;
     use gtk::{glib, TemplateChild};
     use std::cell::Cell;
+    use std::rc::Rc;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/fvtronics/Quire/metadata-workspace.ui")]
@@ -52,6 +54,10 @@ mod imp {
         #[template_child]
         pub metadata_keywords_entry: TemplateChild<adw::EntryRow>,
         #[template_child]
+        pub metadata_keywords_error_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub metadata_keywords_error_label: TemplateChild<gtk::Label>,
+        #[template_child]
         pub metadata_creator_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub metadata_producer_row: TemplateChild<adw::ActionRow>,
@@ -64,6 +70,7 @@ mod imp {
 
         pub metadata: MetadataState,
         pub is_running: Cell<bool>,
+        pub(super) keywords_validation: Rc<DelayedEntryValidationState>,
     }
 
     #[glib::object_subclass]
@@ -147,7 +154,23 @@ impl MetadataWorkspace {
         self.connect_metadata_changed(&imp.metadata_title_entry);
         self.connect_metadata_changed(&imp.metadata_author_entry);
         self.connect_metadata_changed(&imp.metadata_subject_entry);
-        self.connect_metadata_changed(&imp.metadata_keywords_entry);
+
+        let workspace = self.clone();
+        let keywords_changed = move || {
+            workspace.imp().metadata.job.clear_last_output();
+            workspace.update_view();
+        };
+
+        let workspace = self.clone();
+        let refresh_keywords_validation = move || {
+            workspace.update_view();
+        };
+        connect_delayed_entry_validation(
+            &imp.metadata_keywords_entry,
+            imp.keywords_validation.clone(),
+            keywords_changed,
+            refresh_keywords_validation,
+        );
     }
 
     pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
@@ -331,9 +354,17 @@ impl MetadataWorkspace {
     }
 
     fn update_keywords_entry_state(&self, has_error: bool) {
-        let entry = &self.imp().metadata_keywords_entry;
+        let imp = self.imp();
 
-        set_entry_validation_error(entry, has_error, &keywords_error_message());
+        EntryValidation::new(
+            &imp.metadata_keywords_entry,
+            &imp.metadata_keywords_error_row,
+            &imp.metadata_keywords_error_label,
+        )
+        .set_error(
+            imp.keywords_validation.display(has_error),
+            &keywords_error_message(),
+        );
     }
 
     fn open_last_output(&self) {

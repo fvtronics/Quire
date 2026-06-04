@@ -1,7 +1,8 @@
 use super::ui::{
-    format_page_ranges, icon_button, list_preview_widget, open_pdf_file, page_count_label,
-    page_ranges_error_message, pdf_file_row, preview_tile, save_pdf_file,
-    set_entry_validation_error, tile_controls, tile_label, tile_preview_widget,
+    connect_delayed_entry_validation, format_page_ranges, icon_button, list_preview_widget,
+    open_pdf_file, page_count_label, page_ranges_error_message, pdf_file_row, preview_tile,
+    save_pdf_file, tile_controls, tile_label, tile_preview_widget, DelayedEntryValidationState,
+    EntryValidation,
 };
 use super::workspace::{
     add_item_context_menu, collection_scroll_position, flow_box_item, load_single_processable_pdf,
@@ -21,9 +22,11 @@ use std::path::PathBuf;
 
 mod imp {
     use super::super::state::ExtractState;
+    use super::DelayedEntryValidationState;
     use adw::subclass::prelude::*;
     use gtk::{glib, TemplateChild};
     use std::cell::Cell;
+    use std::rc::Rc;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/com/fvtronics/Quire/extract-workspace.ui")]
@@ -47,6 +50,10 @@ mod imp {
         #[template_child]
         pub extract_ranges_entry: TemplateChild<adw::EntryRow>,
         #[template_child]
+        pub extract_ranges_error_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub extract_ranges_error_label: TemplateChild<gtk::Label>,
+        #[template_child]
         pub extract_view_stack: TemplateChild<adw::ViewStack>,
         #[template_child]
         pub extract_page_list: TemplateChild<gtk::ListBox>,
@@ -66,6 +73,7 @@ mod imp {
         pub extract: ExtractState,
         pub is_running: Cell<bool>,
         pub is_syncing_ranges_entry: Cell<bool>,
+        pub(super) ranges_validation: Rc<DelayedEntryValidationState>,
     }
 
     #[glib::object_subclass]
@@ -163,12 +171,12 @@ impl ExtractWorkspace {
         });
 
         let workspace = self.clone();
-        imp.extract_ranges_entry.connect_changed(move |entry| {
+        let ranges_changed = move || {
             let imp = workspace.imp();
             if imp.is_syncing_ranges_entry.get() {
                 return;
             }
-            let text = entry.text();
+            let text = imp.extract_ranges_entry.text();
             let text = text.trim();
 
             let changed_pages = if text.is_empty() {
@@ -187,7 +195,18 @@ impl ExtractWorkspace {
             } else {
                 workspace.refresh_items(&changed_pages);
             }
-        });
+        };
+
+        let workspace = self.clone();
+        let refresh_ranges_validation = move || {
+            workspace.refresh_view_state();
+        };
+        connect_delayed_entry_validation(
+            &imp.extract_ranges_entry,
+            imp.ranges_validation.clone(),
+            ranges_changed,
+            refresh_ranges_validation,
+        );
     }
 
     pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
@@ -413,9 +432,13 @@ impl ExtractWorkspace {
         imp.extract_open_output_button
             .set_sensitive(imp.extract.job.has_last_output() && !is_busy);
         imp.extract_ranges_entry.set_sensitive(has_file && !is_busy);
-        set_entry_validation_error(
+        EntryValidation::new(
             &imp.extract_ranges_entry,
-            has_range_error,
+            &imp.extract_ranges_error_row,
+            &imp.extract_ranges_error_label,
+        )
+        .set_error(
+            imp.ranges_validation.display(has_range_error),
             &page_ranges_error_message(),
         );
 
