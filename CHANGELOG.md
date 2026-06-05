@@ -1,11 +1,7 @@
-# v0.2.5
-
-<p>New</p>
-<ul>
-  <li>Added a Watermark section</li>
-</ul>
+# v0.2.6
 
 <p>Changes</p>
 <ul>
-  <li>Improved feedback when fields need attention</li>
+  <li>Fixed missing icons and previews in some environments</li>
+  <li>Improved touchscreen support</li>
 </ul>

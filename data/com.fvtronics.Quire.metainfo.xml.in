@@ -36,31 +36,31 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.5/data/screenshots/merge.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/merge.png</image>
       <caption>Merge multiple PDF files into a single document</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.5/data/screenshots/organize.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/organize.png</image>
       <caption>Reorder and remove pages before saving a new PDF</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.5/data/screenshots/extract.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/extract.png</image>
       <caption>Extract selected pages into a new document</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.5/data/screenshots/split.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/split.png</image>
       <caption>Split a PDF into multiple documents</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.5/data/screenshots/compress.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/compress.png</image>
       <caption>Compress PDF files for smaller output</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.5/data/screenshots/metadata.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/metadata.png</image>
       <caption>View and edit PDF metadata</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.5/data/screenshots/watermark.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/watermark.png</image>
       <caption>Add a watermark to specific PDF pages</caption>
     </screenshot>
   </screenshots>
@@ -71,6 +71,15 @@
   </branding>
 
   <releases>
+    <release version="0.2.6" date="2026-06-05">
+      <description>
+        <p>Changes</p>
+        <ul>
+          <li>Fixed missing icons and previews in some environments</li>
+          <li>Improved touchscreen support</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.5" date="2026-06-04">
       <description>
         <p>New</p>
