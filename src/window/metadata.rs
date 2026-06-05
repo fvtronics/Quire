@@ -1,6 +1,7 @@
 use super::ui::{
-    clear_box, connect_delayed_entry_validation, file_subtitle, open_pdf_file, pdf_file_row,
-    save_pdf_file, single_file_preview_widget, DelayedEntryValidationState, EntryValidation,
+    clear_box, connect_delayed_entry_validation, file_subtitle, open_pdf_file, output_pdf_name,
+    pdf_file_row, save_pdf_file, single_file_preview_widget, DelayedEntryValidationState,
+    EntryValidation,
 };
 use super::workspace::{
     load_single_processable_pdf, open_output, output_option_callback, parent_window,
@@ -216,11 +217,12 @@ impl MetadataWorkspace {
 
         let workspace = self.clone();
         glib::spawn_future_local(async move {
+            let initial_name = output_pdf_name(&input_file, "metadata");
             if let Some(path) = save_pdf_file(
                 &parent,
                 &gettext("Save PDF Metadata"),
                 &gettext("Save"),
-                "Metadata.pdf",
+                &initial_name,
             )
             .await
             {

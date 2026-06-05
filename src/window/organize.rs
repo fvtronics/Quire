@@ -1,7 +1,7 @@
 use super::ui::{
     blank_list_preview_widget, blank_tile_preview_widget, dim_tile_label, list_preview_widget,
-    open_pdf_file, page_count_label, preview_tile, save_pdf_file, tile_controls, tile_label,
-    tile_preview_widget,
+    open_pdf_file, output_pdf_name, page_count_label, preview_tile, save_pdf_file, tile_controls,
+    tile_label, tile_preview_widget,
 };
 use super::workspace::{
     add_item_context_menu, collection_scroll_position, flow_box_item, load_single_processable_pdf,
@@ -179,16 +179,20 @@ impl OrganizeWorkspace {
     }
 
     fn choose_output_file(&self) {
+        let Some((input_file, _, _)) = self.imp().organize.selections() else {
+            return;
+        };
         let Some(parent) = parent_window(self) else {
             return;
         };
         let workspace = self.clone();
         glib::spawn_future_local(async move {
+            let initial_name = output_pdf_name(&input_file, "organized");
             if let Some(path) = save_pdf_file(
                 &parent,
                 &gettext("Save Organized PDF"),
                 &gettext("Save"),
-                "Organized.pdf",
+                &initial_name,
             )
             .await
             {

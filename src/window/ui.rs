@@ -102,6 +102,14 @@ pub(super) async fn save_pdf_file(
         .and_then(|file| file.path())
 }
 
+pub(super) fn output_pdf_name(input_file: &Path, action: &str) -> String {
+    input_file
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .map(|name| format!("{name}_{action}.pdf"))
+        .unwrap_or_else(|| format!("{action}.pdf"))
+}
+
 pub(super) async fn select_folder(
     parent: &impl IsA<gtk::Window>,
     title: &str,
@@ -738,9 +746,10 @@ fn format_page_range(start: u32, end: u32) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        fit_size, format_page_ranges, rotated_size, tile_control_focus_direction,
+        fit_size, format_page_ranges, output_pdf_name, rotated_size, tile_control_focus_direction,
         DelayedEntryValidationState, EntryValidationDisplay,
     };
+    use std::path::Path;
 
     #[test]
     fn format_page_ranges_groups_contiguous_pages() {
@@ -752,6 +761,14 @@ mod tests {
         assert_eq!(format_page_ranges(&[]), "");
         assert_eq!(format_page_ranges(&[4]), "4");
         assert_eq!(format_page_ranges(&[1, 3, 5]), "1,3,5");
+    }
+
+    #[test]
+    fn output_pdf_name_uses_input_stem_and_action() {
+        assert_eq!(
+            output_pdf_name(Path::new("/tmp/sample.pdf"), "organized"),
+            "sample_organized.pdf"
+        );
     }
 
     #[test]

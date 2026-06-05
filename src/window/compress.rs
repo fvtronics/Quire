@@ -1,5 +1,5 @@
 use super::ui::{
-    clear_box, file_subtitle, open_pdf_file, pdf_file_row, save_pdf_file,
+    clear_box, file_subtitle, open_pdf_file, output_pdf_name, pdf_file_row, save_pdf_file,
     single_file_preview_widget,
 };
 use super::workspace::{
@@ -161,11 +161,12 @@ impl CompressWorkspace {
 
         let workspace = self.clone();
         glib::spawn_future_local(async move {
+            let initial_name = output_pdf_name(&input_file, "compressed");
             if let Some(path) = save_pdf_file(
                 &parent,
                 &gettext("Save Compressed PDF"),
                 &gettext("Compress"),
-                "Compressed.pdf",
+                &initial_name,
             )
             .await
             {
