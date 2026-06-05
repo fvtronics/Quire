@@ -21,20 +21,6 @@
 	},
 	"modules": [
 		{
-			"name": "blueprint-compiler",
-			"buildsystem": "meson",
-			"cleanup": [
-				"*"
-			],
-			"sources": [
-				{
-					"type": "archive",
-					"url": "https://download.gnome.org/sources/blueprint-compiler/0.20/blueprint-compiler-0.20.4.tar.xz",
-					"sha256": "1f1ecc84bcd698902d422f7de83d39229a209dd3016f6d2c3b0ed0ab123f6891"
-				}
-			]
-		},
-		{
 			"name": "poppler",
 			"buildsystem": "cmake-ninja",
 			"config-opts": [
