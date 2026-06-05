@@ -23,6 +23,10 @@
 		{
 			"name": "poppler",
 			"buildsystem": "cmake-ninja",
+			"cleanup": [
+				"/include",
+				"/lib/pkgconfig"
+			],
 			"config-opts": [
 				"-DBUILD_GTK_TEST=OFF",
 				"-DBUILD_QT5_TESTS=OFF",
