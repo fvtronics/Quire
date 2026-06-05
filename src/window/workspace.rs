@@ -392,13 +392,13 @@ pub(super) fn setup_advanced_options_menu(
 
     let modern_pdf = adw::SwitchRow::builder()
         .title(gettext("Modern PDF Format"))
-        .tooltip_text(gettext("Save with PDF 1.5 object streams"))
+        .subtitle(gettext("Save with PDF 1.5 object streams"))
         .active(options.modern_pdf())
         .build();
     modern_pdf.connect_active_notify(move |row| (menu.modern_pdf)(row.is_active()));
     let remove_metadata = adw::SwitchRow::builder()
         .title(gettext("Remove Metadata"))
-        .tooltip_text(gettext("Remove existing metadata before saving"))
+        .subtitle(gettext("Remove existing metadata before saving"))
         .active(options.remove_metadata())
         .build();
     remove_metadata.connect_active_notify(move |row| (menu.remove_metadata)(row.is_active()));
@@ -408,7 +408,7 @@ pub(super) fn setup_advanced_options_menu(
     if let Some(normalize_page_size_option) = menu.normalize_page_size {
         let normalize_page_size = adw::SwitchRow::builder()
             .title(gettext("Normalize Page Size"))
-            .tooltip_text(gettext("Resize output pages to the largest page size"))
+            .subtitle(gettext("Resize output pages to the largest page size"))
             .active(normalize_page_size_option.active)
             .build();
         normalize_page_size.connect_active_notify(move |row| {
