@@ -23,10 +23,15 @@
   <provides>
     <binary>quire</binary>
   </provides>
-  <supports>
+  <requires>
+    <display_length compare="ge" side="shortest">410</display_length>
+    <display_length compare="ge" side="longest">600</display_length>
+  </requires>
+  <recommends>
     <control>keyboard</control>
     <control>pointing</control>
-  </supports>
+    <control>touch</control>
+  </recommends>
   <content_rating type="oars-1.1" />
 
   <screenshots>
