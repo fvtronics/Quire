@@ -8,12 +8,14 @@
   Simple GNOME utility for working with local PDF files
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Rust-2021-orange?logo=rust" alt="Rust 2021"/>
-  <img src="https://img.shields.io/badge/GTK-4-blue?logo=gtk" alt="GTK 4"/>
-  <img src="https://img.shields.io/badge/Platform-Linux-brightgreen" alt="Platform Linux"/>
-  <img src="https://img.shields.io/badge/License-GPL--3.0--or--later-blue" alt="License"/>
-</p>
+<div align="center">
+
+[![Rust 2021](https://img.shields.io/badge/Rust-2021-orange?logo=rust)](https://www.rust-lang.org)
+[![GTK 4](https://img.shields.io/badge/GTK-4-blue?logo=gtk)](https://gtk.org)
+[![Platform Linux](https://img.shields.io/badge/Platform-Linux-brightgreen)](#how-to-install)
+[![License](https://img.shields.io/badge/License-GPL--3.0--or--later-blue)](COPYING)
+
+</div>
 
 Merge PDFs, organize pages, extract page ranges, split documents,
 compress files, add watermarks, and edit metadata, all without relying on online services.
