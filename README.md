@@ -1,18 +1,22 @@
-# Quire
+<p align="center">
+  <img src="data/icons/hicolor/scalable/apps/com.fvtronics.Quire.svg" width="128" alt="Quire Logo"/>
+</p>
 
-Quire is a simple GNOME utility for working with local PDF files without a
-complex document suite.
+<h1 align="center">Quire</h1>
 
-It can merge multiple PDFs, organize pages, extract page ranges, split
-documents, compress files, and edit metadata without sending them to an online
-service.
+<p align="center">
+  Simple GNOME utility for working with local PDF files
+</p>
 
-[![Scanned on SonarQube](https://sonarcloud.io/images/project_badges/sonarcloud-white.svg)](https://sonarcloud.io/summary/overall?id=fvtronics_quire)
+<p align="center">
+  <img src="https://img.shields.io/badge/Rust-2021-orange?logo=rust" alt="Rust 2021"/>
+  <img src="https://img.shields.io/badge/GTK-4-blue?logo=gtk" alt="GTK 4"/>
+  <img src="https://img.shields.io/badge/Platform-Linux-brightgreen" alt="Platform Linux"/>
+  <img src="https://img.shields.io/badge/License-GPL--3.0--or--later-blue" alt="License"/>
+</p>
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_quire&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=fvtronics_quire)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_quire&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=fvtronics_quire)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_quire&metric=security_rating)](https://sonarcloud.io/summary/overall?id=fvtronics_quire)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_quire&metric=reliability_rating)](https://sonarcloud.io/summary/overall?id=fvtronics_quire)
+Merge PDFs, organize pages, extract page ranges, split documents,
+compress files, add watermarks, and edit metadata, all without relying on online services.
 
 ## Screenshots
 
@@ -50,6 +54,15 @@ To install the built package on your system, run the following command:
 ```sh
 meson install -C build
 ```
+
+## Code Quality
+
+[![Scanned on SonarQube](https://sonarcloud.io/images/project_badges/sonarcloud-white.svg)](https://sonarcloud.io/summary/overall?id=fvtronics_quire)
+
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_quire&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=fvtronics_quire)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_quire&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=fvtronics_quire)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_quire&metric=security_rating)](https://sonarcloud.io/summary/overall?id=fvtronics_quire)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=fvtronics_quire&metric=reliability_rating)](https://sonarcloud.io/summary/overall?id=fvtronics_quire)
 
 ## License
 
