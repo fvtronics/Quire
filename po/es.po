@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Quire 0.1.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-04 18:38-0400\n"
-"PO-Revision-Date: 2026-06-04 18:45-0400\n"
+"POT-Creation-Date: 2026-06-05 19:18-0400\n"
+"PO-Revision-Date: 2026-06-05 19:21-0400\n"
 "Last-Translator: Francisco <fvasquez>\n"
 "Language-Team: es_DO\n"
 "Language: es\n"
@@ -28,11 +28,11 @@ msgstr "Quire"
 #: data/com.fvtronics.Quire.desktop.in:3
 #: data/com.fvtronics.Quire.metainfo.xml.in:8
 msgid "Combine and edit PDF files"
-msgstr "Combinar y editar archivos PDF"
+msgstr "Combine y edite archivos PDF"
 
 #: data/com.fvtronics.Quire.desktop.in:9
-msgid "PDF;Merge;Split;Compress;Extract;Organize;Page;Document;GTK;"
-msgstr "PDF;Combinar;Dividir;Comprimir;Extraer;Organizar;Página;Documento;GTK;"
+msgid "PDF;Merge;Split;Extract;Organize;Watermark;"
+msgstr "PDF;Combinar;Dividir;Extraer;Organizar;"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:10
 msgid ""
@@ -55,86 +55,96 @@ msgstr ""
 msgid "Francisco Vásquez Cuevas"
 msgstr "Francisco Vásquez Cuevas"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:35
+#: data/com.fvtronics.Quire.metainfo.xml.in:40
 msgid "Merge multiple PDF files into a single document"
 msgstr "Combinar varios archivos PDF en un solo documento"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:39
+#: data/com.fvtronics.Quire.metainfo.xml.in:44
 msgid "Reorder and remove pages before saving a new PDF"
 msgstr "Reordenar y eliminar páginas antes de guardar un nuevo PDF"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:43
+#: data/com.fvtronics.Quire.metainfo.xml.in:48
 msgid "Extract selected pages into a new document"
 msgstr "Extraer páginas seleccionadas en un nuevo documento"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:47
+#: data/com.fvtronics.Quire.metainfo.xml.in:52
 msgid "Split a PDF into multiple documents"
 msgstr "Dividir un PDF en varios documentos"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:51
+#: data/com.fvtronics.Quire.metainfo.xml.in:56
 msgid "Compress PDF files for smaller output"
 msgstr "Comprimir archivos PDF para obtener un tamaño más reducido"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:55
+#: data/com.fvtronics.Quire.metainfo.xml.in:60
 msgid "View and edit PDF metadata"
 msgstr "Ver y editar metadatos del PDF"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:59
+#: data/com.fvtronics.Quire.metainfo.xml.in:64
 msgid "Add a watermark to specific PDF pages"
 msgstr "Añadir una marca de agua a páginas específicas el archivo PDF"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:71
-#: data/com.fvtronics.Quire.metainfo.xml.in:100
-#: data/com.fvtronics.Quire.metainfo.xml.in:120
-msgid "New"
-msgstr "Nuevo"
-
-#: data/com.fvtronics.Quire.metainfo.xml.in:73
-msgid "Added a Watermark section"
-msgstr "Se añadió una sección de marca de agua"
-
-#: data/com.fvtronics.Quire.metainfo.xml.in:75
-#: data/com.fvtronics.Quire.metainfo.xml.in:83
-#: data/com.fvtronics.Quire.metainfo.xml.in:91
-#: data/com.fvtronics.Quire.metainfo.xml.in:104
-#: data/com.fvtronics.Quire.metainfo.xml.in:112
-#: data/com.fvtronics.Quire.metainfo.xml.in:125
+#: data/com.fvtronics.Quire.metainfo.xml.in:76
+#: data/com.fvtronics.Quire.metainfo.xml.in:89
+#: data/com.fvtronics.Quire.metainfo.xml.in:97
+#: data/com.fvtronics.Quire.metainfo.xml.in:105
+#: data/com.fvtronics.Quire.metainfo.xml.in:118
+#: data/com.fvtronics.Quire.metainfo.xml.in:126
+#: data/com.fvtronics.Quire.metainfo.xml.in:139
 msgid "Changes"
 msgstr "Cambios"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:77
+#: data/com.fvtronics.Quire.metainfo.xml.in:78
+msgid "Fixed missing icons and previews in some environments"
+msgstr ""
+"Se corrigieron los íconos y previsualizaciones faltantes en algunos entornos"
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:79
+msgid "Improved touchscreen support"
+msgstr "Se mejoró el soporte para pantalla táctil"
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:85
+#: data/com.fvtronics.Quire.metainfo.xml.in:114
+#: data/com.fvtronics.Quire.metainfo.xml.in:134
+msgid "New"
+msgstr "Nuevo"
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:87
+msgid "Added a Watermark section"
+msgstr "Se añadió una sección de marca de agua"
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:91
 msgid "Improved feedback when fields need attention"
 msgstr "Se mejoró la retroalimentación cuando un campo requiere atención"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:85
+#: data/com.fvtronics.Quire.metainfo.xml.in:99
 msgid "Improved icon scalability and shadows"
 msgstr "Se mejoró la escalabilidad del ícono y sus sombras"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:93
+#: data/com.fvtronics.Quire.metainfo.xml.in:107
 msgid "Rename app from Folios to Quire"
 msgstr "Renombrar app de Folios a Quire"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:94
+#: data/com.fvtronics.Quire.metainfo.xml.in:108
 msgid "Modify app icon"
 msgstr "Modificar ícono de aplicación"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:102
+#: data/com.fvtronics.Quire.metainfo.xml.in:116
 msgid ""
 "Added an undo action for clearing the document list in the merge section"
 msgstr ""
 "Se añadió una acción de deshacer al limpiar los documentos en la sección de "
 "combinar"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:106
+#: data/com.fvtronics.Quire.metainfo.xml.in:120
 msgid "Improved app usability in small windows"
 msgstr ""
 "Mejoras de usabilidad de la aplicación con tamaños de ventana reducidos"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:114
+#: data/com.fvtronics.Quire.metainfo.xml.in:128
 msgid "Improved keyboard navigation throughout the app"
 msgstr "Mejoras de navegación con teclado en la aplicación"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:122
+#: data/com.fvtronics.Quire.metainfo.xml.in:136
 msgid ""
 "Added undo options when removing PDFs, clearing the merge list, removing "
 "pages, or resetting the page order"
@@ -142,39 +152,39 @@ msgstr ""
 "Se añadieron opciones de deshacer al remover archivos PDF, remover páginas o "
 "restablecer el orden de las páginas."
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:123
+#: data/com.fvtronics.Quire.metainfo.xml.in:137
 msgid "Added an option to open keyboard shortcuts from the app menu"
 msgstr ""
 "Se añadió una opción para abrir los atajos de teclado desde el menú de la "
 "aplicación"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:127
+#: data/com.fvtronics.Quire.metainfo.xml.in:141
 msgid "Fixed right-click menus sometimes becoming unavailable"
 msgstr "Se corrigió el comportamiento de los menús de clic derecho"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:129
-#: data/com.fvtronics.Quire.metainfo.xml.in:137
+#: data/com.fvtronics.Quire.metainfo.xml.in:143
+#: data/com.fvtronics.Quire.metainfo.xml.in:151
 msgid "Optimizations"
 msgstr "Optimizaciones"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:131
+#: data/com.fvtronics.Quire.metainfo.xml.in:145
 msgid ""
 "Improved responsiveness when reordering PDFs and pages in large documents"
 msgstr ""
 "Se mejoró la responsividad al reordenar documentos y páginas en documentos "
 "grandes."
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:139
+#: data/com.fvtronics.Quire.metainfo.xml.in:153
 msgid "Improved preview sizing in list and grid views"
 msgstr ""
 "Se mejoró el tamaño de las previsualizaciones en las vistas de lista y "
 "cuadrícula"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:140
+#: data/com.fvtronics.Quire.metainfo.xml.in:154
 msgid "Improved responsiveness when working with large PDFs"
 msgstr "Se mejoró la responsividad al trabajar con archivos PDF grandes"
 
-#: data/com.fvtronics.Quire.metainfo.xml.in:141
+#: data/com.fvtronics.Quire.metainfo.xml.in:155
 msgid ""
 "Preserved the scroll position while editing items in list and grid views"
 msgstr ""
@@ -198,9 +208,9 @@ msgstr "FVtronics <fvasquez.public@fvtronics.com>"
 #: src/split-workspace.blp:63 src/split-workspace.blp:66
 #: src/watermark-workspace.blp:23 src/watermark-workspace.blp:24
 #: src/watermark-workspace.blp:63 src/watermark-workspace.blp:66
-#: src/window/compress.rs:147 src/window/extract.rs:225
-#: src/window/metadata.rs:198 src/window/organize.rs:174
-#: src/window/split.rs:260 src/window/watermark.rs:271
+#: src/window/compress.rs:147 src/window/extract.rs:227
+#: src/window/metadata.rs:202 src/window/organize.rs:174
+#: src/window/split.rs:264 src/window/watermark.rs:276
 msgid "Open PDF"
 msgstr "Abrir PDF"
 
@@ -220,7 +230,7 @@ msgstr "Abrir resultado"
 msgid "Compress PDF"
 msgstr "Comprimir PDF"
 
-#: src/compress-workspace.blp:43 src/window.blp:72 src/window/compress.rs:167
+#: src/compress-workspace.blp:43 src/window.blp:72 src/window/compress.rs:168
 msgid "Compress"
 msgstr "Comprimir"
 
@@ -259,7 +269,7 @@ msgstr "Descartar flujos de datos PDF vacíos"
 msgid "Extract Selected Pages"
 msgstr "Extraer páginas seleccionadas"
 
-#: src/extract-workspace.blp:43 src/window/extract.rs:269
+#: src/extract-workspace.blp:43 src/window/extract.rs:272
 msgid "Extract"
 msgstr "Extraer"
 
@@ -321,7 +331,7 @@ msgid "Save Metadata"
 msgstr "Guardar metadatos"
 
 #: src/metadata-workspace.blp:43 src/organize-workspace.blp:52
-#: src/window/metadata.rs:222 src/window/organize.rs:190
+#: src/window/metadata.rs:227 src/window/organize.rs:194
 msgid "Save"
 msgstr "Guardar"
 
@@ -365,7 +375,7 @@ msgstr "Restablecer orden de páginas"
 msgid "Reset"
 msgstr "Restablecer"
 
-#: src/organize-workspace.blp:49 src/window/organize.rs:189
+#: src/organize-workspace.blp:49 src/window/organize.rs:193
 msgid "Save Organized PDF"
 msgstr "Guardar PDF organizado"
 
@@ -393,8 +403,8 @@ msgstr "Desbloquear"
 msgid "Password"
 msgstr "Contraseña"
 
-#: src/password-dialog.blp:30 src/window/workspace.rs:757
-#: src/window/workspace.rs:769
+#: src/password-dialog.blp:30 src/window/workspace.rs:781
+#: src/window/workspace.rs:793
 msgid "Invalid password"
 msgstr "Contraseña incorrecta"
 
@@ -410,7 +420,7 @@ msgstr "Abrir carpeta"
 msgid "Split PDF"
 msgstr "Dividir PDF"
 
-#: src/split-workspace.blp:43 src/window.blp:65 src/window/split.rs:287
+#: src/split-workspace.blp:43 src/window.blp:65 src/window/split.rs:291
 msgid "Split"
 msgstr "Dividir"
 
@@ -427,7 +437,7 @@ msgid "Split After"
 msgstr "Dividir después de"
 
 #: src/split-workspace.blp:101 src/watermark-workspace.blp:116
-#: src/window/split.rs:145 src/window/watermark.rs:160
+#: src/window/split.rs:145 src/window/watermark.rs:163
 msgid "Specific Pages"
 msgstr "Páginas específicas"
 
@@ -454,7 +464,7 @@ msgid "Quit"
 msgstr "Salir"
 
 #: src/watermark-workspace.blp:40 src/watermark-workspace.blp:43
-#: src/window.rs:77 src/window.blp:79 src/window/watermark.rs:334
+#: src/window.rs:77 src/window.blp:79 src/window/watermark.rs:340
 msgid "Add Watermark"
 msgstr "Añadir marca de agua"
 
@@ -470,7 +480,7 @@ msgstr "Elija una imagen de marca de agua, luego guarde un nuevo documento."
 msgid "Watermark Image"
 msgstr "Imagen de marca de agua"
 
-#: src/watermark-workspace.blp:98 src/window/watermark.rs:418
+#: src/watermark-workspace.blp:98 src/window/watermark.rs:424
 msgid "No image selected"
 msgstr "No hay una imagen seleccionada"
 
@@ -506,9 +516,9 @@ msgstr "Editar metadatos"
 msgid "No files selected"
 msgstr "No hay archivos seleccionados"
 
-#: src/window.rs:89 src/window/compress.rs:261 src/window/extract.rs:452
-#: src/window/metadata.rs:320 src/window/organize.rs:383
-#: src/window/split.rs:422 src/window/watermark.rs:464
+#: src/window.rs:89 src/window/compress.rs:262 src/window/extract.rs:455
+#: src/window/metadata.rs:325 src/window/organize.rs:387
+#: src/window/split.rs:426 src/window/watermark.rs:470
 msgid "No PDF selected"
 msgstr "Ningún archivo PDF seleccionado"
 
@@ -564,27 +574,27 @@ msgstr "Atajos de teclado"
 msgid "_About Quire"
 msgstr "_Acerca de Quire"
 
-#: src/window/compress.rs:147 src/window/extract.rs:225
-#: src/window/metadata.rs:198 src/window/organize.rs:174
-#: src/window/split.rs:260 src/window/watermark.rs:271
+#: src/window/compress.rs:147 src/window/extract.rs:227
+#: src/window/metadata.rs:202 src/window/organize.rs:174
+#: src/window/split.rs:264 src/window/watermark.rs:276
 msgid "Open"
 msgstr "Abrir"
 
-#: src/window/compress.rs:166
+#: src/window/compress.rs:167
 msgid "Save Compressed PDF"
 msgstr "Guardar archivo PDF comprimido"
 
-#: src/window/compress.rs:210
+#: src/window/compress.rs:211
 msgid "Compressed PDF saved"
 msgstr "Archivo PDF comprimido guardado"
 
-#: src/window/compress.rs:255
+#: src/window/compress.rs:256
 msgid "Compressing PDF..."
 msgstr "Comprimiendo archivo PDF..."
 
-#: src/window/compress.rs:257 src/window/extract.rs:448
-#: src/window/metadata.rs:316 src/window/organize.rs:379
-#: src/window/split.rs:418 src/window/watermark.rs:460
+#: src/window/compress.rs:258 src/window/extract.rs:451
+#: src/window/metadata.rs:321 src/window/organize.rs:383
+#: src/window/split.rs:422 src/window/watermark.rs:466
 msgid "Loading PDF..."
 msgstr "Cargando archivo PDF..."
 
@@ -592,45 +602,45 @@ msgstr "Cargando archivo PDF..."
 msgid "Rotate Selected Pages"
 msgstr "Girar páginas seleccionadas"
 
-#: src/window/extract.rs:243 src/window/workspace.rs:749
+#: src/window/extract.rs:245 src/window/workspace.rs:773
 msgid "Choose at least one page"
 msgstr "Elija al menos una página"
 
-#: src/window/extract.rs:268
+#: src/window/extract.rs:271
 msgid "Save Extracted Pages"
 msgstr "Guardar páginas extraídas"
 
-#: src/window/extract.rs:313
+#: src/window/extract.rs:316
 msgid "Extracted pages saved"
 msgstr "Páginas extraídas guardadas"
 
-#: src/window/extract.rs:446
+#: src/window/extract.rs:449
 msgid "Extracting pages..."
 msgstr "Extrayendo páginas..."
 
-#: src/window/extract.rs:479 src/window/extract.rs:535
+#: src/window/extract.rs:482 src/window/extract.rs:538
 msgid "Select Page"
 msgstr "Seleccionar página"
 
-#: src/window/extract.rs:483 src/window/extract.rs:524
-#: src/window/organize.rs:632
+#: src/window/extract.rs:486 src/window/extract.rs:527
+#: src/window/organize.rs:636
 msgid "Page"
 msgstr "Página"
 
-#: src/window/extract.rs:492 src/window/extract.rs:527
+#: src/window/extract.rs:495 src/window/extract.rs:530
 #: src/window/workspace.rs:578
 msgid "Rotate Clockwise"
 msgstr "Girar en sentido horario"
 
-#: src/window/extract.rs:573 src/window/workspace.rs:613
+#: src/window/extract.rs:576 src/window/workspace.rs:613
 msgid "Rotate _Clockwise"
 msgstr "_Girar en sentido horario"
 
-#: src/window/extract.rs:577
+#: src/window/extract.rs:580
 msgid "_Unselect"
 msgstr "_Deseleccionar"
 
-#: src/window/extract.rs:579
+#: src/window/extract.rs:582
 msgid "_Select"
 msgstr "_Seleccionar"
 
@@ -665,7 +675,7 @@ msgid_plural "{} PDFs selected"
 msgstr[0] "1 archivo PDF seleccionado"
 msgstr[1] "{} archivos PDF seleccionados"
 
-#: src/window/merge.rs:517 src/window/organize.rs:495
+#: src/window/merge.rs:517 src/window/organize.rs:499
 msgid "Du_plicate"
 msgstr "_Duplicar"
 
@@ -677,27 +687,27 @@ msgstr "PDF eliminado"
 msgid "Merge list cleared"
 msgstr "Lista de documentos limpiada"
 
-#: src/window/metadata.rs:20
+#: src/window/metadata.rs:21
 msgid "Enter keywords separated by commas."
 msgstr "Introduzca palabras clave separadas por comas."
 
-#: src/window/metadata.rs:131
+#: src/window/metadata.rs:135
 msgid "Producer will be replaced when saving"
 msgstr "El productor se reemplazará al guardar"
 
-#: src/window/metadata.rs:221
+#: src/window/metadata.rs:226
 msgid "Save PDF Metadata"
 msgstr "Guardar metadatos del PDF"
 
-#: src/window/metadata.rs:266
+#: src/window/metadata.rs:271
 msgid "PDF metadata saved"
 msgstr "Metadatos del PDF guardados"
 
-#: src/window/metadata.rs:314
+#: src/window/metadata.rs:319
 msgid "Saving metadata..."
 msgstr "Guardando metadatos..."
 
-#: src/window/metadata.rs:379
+#: src/window/metadata.rs:384
 msgid "N/A"
 msgstr "N/A"
 
@@ -705,31 +715,31 @@ msgstr "N/A"
 msgid "Rotate All Pages"
 msgstr "Girar todas las páginas"
 
-#: src/window/organize.rs:230
+#: src/window/organize.rs:234
 msgid "Page order reset"
 msgstr "Orden de páginas reestablecido"
 
-#: src/window/organize.rs:251
+#: src/window/organize.rs:255
 msgid "Organized PDF saved"
 msgstr "Archivo PDF organizado guardado"
 
-#: src/window/organize.rs:377
+#: src/window/organize.rs:381
 msgid "Organizing pages..."
 msgstr "Organizando páginas..."
 
-#: src/window/organize.rs:398
+#: src/window/organize.rs:402
 msgid "Position"
 msgstr "Posición"
 
-#: src/window/organize.rs:491
+#: src/window/organize.rs:495
 msgid "Insert _Blank Page After"
 msgstr "_Insertar página en blanco"
 
-#: src/window/organize.rs:579
+#: src/window/organize.rs:583
 msgid "Page removed"
 msgstr "Página eliminada"
 
-#: src/window/organize.rs:630
+#: src/window/organize.rs:634
 msgid "Blank Page"
 msgstr "Página en blanco"
 
@@ -745,15 +755,15 @@ msgstr "Páginas pares"
 msgid "Odd Pages"
 msgstr "Páginas impares"
 
-#: src/window/split.rs:287
+#: src/window/split.rs:291
 msgid "Choose Output Folder"
 msgstr "Elegir carpeta de salida"
 
-#: src/window/split.rs:332
+#: src/window/split.rs:336
 msgid "Split PDFs saved"
 msgstr "Archivos PDF divididos guardados"
 
-#: src/window/split.rs:416
+#: src/window/split.rs:420
 msgid "Splitting PDF..."
 msgstr "Dividiendo archivo PDF..."
 
@@ -813,115 +823,115 @@ msgstr "Mover hacia abaj_o"
 msgid "_Remove"
 msgstr "_Eliminar"
 
-#: src/window/workspace.rs:748
+#: src/window/workspace.rs:772
 msgid "Choose at least two PDFs"
 msgstr "Elija al menos dos archivos PDF"
 
-#: src/window/workspace.rs:751
+#: src/window/workspace.rs:775
 msgid "Choose a different output file"
 msgstr "Elija un archivo de salida diferente"
 
-#: src/window/workspace.rs:754
+#: src/window/workspace.rs:778
 msgid "Could not open PDF"
 msgstr "No se pudo abrir el archivo PDF"
 
-#: src/window/workspace.rs:755 src/window/watermark.rs:295
+#: src/window/workspace.rs:779 src/window/watermark.rs:300
 msgid "Could not open image"
 msgstr "No se pudo abrir la imagen"
 
-#: src/window/workspace.rs:756 src/window/workspace.rs:768
+#: src/window/workspace.rs:780 src/window/workspace.rs:792
 msgid "Password required"
 msgstr "Se requiere contraseña"
 
-#: src/window/workspace.rs:758
+#: src/window/workspace.rs:782
 msgid "Could not process PDF"
 msgstr "No se pudo procesar el archivo PDF"
 
-#: src/window/workspace.rs:760
+#: src/window/workspace.rs:784
 msgid "Could not save PDF"
 msgstr "No se pudo guardar el archivo PDF"
 
-#: src/window/workspace.rs:762
+#: src/window/workspace.rs:786
 msgid "Could not finish operation"
 msgstr "No se pudo finalizar la operación"
 
-#: src/window/workspace.rs:770
+#: src/window/workspace.rs:794
 msgid "Could not preview PDF"
 msgstr "No se pudo generar la vista previa del PDF"
 
-#: src/window/ui.rs:25
+#: src/window/ui.rs:24
 msgid "PDF Documents"
 msgstr "Documentos PDF"
 
-#: src/window/ui.rs:37
+#: src/window/ui.rs:36
 msgid "Images"
 msgstr "Imágenes"
 
-#: src/window/ui.rs:142
+#: src/window/ui.rs:149
 #, rust-format
 msgid "Enter the password for {}."
 msgstr "Introduzca la contraseña de {}."
 
-#: src/window/ui.rs:302
+#: src/window/ui.rs:309
 msgid "Enter page ranges like 1,3-5,8."
 msgstr "Introduzca rangos de páginas como 1,3-5,8."
 
-#: src/window/ui.rs:306
+#: src/window/ui.rs:313
 msgid "Enter pages like 2,4,7."
 msgstr "Introduzca páginas como 2,4,7."
 
-#: src/window/ui.rs:310
+#: src/window/ui.rs:317
 msgid "Enter a page count of 1 or more."
 msgstr "Introduzca un número de páginas de 1 o más."
 
-#: src/window/ui.rs:335
+#: src/window/ui.rs:342
 msgid "Size unavailable"
 msgstr "Tamaño no disponible"
 
-#: src/window/ui.rs:671
+#: src/window/ui.rs:637
 #, rust-format
 msgid "1 page"
 msgid_plural "{} pages"
 msgstr[0] "1 página"
 msgstr[1] "{} páginas"
 
-#: src/window/watermark.rs:145
+#: src/window/watermark.rs:148
 msgid "Foreground"
 msgstr "Frente"
 
-#: src/window/watermark.rs:145
+#: src/window/watermark.rs:148
 msgid "Background"
 msgstr "Fondo"
 
-#: src/window/watermark.rs:157
+#: src/window/watermark.rs:160
 msgid "All Pages"
 msgstr "Todas las páginas"
 
-#: src/window/watermark.rs:158
+#: src/window/watermark.rs:161
 msgid "First Page"
 msgstr "Primera página"
 
-#: src/window/watermark.rs:159
+#: src/window/watermark.rs:162
 msgid "Last Page"
 msgstr "Última página"
 
-#: src/window/watermark.rs:286
+#: src/window/watermark.rs:291
 msgid "Choose Watermark Image"
 msgstr "Elija una imagen de marca de agua"
 
-#: src/window/watermark.rs:287
+#: src/window/watermark.rs:292
 msgid "Choose"
 msgstr "Elegir"
 
-#: src/window/watermark.rs:333
+#: src/window/watermark.rs:339
 msgid "Save Watermarked PDF"
 msgstr "Guardar archivo PDF con marca de agua"
 
-#: src/window/watermark.rs:376
+#: src/window/watermark.rs:382
 msgid "Watermarked PDF saved"
 msgstr "Archivo PDF con marca de agua guardado"
 
-#: src/window/watermark.rs:458
+#: src/window/watermark.rs:464
 msgid "Adding watermark..."
 msgstr "Añadiendo marca de agua..."
 
