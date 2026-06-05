@@ -682,12 +682,28 @@ pub(super) fn add_item_context_menu(widget: &impl IsA<gtk::Widget>, items: Vec<C
         let popover_for_click = popover.clone();
         gesture.connect_pressed(move |gesture, _, x, y| {
             let bounds = gtk::gdk::Rectangle::new(x as i32, y as i32, 1, 1);
-            popover_for_click.set_pointing_to(Some(&bounds));
-            popover_for_click.popup();
+            popup_context_menu(&popover_for_click, None, Some(&bounds));
             gesture.set_state(gtk::EventSequenceState::Claimed);
         });
         widget.add_controller(gesture);
     }
+
+    let long_press = gtk::GestureLongPress::builder()
+        .button(gtk::gdk::BUTTON_PRIMARY)
+        .touch_only(true)
+        .build();
+    let popover_for_long_press = popover.clone();
+    let popover_bin_for_long_press = popover_bin.clone();
+    long_press.connect_pressed(move |gesture, x, y| {
+        let bounds = gtk::gdk::Rectangle::new(x as i32, y as i32, 1, 1);
+        popup_context_menu(
+            &popover_for_long_press,
+            popover_bin_for_long_press.as_ref(),
+            Some(&bounds),
+        );
+        gesture.set_state(gtk::EventSequenceState::Claimed);
+    });
+    widget.add_controller(long_press);
 
     let key = gtk::EventControllerKey::new();
     let popover_for_key = popover.clone();
@@ -697,12 +713,7 @@ pub(super) fn add_item_context_menu(widget: &impl IsA<gtk::Widget>, items: Vec<C
             return glib::Propagation::Proceed;
         }
 
-        popover_for_key.set_pointing_to(None);
-        if let Some(popover_bin) = &popover_bin_for_key {
-            popover_bin.popup();
-        } else {
-            popover_for_key.popup();
-        }
+        popup_context_menu(&popover_for_key, popover_bin_for_key.as_ref(), None);
         glib::Propagation::Stop
     });
     widget.add_controller(key);
@@ -718,6 +729,19 @@ pub(super) fn add_item_context_menu(widget: &impl IsA<gtk::Widget>, items: Vec<C
         widget.connect_unrealize(move |_| {
             popover.unparent();
         });
+    }
+}
+
+fn popup_context_menu(
+    popover: &gtk::PopoverMenu,
+    popover_bin: Option<&gtk::PopoverBin>,
+    pointing_to: Option<&gtk::gdk::Rectangle>,
+) {
+    popover.set_pointing_to(pointing_to);
+    if let Some(popover_bin) = popover_bin {
+        popover_bin.popup();
+    } else {
+        popover.popup();
     }
 }
 

@@ -128,6 +128,9 @@ impl MetadataWorkspace {
             &imp.metadata.options,
             AdvancedOptionsMenu::new(modern_pdf, remove_metadata),
         );
+        imp.metadata_author_entry
+            .set_input_purpose(gtk::InputPurpose::Name);
+
         let producer_warning = gtk::Image::from_icon_name("dialog-warning-symbolic");
         producer_warning.set_tooltip_text(Some(&gettext("Producer will be replaced when saving")));
         imp.metadata_producer_row.add_suffix(&producer_warning);

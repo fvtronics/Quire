@@ -157,6 +157,10 @@ impl SplitWorkspace {
                 gtk::Expression::NONE,
                 "string",
             )));
+        imp.split_specific_pages_entry
+            .set_input_purpose(gtk::InputPurpose::Number);
+        imp.split_pages_entry
+            .set_input_purpose(gtk::InputPurpose::Digits);
 
         let modern_pdf = output_option_callback(
             self.clone(),

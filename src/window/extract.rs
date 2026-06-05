@@ -149,6 +149,8 @@ impl ExtractWorkspace {
                     normalize_page_size,
                 ),
         );
+        imp.extract_ranges_entry
+            .set_input_purpose(gtk::InputPurpose::Number);
 
         let workspace = self.clone();
         imp.extract_choose_button.connect_clicked(move |_| {

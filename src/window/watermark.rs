@@ -171,6 +171,8 @@ impl WatermarkWorkspace {
                 gtk::Expression::NONE,
                 "string",
             )));
+        imp.watermark_specific_pages_entry
+            .set_input_purpose(gtk::InputPurpose::Number);
 
         let modern_pdf = output_option_callback(
             self.clone(),
