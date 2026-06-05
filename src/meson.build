@@ -51,14 +51,6 @@ else
   cargo_env.set('CARGO_HOME', meson.project_build_root() / 'cargo-home')
 endif
 
-if get_option('buildtype') == 'release'
-  cargo_build_type = '--release'
-  rust_target = 'release'
-else
-  cargo_build_type = ''
-  rust_target = 'debug'
-endif
-
 cargo_build = custom_target(
   'cargo-build',
   build_by_default: true,
@@ -70,12 +62,10 @@ cargo_build = custom_target(
   command: [
     sh,
     '-c',
-    'cargo build $1 --manifest-path "$2" && cp "$3/$4/quire" "$5"',
+    'cargo build --release --manifest-path "$1" && cp "$2/release/quire" "$3"',
     'sh',
-    cargo_build_type,
     meson.project_source_root() / 'Cargo.toml',
     cargo_target_dir,
-    rust_target,
     '@OUTPUT@',
   ],
   env: cargo_env,

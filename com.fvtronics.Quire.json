@@ -19,17 +19,6 @@
 			"CARGO_NET_OFFLINE": "true"
 		}
 	},
-	"cleanup": [
-		"/include",
-		"/lib/pkgconfig",
-		"/man",
-		"/share/doc",
-		"/share/gtk-doc",
-		"/share/man",
-		"/share/pkgconfig",
-		"*.la",
-		"*.a"
-	],
 	"modules": [
 		{
 			"name": "blueprint-compiler",
@@ -48,7 +37,6 @@
 		{
 			"name": "poppler",
 			"buildsystem": "cmake-ninja",
-			"builddir": true,
 			"config-opts": [
 				"-DBUILD_GTK_TEST=OFF",
 				"-DBUILD_QT5_TESTS=OFF",
@@ -77,7 +65,6 @@
 		},
 		{
 			"name": "quire",
-			"builddir": true,
 			"buildsystem": "meson",
 			"sources": [
 				{
@@ -87,11 +74,7 @@
 				},
 				"cargo-sources.json"
 			],
-			"config-opts": [
-				"--libdir=lib",
-				"-Dbuildtype=release",
-				"-Dcargo-home=/run/build/quire/cargo"
-			]
+			"config-opts": ["-Dcargo-home=/run/build/quire/cargo"]
 		}
 	]
 }
