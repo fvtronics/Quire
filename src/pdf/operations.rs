@@ -5,7 +5,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use gtk::gdk_pixbuf::Pixbuf;
 use gtk::gio;
 use lopdf::content::{Content, Operation};
 use lopdf::{dictionary, Dictionary, Document, Object, ObjectId, Stream};
@@ -621,10 +620,11 @@ struct WatermarkImage {
 
 impl WatermarkImage {
     fn load(path: &Path) -> Result<Self, PdfBackendError> {
-        let pixbuf = Pixbuf::from_file(path).map_err(|error| PdfBackendError::ImageLoad {
-            path: path.to_path_buf(),
-            message: error.to_string(),
-        })?;
+        let pixbuf =
+            crate::image::load_pixbuf(path).map_err(|error| PdfBackendError::ImageLoad {
+                path: path.to_path_buf(),
+                message: error,
+            })?;
         if pixbuf.bits_per_sample() != 8 || pixbuf.width() <= 0 || pixbuf.height() <= 0 {
             return Err(PdfBackendError::ImageLoad {
                 path: path.to_path_buf(),

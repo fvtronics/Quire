@@ -1,7 +1,8 @@
 use super::ui::{
     clear_box, connect_delayed_entry_validation, file_subtitle, file_title, open_image_file,
     open_pdf_file, output_pdf_name, page_count_label, page_ranges_error_message, pdf_file_row,
-    save_pdf_file, single_file_preview_widget, DelayedEntryValidationState, EntryValidation,
+    save_pdf_file, single_file_preview_widget, texture_picture, DelayedEntryValidationState,
+    EntryValidation,
 };
 use super::workspace::{
     load_single_processable_pdf, open_output, output_option_callback, parent_window,
@@ -11,10 +12,12 @@ use super::workspace::{
     AdvancedOptionsMenu, SinglePdfLoadHandlers,
 };
 use super::PdfTool;
+use crate::image::argb32_surface_texture;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
-use gtk::gdk_pixbuf::{InterpType, Pixbuf};
+use gtk::gdk::prelude::GdkCairoContextExt;
+use gtk::gdk_pixbuf::Pixbuf;
 use gtk::glib;
 use std::path::{Path, PathBuf};
 
@@ -288,7 +291,7 @@ impl WatermarkWorkspace {
             )
             .await
             {
-                let pixbuf = match Pixbuf::from_file(&path) {
+                let pixbuf = match crate::image::load_pixbuf(&path) {
                     Ok(pixbuf) => pixbuf,
                     Err(error) => {
                         eprintln!("Watermark image preview error: {error}");
@@ -529,43 +532,61 @@ fn watermarked_preview_widget(
     watermark: &Pixbuf,
     opacity: f32,
 ) -> Option<gtk::Picture> {
-    let page = Pixbuf::from_read(std::io::Cursor::new(preview.png_data.clone())).ok()?;
-    let watermarked = page.copy()?;
-    let (width, height, x, y) = watermark_preview_placement(&page, watermark)?;
-    watermark.composite(
-        &watermarked,
-        x,
-        y,
-        width,
-        height,
-        x.into(),
-        y.into(),
-        width as f64 / watermark.width() as f64,
-        height as f64 / watermark.height() as f64,
-        InterpType::Bilinear,
-        (opacity as f64 * 255.0).round() as i32,
-    );
-
-    let texture = gtk::gdk::Texture::for_pixbuf(&watermarked);
-    let picture = gtk::Picture::for_paintable(&texture);
-    picture.set_can_shrink(true);
-    picture.set_content_fit(gtk::ContentFit::Contain);
-    Some(picture)
+    let texture = watermarked_preview_texture(preview, watermark, opacity)?;
+    Some(texture_picture(&texture))
 }
 
-fn watermark_preview_placement(page: &Pixbuf, watermark: &Pixbuf) -> Option<(i32, i32, i32, i32)> {
-    if page.width() <= 0 || page.height() <= 0 || watermark.width() <= 0 || watermark.height() <= 0
-    {
+#[allow(deprecated)]
+fn watermarked_preview_texture(
+    preview: &crate::preview::PagePreview,
+    watermark: &Pixbuf,
+    opacity: f32,
+) -> Option<gtk::gdk::Texture> {
+    let source = preview.image.surface()?;
+    let mut surface = cairo::ImageSurface::create(
+        cairo::Format::ARgb32,
+        preview.image.width,
+        preview.image.height,
+    )
+    .ok()?;
+    let context = cairo::Context::new(&surface).ok()?;
+    context.set_operator(cairo::Operator::Source);
+    context.set_source_surface(&source, 0.0, 0.0).ok()?;
+    context.paint().ok()?;
+    context.set_operator(cairo::Operator::Over);
+
+    let (width, height, x, y) =
+        watermark_preview_placement(preview.image.width, preview.image.height, watermark)?;
+    context.save().ok()?;
+    context.translate(x.into(), y.into());
+    context.scale(
+        width as f64 / watermark.width() as f64,
+        height as f64 / watermark.height() as f64,
+    );
+    context.set_source_pixbuf(watermark, 0.0, 0.0);
+    context.paint_with_alpha(opacity.into()).ok()?;
+    context.restore().ok()?;
+    drop(context);
+
+    argb32_surface_texture(&mut surface)
+}
+
+fn watermark_preview_placement(
+    page_width: i32,
+    page_height: i32,
+    watermark: &Pixbuf,
+) -> Option<(i32, i32, i32, i32)> {
+    if page_width <= 0 || page_height <= 0 || watermark.width() <= 0 || watermark.height() <= 0 {
         return None;
     }
 
-    let max_width = page.width() as f64 * (1.0 - WATERMARK_PREVIEW_MARGIN_RATIO * 2.0);
-    let max_height = page.height() as f64 * (1.0 - WATERMARK_PREVIEW_MARGIN_RATIO * 2.0);
+    let max_width = page_width as f64 * (1.0 - WATERMARK_PREVIEW_MARGIN_RATIO * 2.0);
+    let max_height = page_height as f64 * (1.0 - WATERMARK_PREVIEW_MARGIN_RATIO * 2.0);
     let scale = (max_width / watermark.width() as f64).min(max_height / watermark.height() as f64);
     let width = (watermark.width() as f64 * scale).round().max(1.0) as i32;
     let height = (watermark.height() as f64 * scale).round().max(1.0) as i32;
-    let x = (page.width() - width) / 2;
-    let y = (page.height() - height) / 2;
+    let x = (page_width - width) / 2;
+    let y = (page_height - height) / 2;
 
     Some((width, height, x, y))
 }
@@ -573,10 +594,13 @@ fn watermark_preview_placement(page: &Pixbuf, watermark: &Pixbuf) -> Option<(i32
 #[cfg(test)]
 mod tests {
     use super::{
-        watermark_preview_placement, WatermarkPageMode, WATERMARK_PAGES_ALL, WATERMARK_PAGES_FIRST,
-        WATERMARK_PAGES_LAST, WATERMARK_PAGES_SPECIFIC,
+        watermark_preview_placement, watermarked_preview_texture, WatermarkPageMode,
+        WATERMARK_PAGES_ALL, WATERMARK_PAGES_FIRST, WATERMARK_PAGES_LAST, WATERMARK_PAGES_SPECIFIC,
     };
+    use crate::image::Argb32Image;
+    use crate::preview::PagePreview;
     use gtk::gdk_pixbuf::{Colorspace, Pixbuf};
+    use gtk::prelude::*;
 
     #[test]
     fn watermark_page_mode_maps_known_indices() {
@@ -605,15 +629,51 @@ mod tests {
 
     #[test]
     fn watermark_preview_placement_scales_to_page_preview() {
-        let page = Pixbuf::new(Colorspace::Rgb, false, 8, 200, 283)
-            .expect("test page pixbuf should be created");
         let watermark = Pixbuf::new(Colorspace::Rgb, false, 8, 200, 283)
             .expect("test watermark pixbuf should be created");
 
         let (width, height, x, y) =
-            watermark_preview_placement(&page, &watermark).expect("placement should fit");
+            watermark_preview_placement(200, 283, &watermark).expect("placement should fit");
 
         assert_eq!((width, height), (168, 238));
         assert_eq!((x, y), (16, 22));
+    }
+
+    #[test]
+    fn watermarked_preview_texture_paints_watermark_pixels() {
+        let preview = PagePreview {
+            page_number: 1,
+            image: Argb32Image::new(2, 2, 8, white_argb32_pixels(4))
+                .expect("test preview image should be valid"),
+        };
+        let watermark = Pixbuf::new(Colorspace::Rgb, false, 8, 1, 1)
+            .expect("test watermark pixbuf should be created");
+        watermark.fill(0x000000ff);
+
+        let texture = watermarked_preview_texture(&preview, &watermark, 1.0)
+            .expect("watermarked preview texture should be created");
+        let mut pixels = vec![0; texture.width() as usize * texture.height() as usize * 4];
+        texture.download(&mut pixels, texture.width() as usize * 4);
+
+        assert_eq!(texture.width(), 2);
+        assert_eq!(texture.height(), 2);
+        assert!(
+            pixels.chunks_exact(4).all(is_darkened_opaque_argb32_pixel),
+            "{pixels:?}"
+        );
+    }
+
+    fn white_argb32_pixels(count: usize) -> Vec<u8> {
+        std::iter::repeat_n(white_argb32_pixel(), count)
+            .flatten()
+            .collect()
+    }
+
+    fn white_argb32_pixel() -> [u8; 4] {
+        [u8::MAX, u8::MAX, u8::MAX, u8::MAX]
+    }
+
+    fn is_darkened_opaque_argb32_pixel(pixel: &[u8]) -> bool {
+        pixel[0] < 200 && pixel[1] < 200 && pixel[2] < 200 && pixel[3] == u8::MAX
     }
 }

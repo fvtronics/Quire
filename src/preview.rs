@@ -16,7 +16,7 @@ const SINGLE_FILE_PREVIEW_WIDTH: i32 = 360;
 #[derive(Debug, Clone)]
 pub struct PagePreview {
     pub page_number: u32,
-    pub png_data: Vec<u8>,
+    pub(crate) image: crate::image::Argb32Image,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -223,17 +223,9 @@ fn render_page_preview(
         .map_err(|error| PreviewError::Render(error.to_string()))?;
     context.scale(scale, scale);
     page.render(&context);
-    surface.flush();
+    drop(context);
 
-    let mut png_data = Vec::new();
-    surface
-        .write_to_png(&mut png_data)
-        .map_err(|error| PreviewError::Render(error.to_string()))?;
-
-    Ok(Some(PagePreview {
-        page_number: index as u32 + 1,
-        png_data,
-    }))
+    page_preview_from_surface(surface, index as u32 + 1).map(Some)
 }
 
 fn document_metadata(document: &poppler::Document) -> crate::pdf::PdfDocumentMetadata {
@@ -252,18 +244,30 @@ fn embedded_page_thumbnail(
     page_number: u32,
     minimum_width: i32,
 ) -> Option<PagePreview> {
-    let (width, _) = page.thumbnail_size()?;
+    let (width, height) = page.thumbnail_size()?;
     if width < minimum_width {
         return None;
     }
 
-    let mut png_data = Vec::new();
-    page.thumbnail()?.write_to_png(&mut png_data).ok()?;
+    let thumbnail = page.thumbnail()?;
+    let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, width, height).ok()?;
+    let context = cairo::Context::new(&surface).ok()?;
+    context.set_operator(cairo::Operator::Source);
+    context.set_source_surface(&thumbnail, 0.0, 0.0).ok()?;
+    context.paint().ok()?;
+    drop(context);
 
-    Some(PagePreview {
-        page_number,
-        png_data,
-    })
+    page_preview_from_surface(surface, page_number).ok()
+}
+
+fn page_preview_from_surface(
+    mut surface: cairo::ImageSurface,
+    page_number: u32,
+) -> Result<PagePreview, PreviewError> {
+    let image =
+        crate::image::Argb32Image::from_surface(&mut surface).map_err(PreviewError::Render)?;
+
+    Ok(PagePreview { page_number, image })
 }
 
 #[cfg(test)]
@@ -278,7 +282,7 @@ mod tests {
     use std::path::Path;
 
     #[test]
-    fn render_page_previews_returns_page_count_and_pngs() {
+    fn render_page_previews_returns_page_count_and_pixels() {
         let dir = tempfile::tempdir().expect("test directory should be created");
         let input = dir.path().join("input.pdf");
         write_test_pdf(&input, 3);
@@ -291,7 +295,7 @@ mod tests {
             vec![1, 2, 3]
         );
         for preview in previews.previews.values() {
-            assert_png(&preview.png_data);
+            assert_preview_pixels(preview);
         }
     }
 
@@ -307,7 +311,7 @@ mod tests {
         assert_eq!(page_count, 2);
         let preview = preview.expect("first page preview should render");
         assert_eq!(preview.page_number, 1);
-        assert_png(&preview.png_data);
+        assert_preview_pixels(&preview);
     }
 
     #[test]
@@ -405,10 +409,7 @@ mod tests {
             .expect("encrypted test PDF should be saved");
     }
 
-    fn assert_png(data: &[u8]) {
-        assert!(
-            data.starts_with(b"\x89PNG\r\n\x1a\n"),
-            "preview should be PNG data"
-        );
+    fn assert_preview_pixels(preview: &super::PagePreview) {
+        assert!(preview.image.texture().is_some());
     }
 }

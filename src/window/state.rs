@@ -787,15 +787,7 @@ mod tests {
             page_count,
             previews: rendered_pages
                 .iter()
-                .map(|page_number| {
-                    (
-                        *page_number,
-                        crate::preview::PagePreview {
-                            page_number: *page_number,
-                            png_data: Vec::new(),
-                        },
-                    )
-                })
+                .map(|page_number| (*page_number, page_preview(*page_number)))
                 .collect(),
         }
     }
@@ -819,7 +811,13 @@ mod tests {
     fn page_preview(page_number: u32) -> crate::preview::PagePreview {
         crate::preview::PagePreview {
             page_number,
-            png_data: vec![page_number as u8],
+            image: crate::image::Argb32Image::new(
+                1,
+                1,
+                4,
+                vec![page_number as u8, page_number as u8, page_number as u8, 255],
+            )
+            .expect("test preview image should be valid"),
         }
     }
 
@@ -989,7 +987,10 @@ mod tests {
             state.passwords.borrow().get(&locked).map(String::as_str),
             Some("secret")
         );
-        assert_eq!(state.previews.borrow()[&locked].png_data, vec![1]);
+        assert_eq!(
+            state.previews.borrow()[&locked].image.pixels,
+            vec![1, 1, 1, 255]
+        );
         assert_eq!(state.job.last_output(), None);
     }
 

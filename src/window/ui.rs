@@ -1,9 +1,8 @@
+use crate::image::argb32_surface_texture;
 use adw::prelude::*;
 use gettextrs::{gettext, ngettext};
-use gtk::gdk_pixbuf::{InterpType, Pixbuf, PixbufRotation};
 use gtk::{gio, glib};
 use std::cell::{Cell, RefCell};
-use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Duration;
@@ -352,7 +351,7 @@ pub(super) fn rotated_preview_picture(
     preview: &crate::preview::PagePreview,
     rotation: i64,
 ) -> gtk::Picture {
-    match rotated_preview_pixbuf(preview, rotation).map(|pixbuf| pixbuf_picture(&pixbuf)) {
+    match rotated_preview_texture(preview, rotation).map(|texture| texture_picture(&texture)) {
         Some(picture) => picture,
         None => preview_picture_fallback(),
     }
@@ -441,9 +440,8 @@ fn collection_preview_widget(
     height: i32,
 ) -> gtk::Widget {
     let child: gtk::Widget = if let Some(preview) = preview {
-        let picture = match rotated_preview_pixbuf(preview, rotation)
-            .and_then(|pixbuf| fit_pixbuf(&pixbuf, width, height))
-            .map(|pixbuf| pixbuf_picture(&pixbuf))
+        let picture = match rotated_preview_texture(preview, rotation)
+            .map(|texture| texture_picture(&texture))
         {
             Some(picture) => picture,
             None => preview_picture_fallback(),
@@ -463,10 +461,8 @@ fn collection_blank_preview_widget(
     height: i32,
 ) -> gtk::Widget {
     let source_size = source_preview
-        .and_then(|preview| {
-            rotated_preview_pixbuf(preview, rotation)
-                .and_then(|pixbuf| fit_size(pixbuf.width(), pixbuf.height(), width, height))
-        })
+        .map(|preview| rotated_preview_size(preview, rotation))
+        .and_then(|size| fit_size(size.0, size.1, width, height))
         .unwrap_or_else(|| blank_page_fallback_size(width, height, rotation));
     let picture = match blank_page_texture(source_size.0, source_size.1) {
         Some(texture) => gtk::Picture::for_paintable(&texture),
@@ -510,12 +506,7 @@ fn collection_preview_size_request(width: i32, height: i32) -> (i32, i32) {
 }
 
 fn blank_page_texture(width: i32, height: i32) -> Option<gtk::gdk::Texture> {
-    let png_data = blank_page_png(width, height)?;
-    gtk::gdk::Texture::from_bytes(&glib::Bytes::from(&png_data)).ok()
-}
-
-fn blank_page_png(width: i32, height: i32) -> Option<Vec<u8>> {
-    let surface =
+    let mut surface =
         cairo::ImageSurface::create(cairo::Format::ARgb32, width.max(1), height.max(1)).ok()?;
     let context = cairo::Context::new(&surface).ok()?;
 
@@ -525,20 +516,9 @@ fn blank_page_png(width: i32, height: i32) -> Option<Vec<u8>> {
     context.set_line_width(1.0);
     context.rectangle(0.5, 0.5, width as f64 - 1.0, height as f64 - 1.0);
     context.stroke().ok()?;
-    surface.flush();
+    drop(context);
 
-    let mut png_data = Vec::new();
-    surface.write_to_png(&mut png_data).ok()?;
-    Some(png_data)
-}
-
-fn fit_pixbuf(pixbuf: &Pixbuf, max_width: i32, max_height: i32) -> Option<Pixbuf> {
-    let (width, height) = fit_size(pixbuf.width(), pixbuf.height(), max_width, max_height)?;
-    if width == pixbuf.width() && height == pixbuf.height() {
-        Some(pixbuf.clone())
-    } else {
-        pixbuf.scale_simple(width, height, InterpType::Bilinear)
-    }
+    argb32_surface_texture(&mut surface)
 }
 
 fn fit_size(width: i32, height: i32, max_width: i32, max_height: i32) -> Option<(i32, i32)> {
@@ -556,45 +536,23 @@ fn fit_size(width: i32, height: i32, max_width: i32, max_height: i32) -> Option<
 fn blank_page_fallback_size(width: i32, height: i32, rotation: i64) -> (i32, i32) {
     let page_width = width;
     let page_height = (width as f64 * std::f64::consts::SQRT_2).ceil() as i32;
-    let (page_width, page_height) = rotated_size(page_width, page_height, rotation);
+    let (page_width, page_height) = crate::image::rotated_size(page_width, page_height, rotation);
     fit_size(page_width, page_height, width, height).unwrap_or((width, height))
 }
 
-fn rotated_size(width: i32, height: i32, rotation: i64) -> (i32, i32) {
-    if matches!(normalize_rotation(rotation), 90 | 270) {
-        (height, width)
-    } else {
-        (width, height)
-    }
+fn rotated_preview_texture(
+    preview: &crate::preview::PagePreview,
+    rotation: i64,
+) -> Option<gtk::gdk::Texture> {
+    preview.image.rotated(rotation)?.texture()
 }
 
-fn rotated_preview_pixbuf(preview: &crate::preview::PagePreview, rotation: i64) -> Option<Pixbuf> {
-    let mut pixbuf = Pixbuf::from_read(Cursor::new(preview.png_data.clone())).ok()?;
-    if let Some(rotated) = match normalize_rotation(rotation) {
-        90 => pixbuf.rotate_simple(PixbufRotation::Clockwise),
-        180 => pixbuf.rotate_simple(PixbufRotation::Upsidedown),
-        270 => pixbuf.rotate_simple(PixbufRotation::Counterclockwise),
-        _ => None,
-    } {
-        pixbuf = rotated;
-    }
-    Some(pixbuf)
+fn rotated_preview_size(preview: &crate::preview::PagePreview, rotation: i64) -> (i32, i32) {
+    preview.image.rotated_size(rotation)
 }
 
-fn pixbuf_picture(pixbuf: &Pixbuf) -> gtk::Picture {
-    let format = if pixbuf.has_alpha() {
-        gtk::gdk::MemoryFormat::R8g8b8a8
-    } else {
-        gtk::gdk::MemoryFormat::R8g8b8
-    };
-    let texture = gtk::gdk::MemoryTexture::new(
-        pixbuf.width(),
-        pixbuf.height(),
-        format,
-        &pixbuf.read_pixel_bytes(),
-        pixbuf.rowstride() as usize,
-    );
-    let picture = gtk::Picture::for_paintable(&texture);
+pub(super) fn texture_picture(texture: &gtk::gdk::Texture) -> gtk::Picture {
+    let picture = gtk::Picture::for_paintable(texture);
     picture.set_can_shrink(true);
     picture.set_content_fit(gtk::ContentFit::Contain);
     picture
@@ -693,10 +651,6 @@ fn format_size(bytes: u64) -> String {
     }
 }
 
-fn normalize_rotation(rotation: i64) -> i64 {
-    rotation.rem_euclid(360)
-}
-
 fn tile_control_focus_direction(
     key: gtk::gdk::Key,
     modifiers: gtk::gdk::ModifierType,
@@ -746,7 +700,7 @@ fn format_page_range(start: u32, end: u32) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        fit_size, format_page_ranges, output_pdf_name, rotated_size, tile_control_focus_direction,
+        fit_size, format_page_ranges, output_pdf_name, tile_control_focus_direction,
         DelayedEntryValidationState, EntryValidationDisplay,
     };
     use std::path::Path;
@@ -807,9 +761,9 @@ mod tests {
 
     #[test]
     fn rotated_size_swaps_dimensions_for_quarter_turns() {
-        assert_eq!(rotated_size(100, 200, 90), (200, 100));
-        assert_eq!(rotated_size(100, 200, 270), (200, 100));
-        assert_eq!(rotated_size(100, 200, 180), (100, 200));
+        assert_eq!(crate::image::rotated_size(100, 200, 90), (200, 100));
+        assert_eq!(crate::image::rotated_size(100, 200, 270), (200, 100));
+        assert_eq!(crate::image::rotated_size(100, 200, 180), (100, 200));
     }
 
     #[test]
