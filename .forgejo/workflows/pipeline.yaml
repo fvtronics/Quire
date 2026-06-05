@@ -200,6 +200,11 @@ jobs:
           test "$VERSION" = "$MESON_VERSION"
           grep -q "<release version=\"$VERSION\"" data/com.fvtronics.Quire.metainfo.xml.in
 
+      - name: Install metadata validation tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends appstream desktop-file-utils
+
       - name: Validate App Metadata
         run: |
           python3 -m json.tool com.fvtronics.Quire.json >/dev/null
