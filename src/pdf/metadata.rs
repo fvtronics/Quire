@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-use lopdf::{dictionary, text_string, Dictionary, Document, IncrementalDocument, Object};
+use lopdf::{Dictionary, Document, IncrementalDocument, Object, dictionary, text_string};
 use std::path::PathBuf;
 
 use super::document::{load_document, remove_metadata, save_document, temporary_output_file};

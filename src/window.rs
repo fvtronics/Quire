@@ -102,7 +102,7 @@ mod imp {
     use super::{PdfTool, ViewMode};
     use adw::subclass::prelude::*;
     use gtk::prelude::*;
-    use gtk::{glib, TemplateChild};
+    use gtk::{TemplateChild, glib};
     use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]

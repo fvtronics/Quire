@@ -703,8 +703,8 @@ fn format_page_range(start: u32, end: u32) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        fit_size, format_page_ranges, output_pdf_name, tile_control_focus_direction,
-        DelayedEntryValidationState, EntryValidationDisplay,
+        DelayedEntryValidationState, EntryValidationDisplay, fit_size, format_page_ranges,
+        output_pdf_name, tile_control_focus_direction,
     };
     use std::path::Path;
 

@@ -955,10 +955,12 @@ mod tests {
 
         state.remove_file(0);
 
-        assert!(!state
-            .passwords
-            .borrow()
-            .contains_key(&PathBuf::from("locked.pdf")));
+        assert!(
+            !state
+                .passwords
+                .borrow()
+                .contains_key(&PathBuf::from("locked.pdf"))
+        );
     }
 
     #[test]

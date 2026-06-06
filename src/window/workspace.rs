@@ -1,4 +1,4 @@
-use super::ui::{ask_pdf_password, icon_button, PasswordPromptReason};
+use super::ui::{PasswordPromptReason, ask_pdf_password, icon_button};
 use super::{PdfTool, QuireWindow};
 use adw::prelude::*;
 use gettextrs::gettext;

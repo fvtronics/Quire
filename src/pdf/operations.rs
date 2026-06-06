@@ -7,12 +7,12 @@
 
 use gtk::gio;
 use lopdf::content::{Content, Operation};
-use lopdf::{dictionary, Dictionary, Document, Object, ObjectId, Stream};
+use lopdf::{Dictionary, Document, Object, ObjectId, Stream, dictionary};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use super::document::{
-    build_and_save_document, load_document, remove_metadata, save_document, OutputPages,
+    OutputPages, build_and_save_document, load_document, remove_metadata, save_document,
 };
 use super::metadata::edit_pdf_metadata_blocking;
 use super::pages::{

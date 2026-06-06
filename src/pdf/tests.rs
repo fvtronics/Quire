@@ -6,15 +6,15 @@
  */
 
 use super::{
-    app_producer_metadata, compress_pdf_blocking, edit_pdf_metadata_blocking, load_document,
-    merge_pdfs_blocking, parse_page_numbers, parse_page_ranges, split_breaks, split_pdf_blocking,
-    watermark_pdf_blocking, write_selected_pages, CompressOptions, PageSelection, PdfBackendError,
-    PdfDocumentMetadata, PdfEditableMetadata, PdfInput, PdfOutputOptions, PdfSaveOptions,
-    SplitRule, WatermarkLayer, WatermarkOptions, WatermarkTarget,
+    CompressOptions, PageSelection, PdfBackendError, PdfDocumentMetadata, PdfEditableMetadata,
+    PdfInput, PdfOutputOptions, PdfSaveOptions, SplitRule, WatermarkLayer, WatermarkOptions,
+    WatermarkTarget, app_producer_metadata, compress_pdf_blocking, edit_pdf_metadata_blocking,
+    load_document, merge_pdfs_blocking, parse_page_numbers, parse_page_ranges, split_breaks,
+    split_pdf_blocking, watermark_pdf_blocking, write_selected_pages,
 };
 use lopdf::{
-    content::Content, dictionary, Document, EncryptionState, EncryptionVersion, Object,
-    Permissions, Stream,
+    Document, EncryptionState, EncryptionVersion, Object, Permissions, Stream, content::Content,
+    dictionary,
 };
 use std::fs;
 use std::path::{Path, PathBuf};

@@ -1,19 +1,19 @@
+use super::PdfTool;
 use super::ui::{
-    connect_delayed_entry_validation, format_page_ranges, icon_button, list_preview_widget,
-    open_pdf_file, output_pdf_name, page_count_label, page_ranges_error_message, pdf_file_row,
-    preview_tile, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
-    DelayedEntryValidationState, EntryValidation,
+    DelayedEntryValidationState, EntryValidation, connect_delayed_entry_validation,
+    format_page_ranges, icon_button, list_preview_widget, open_pdf_file, output_pdf_name,
+    page_count_label, page_ranges_error_message, pdf_file_row, preview_tile, save_pdf_file,
+    tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
+    AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem, SinglePdfLoadHandlers,
     add_item_context_menu, collection_scroll_position, flow_box_item, load_single_processable_pdf,
     open_output, output_option_callback, parent_window, preserve_collection_scroll_position,
     replace_collection_item, restore_collection_scroll_position, run_output_job,
     setup_advanced_options_menu, setup_compact_workspace_margins, setup_default_width_breakpoint,
     setup_vertical_layout_breakpoint, show_backend_error, show_toast, update_shell_title,
-    update_shell_view_mode, AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem,
-    SinglePdfLoadHandlers,
+    update_shell_view_mode,
 };
-use super::PdfTool;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
@@ -24,7 +24,7 @@ mod imp {
     use super::super::state::ExtractState;
     use super::DelayedEntryValidationState;
     use adw::subclass::prelude::*;
-    use gtk::{glib, TemplateChild};
+    use gtk::{TemplateChild, glib};
     use std::cell::Cell;
     use std::rc::Rc;
 

@@ -1,17 +1,18 @@
+use super::PdfTool;
 use super::ui::{
     dim_tile_label, file_subtitle, file_title, list_preview_widget, open_pdf_files, preview_tile,
     save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    add_item_context_menu, collection_scroll_position, flow_box_item, load_processable_pdf,
-    open_output, ordered_item_context_menu_items, ordered_item_controls, output_option_callback,
-    parent_window, preserve_collection_scroll_position, replace_collection_item,
+    AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem, OrderedItemActions,
+    OrderedItemControlOptions, PdfLoadResult, PendingUndo, add_item_context_menu,
+    collection_scroll_position, flow_box_item, load_processable_pdf, open_output,
+    ordered_item_context_menu_items, ordered_item_controls, output_option_callback, parent_window,
+    preserve_collection_scroll_position, replace_collection_item,
     restore_collection_scroll_position, run_output_job, setup_advanced_options_menu,
     setup_compact_workspace_margins, show_pdf_load_error, update_shell_title,
-    update_shell_view_mode, AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem,
-    OrderedItemActions, OrderedItemControlOptions, PdfLoadResult, PendingUndo,
+    update_shell_view_mode,
 };
-use super::PdfTool;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
@@ -22,7 +23,7 @@ mod imp {
     use super::super::state::MergeState;
     use super::PendingUndo;
     use adw::subclass::prelude::*;
-    use gtk::{glib, TemplateChild};
+    use gtk::{TemplateChild, glib};
     use std::cell::Cell;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]

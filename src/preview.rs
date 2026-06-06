@@ -274,11 +274,11 @@ fn page_preview_from_surface(
 #[cfg(test)]
 mod tests {
     use super::{
-        render_first_page_preview_blocking, render_first_page_preview_with_count_blocking,
-        render_page_previews_blocking, PreviewError,
+        PreviewError, render_first_page_preview_blocking,
+        render_first_page_preview_with_count_blocking, render_page_previews_blocking,
     };
     use lopdf::{
-        dictionary, Document, EncryptionState, EncryptionVersion, Object, Permissions, Stream,
+        Document, EncryptionState, EncryptionVersion, Object, Permissions, Stream, dictionary,
     };
     use std::path::Path;
 

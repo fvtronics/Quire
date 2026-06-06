@@ -261,8 +261,8 @@ fn unpremultiply(value: u8, alpha: u8) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::{
-        argb32_surface, argb32_texture, load_pixbuf, pixbuf_from_surface, rotated_argb32_image,
-        rotated_size, Argb32Image,
+        Argb32Image, argb32_surface, argb32_texture, load_pixbuf, pixbuf_from_surface,
+        rotated_argb32_image, rotated_size,
     };
     use gtk::gdk::prelude::*;
 

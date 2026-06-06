@@ -1,17 +1,17 @@
+use super::PdfTool;
 use super::ui::{
-    clear_box, connect_delayed_entry_validation, file_subtitle, file_title, open_image_file,
-    open_pdf_file, output_pdf_name, page_count_label, page_ranges_error_message, pdf_file_row,
-    save_pdf_file, single_file_preview_widget, texture_picture, DelayedEntryValidationState,
-    EntryValidation,
+    DelayedEntryValidationState, EntryValidation, clear_box, connect_delayed_entry_validation,
+    file_subtitle, file_title, open_image_file, open_pdf_file, output_pdf_name, page_count_label,
+    page_ranges_error_message, pdf_file_row, save_pdf_file, single_file_preview_widget,
+    texture_picture,
 };
 use super::workspace::{
-    load_single_processable_pdf, open_output, output_option_callback, parent_window,
-    run_output_job, setup_advanced_options_menu, setup_compact_workspace_margins,
-    setup_default_height_breakpoint, setup_default_width_breakpoint,
-    setup_vertical_layout_breakpoint, show_toast, update_shell_title, update_shell_view_mode,
-    AdvancedOptionsMenu, SinglePdfLoadHandlers,
+    AdvancedOptionsMenu, SinglePdfLoadHandlers, load_single_processable_pdf, open_output,
+    output_option_callback, parent_window, run_output_job, setup_advanced_options_menu,
+    setup_compact_workspace_margins, setup_default_height_breakpoint,
+    setup_default_width_breakpoint, setup_vertical_layout_breakpoint, show_toast,
+    update_shell_title, update_shell_view_mode,
 };
-use super::PdfTool;
 use crate::image::argb32_surface_texture;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -52,7 +52,7 @@ mod imp {
     use super::super::state::WatermarkState;
     use super::{DelayedEntryValidationState, Pixbuf};
     use adw::subclass::prelude::*;
-    use gtk::{glib, TemplateChild};
+    use gtk::{TemplateChild, glib};
     use std::cell::{Cell, RefCell};
     use std::rc::Rc;
 
@@ -596,8 +596,8 @@ fn watermark_preview_placement(
 #[cfg(test)]
 mod tests {
     use super::{
-        watermark_preview_placement, watermarked_preview_texture, WatermarkPageMode,
         WATERMARK_PAGES_ALL, WATERMARK_PAGES_FIRST, WATERMARK_PAGES_LAST, WATERMARK_PAGES_SPECIFIC,
+        WatermarkPageMode, watermark_preview_placement, watermarked_preview_texture,
     };
     use crate::image::Argb32Image;
     use crate::preview::PagePreview;

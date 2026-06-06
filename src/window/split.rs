@@ -1,16 +1,16 @@
+use super::PdfTool;
 use super::ui::{
-    clear_box, connect_delayed_entry_validation, file_subtitle, open_pdf_file,
-    page_count_error_message, page_count_label, page_numbers_error_message, pdf_file_row,
-    select_folder, single_file_preview_widget, DelayedEntryValidationState, EntryValidation,
+    DelayedEntryValidationState, EntryValidation, clear_box, connect_delayed_entry_validation,
+    file_subtitle, open_pdf_file, page_count_error_message, page_count_label,
+    page_numbers_error_message, pdf_file_row, select_folder, single_file_preview_widget,
 };
 use super::workspace::{
-    load_single_processable_pdf, open_output, output_option_callback, parent_window,
-    run_output_job, setup_advanced_options_menu, setup_compact_workspace_margins,
-    setup_default_height_breakpoint, setup_default_width_breakpoint,
-    setup_vertical_layout_breakpoint, show_backend_error, update_shell_title,
-    update_shell_view_mode, AdvancedOptionsMenu, SinglePdfLoadHandlers,
+    AdvancedOptionsMenu, SinglePdfLoadHandlers, load_single_processable_pdf, open_output,
+    output_option_callback, parent_window, run_output_job, setup_advanced_options_menu,
+    setup_compact_workspace_margins, setup_default_height_breakpoint,
+    setup_default_width_breakpoint, setup_vertical_layout_breakpoint, show_backend_error,
+    update_shell_title, update_shell_view_mode,
 };
-use super::PdfTool;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
@@ -50,7 +50,7 @@ mod imp {
     use super::DelayedEntryValidationState;
     use adw::subclass::prelude::*;
     use gtk::prelude::EditableExt;
-    use gtk::{glib, TemplateChild};
+    use gtk::{TemplateChild, glib};
     use std::cell::Cell;
     use std::rc::Rc;
 
@@ -501,8 +501,8 @@ fn split_default_prefix(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        SplitMode, SPLIT_EVEN_PAGES, SPLIT_EVERY_N_PAGES, SPLIT_EVERY_PAGE, SPLIT_ODD_PAGES,
-        SPLIT_SPECIFIC_PAGES,
+        SPLIT_EVEN_PAGES, SPLIT_EVERY_N_PAGES, SPLIT_EVERY_PAGE, SPLIT_ODD_PAGES,
+        SPLIT_SPECIFIC_PAGES, SplitMode,
     };
 
     #[test]
