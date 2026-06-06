@@ -10,7 +10,7 @@
 
 <div align="center">
 
-[![Rust 2021](https://img.shields.io/badge/Rust-2021-orange?logo=rust)](https://www.rust-lang.org)
+[![Rust 2024](https://img.shields.io/badge/Rust-2024-orange?logo=rust)](https://www.rust-lang.org)
 [![GTK 4](https://img.shields.io/badge/GTK-4-blue?logo=gtk)](https://gtk.org)
 [![Platform Linux](https://img.shields.io/badge/Platform-Linux-brightgreen)](#how-to-install)
 [![License](https://img.shields.io/badge/License-GPL--3.0--or--later-blue)](COPYING)
