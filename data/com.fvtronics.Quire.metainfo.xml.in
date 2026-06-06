@@ -35,31 +35,31 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/merge.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.0/data/screenshots/merge.png</image>
       <caption>Merge multiple PDF files into a single document</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/organize.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.0/data/screenshots/organize.png</image>
       <caption>Reorder and remove pages before saving a new PDF</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/extract.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.0/data/screenshots/extract.png</image>
       <caption>Extract selected pages into a new document</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/split.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.0/data/screenshots/split.png</image>
       <caption>Split a PDF into multiple documents</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/compress.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.0/data/screenshots/compress.png</image>
       <caption>Compress PDF files for smaller output</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/metadata.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.0/data/screenshots/metadata.png</image>
       <caption>View and edit PDF metadata</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.2.6/data/screenshots/watermark.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.0/data/screenshots/watermark.png</image>
       <caption>Add a watermark to specific PDF pages</caption>
     </screenshot>
   </screenshots>
@@ -70,6 +70,18 @@
   </branding>
 
   <releases>
+    <release version="0.3.0" date="2026-06-06">
+      <description>
+        <p>New</p>
+        <ul>
+          <li>Add support for mobile window sizes</li>
+        </ul>
+        <p>Changes</p>
+        <ul>
+          <li>Improve app responsiveness when resizing it</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.6" date="2026-06-05">
       <description>
         <p>Changes</p>
@@ -117,41 +129,6 @@
         <p>Changes</p>
         <ul>
           <li>Improved app usability in small windows</li>
-        </ul>
-      </description>
-    </release>
-    <release version="0.2.1" date="2026-06-02">
-      <description>
-        <p>Changes</p>
-        <ul>
-          <li>Improved keyboard navigation throughout the app</li>
-        </ul>
-      </description>
-    </release>
-    <release version="0.2.0" date="2026-06-01">
-      <description>
-        <p>New</p>
-        <ul>
-          <li>Added undo options when removing PDFs, clearing the merge list, removing pages, or resetting the page order</li>
-          <li>Added an option to open keyboard shortcuts from the app menu</li>
-        </ul>
-        <p>Changes</p>
-        <ul>
-          <li>Fixed right-click menus sometimes becoming unavailable</li>
-        </ul>
-        <p>Optimizations</p>
-        <ul>
-          <li>Improved responsiveness when reordering PDFs and pages in large documents</li>
-        </ul>
-      </description>
-    </release>
-    <release version="0.1.9" date="2026-05-31">
-      <description>
-        <p>Optimizations</p>
-        <ul>
-          <li>Improved preview sizing in list and grid views</li>
-          <li>Improved responsiveness when working with large PDFs</li>
-          <li>Preserved the scroll position while editing items in list and grid views</li>
         </ul>
       </description>
     </release>

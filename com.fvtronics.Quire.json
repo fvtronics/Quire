@@ -58,7 +58,7 @@
                 {
                     "type": "git",
                     "url": "https://codeberg.org/fvtronics/quire.git",
-                    "tag": "v0.2.6"
+                    "tag": "v0.3.0"
                 },
                 "cargo-sources.json"
             ],

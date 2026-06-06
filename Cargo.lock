@@ -958,7 +958,7 @@ dependencies = [
 
 [[package]]
 name = "quire"
-version = "0.2.6"
+version = "0.3.0"
 dependencies = [
  "cairo-rs",
  "gettext-rs",
