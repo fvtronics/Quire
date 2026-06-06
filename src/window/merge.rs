@@ -1,17 +1,17 @@
 use super::PdfTool;
 use super::ui::{
-    dim_tile_label, file_subtitle, file_title, list_preview_widget, open_pdf_files, preview_tile,
-    save_pdf_file, tile_controls, tile_label, tile_preview_widget,
+    GridPreviewSize, dim_tile_label, file_subtitle, file_title, list_preview_widget,
+    open_pdf_files, preview_tile, save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem, OrderedItemActions,
-    OrderedItemControlOptions, PdfLoadResult, PendingUndo, add_item_context_menu,
-    collection_scroll_position, flow_box_item, load_processable_pdf, open_output,
-    ordered_item_context_menu_items, ordered_item_controls, output_option_callback, parent_window,
-    preserve_collection_scroll_position, replace_collection_item,
+    AdaptiveBreakpoints, AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem,
+    OrderedItemActions, OrderedItemControlOptions, PdfLoadResult, PendingUndo,
+    add_item_context_menu, collection_scroll_position, flow_box_item, load_processable_pdf,
+    open_output, ordered_item_context_menu_items, ordered_item_controls, output_option_callback,
+    parent_window, preserve_collection_scroll_position, replace_collection_item,
     restore_collection_scroll_position, run_output_job, setup_advanced_options_menu,
-    setup_compact_workspace_margins, show_pdf_load_error, update_shell_title,
-    update_shell_view_mode,
+    setup_compact_workspace_margins, setup_short_narrow_icon_buttons, setup_short_status_page,
+    show_pdf_load_error, update_shell_title, update_shell_view_mode,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -21,7 +21,7 @@ use std::path::{Path, PathBuf};
 
 mod imp {
     use super::super::state::MergeState;
-    use super::PendingUndo;
+    use super::{GridPreviewSize, PendingUndo};
     use adw::subclass::prelude::*;
     use gtk::{TemplateChild, glib};
     use std::cell::Cell;
@@ -58,6 +58,7 @@ mod imp {
 
         pub merge: MergeState,
         pub(super) pending_undo: PendingUndo,
+        pub(super) grid_preview_size: Cell<GridPreviewSize>,
         pub is_running: Cell<bool>,
     }
 
@@ -161,8 +162,25 @@ impl MergeWorkspace {
         });
     }
 
-    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
-        setup_compact_workspace_margins(breakpoint, self);
+    pub(super) fn setup_responsive_layout(&self, breakpoints: &AdaptiveBreakpoints) {
+        let imp = self.imp();
+        setup_compact_workspace_margins(breakpoints, self);
+        setup_short_status_page(breakpoints, &imp.empty_status);
+        setup_short_narrow_icon_buttons(
+            breakpoints,
+            &[
+                (&imp.add_button, "document-open-symbolic"),
+                (&imp.open_output_button, "arrow-into-box-symbolic"),
+                (&imp.clear_button, "edit-clear-symbolic"),
+                (&imp.merge_button, "view-paged-symbolic"),
+            ],
+        );
+    }
+
+    pub(super) fn set_grid_preview_size(&self, size: GridPreviewSize) {
+        if self.imp().grid_preview_size.replace(size) != size {
+            self.rebuild_collection(true);
+        }
     }
 
     fn choose_pdf_files(&self) {
@@ -468,7 +486,9 @@ impl MergeWorkspace {
         rotation: i64,
     ) -> gtk::FlowBoxChild {
         let tile = preview_tile();
-        tile.append(&tile_preview_widget(preview, rotation));
+        let preview_widget =
+            tile_preview_widget(preview, rotation, self.imp().grid_preview_size.get());
+        tile.append(&preview_widget);
         tile.append(&tile_label(file_title(path)));
 
         let controls = tile_controls();

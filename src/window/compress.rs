@@ -1,13 +1,14 @@
 use super::PdfTool;
 use super::ui::{
-    clear_box, file_subtitle, open_pdf_file, output_pdf_name, pdf_file_row, save_pdf_file,
+    clear_box, file_title, open_pdf_file, output_pdf_name, save_pdf_file,
     single_file_preview_widget,
 };
 use super::workspace::{
-    AdvancedOptionsMenu, SinglePdfLoadHandlers, load_single_processable_pdf, open_output,
-    output_option_callback, parent_window, run_output_job, setup_advanced_options_menu,
-    setup_compact_workspace_margins, setup_default_height_breakpoint,
-    setup_default_width_breakpoint, setup_vertical_layout_breakpoint, update_shell_title,
+    AdaptiveBreakpoints, AdvancedOptionsMenu, SinglePdfLoadHandlers, load_single_processable_pdf,
+    open_output, output_option_callback, parent_window, run_output_job,
+    setup_advanced_options_menu, setup_compact_workspace_margins, setup_default_height_breakpoint,
+    setup_default_width_breakpoint, setup_short_narrow_icon_buttons, setup_short_narrow_preview,
+    setup_short_status_page, setup_vertical_layout_breakpoint, update_shell_title,
     update_shell_view_mode,
 };
 use adw::prelude::*;
@@ -37,8 +38,6 @@ mod imp {
         pub compress_content: TemplateChild<gtk::Box>,
         #[template_child]
         pub compress_preview_box: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub compress_file_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub compress_save_button: TemplateChild<gtk::Button>,
         #[template_child]
@@ -130,12 +129,22 @@ impl CompressWorkspace {
         });
     }
 
-    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
+    pub(super) fn setup_responsive_layout(&self, breakpoints: &AdaptiveBreakpoints) {
         let imp = self.imp();
-        setup_compact_workspace_margins(breakpoint, self);
-        setup_vertical_layout_breakpoint(breakpoint, &imp.compress_content);
-        setup_default_width_breakpoint(breakpoint, &*imp.compress_preview_box);
-        setup_default_height_breakpoint(breakpoint, &*imp.compress_preview_box);
+        setup_compact_workspace_margins(breakpoints, self);
+        setup_short_status_page(breakpoints, &imp.compress_empty_status);
+        setup_vertical_layout_breakpoint(breakpoints, &imp.compress_content);
+        setup_default_width_breakpoint(breakpoints, &*imp.compress_preview_box);
+        setup_default_height_breakpoint(breakpoints, &*imp.compress_preview_box);
+        setup_short_narrow_preview(breakpoints, &*imp.compress_preview_box);
+        setup_short_narrow_icon_buttons(
+            breakpoints,
+            &[
+                (&imp.compress_choose_button, "document-open-symbolic"),
+                (&imp.compress_open_output_button, "arrow-into-box-symbolic"),
+                (&imp.compress_save_button, "package-x-generic-symbolic"),
+            ],
+        );
     }
 
     fn choose_file(&self) {
@@ -223,11 +232,8 @@ impl CompressWorkspace {
         let is_busy = imp.compress.job.is_busy(imp.is_running.get());
         let preview = imp.compress.preview.borrow();
 
-        imp.compress_file_list.remove_all();
         clear_box(&imp.compress_preview_box);
-        if let Some(path) = file.as_ref() {
-            imp.compress_file_list
-                .append(&pdf_file_row(path, file_subtitle(path)));
+        if has_file {
             imp.compress_preview_box
                 .append(&single_file_preview_widget(preview.as_ref()));
         }
@@ -257,7 +263,7 @@ impl CompressWorkspace {
         } else if imp.compress.job.is_loading() {
             gettext("Loading PDF...")
         } else if let Some(path) = file.as_ref() {
-            file_subtitle(path)
+            file_title(path).to_string()
         } else {
             gettext("No PDF selected")
         };

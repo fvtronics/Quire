@@ -9,61 +9,183 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 const ADAPTIVE_WIDTH_SP: f64 = 800.0;
+const ADAPTIVE_HEIGHT_SP: f64 = 480.0;
 const COMPACT_MARGIN: i32 = 18;
 const DEFAULT_SIZE_REQUEST: i32 = -1;
+
+#[derive(Clone, Debug)]
+pub(super) struct AdaptiveBreakpoints {
+    width: adw::Breakpoint,
+    height: adw::Breakpoint,
+    width_and_height: adw::Breakpoint,
+}
+
+impl AdaptiveBreakpoints {
+    pub(super) fn add_width_setter(
+        &self,
+        object: &impl IsA<glib::Object>,
+        property: &str,
+        value: &glib::Value,
+    ) {
+        self.width.add_setter(object, property, Some(value));
+        self.width_and_height
+            .add_setter(object, property, Some(value));
+    }
+
+    pub(super) fn add_height_setter(
+        &self,
+        object: &impl IsA<glib::Object>,
+        property: &str,
+        value: &glib::Value,
+    ) {
+        self.height.add_setter(object, property, Some(value));
+        self.width_and_height
+            .add_setter(object, property, Some(value));
+    }
+
+    pub(super) fn add_width_and_height_setter(
+        &self,
+        object: &impl IsA<glib::Object>,
+        property: &str,
+        value: &glib::Value,
+    ) {
+        self.width_and_height
+            .add_setter(object, property, Some(value));
+    }
+
+    pub(super) fn add_to_window(&self, window: &impl IsA<adw::ApplicationWindow>) {
+        window.add_breakpoint(self.width.clone());
+        window.add_breakpoint(self.height.clone());
+        window.add_breakpoint(self.width_and_height.clone());
+    }
+
+    pub(super) fn is_short_height_breakpoint(&self, breakpoint: Option<&adw::Breakpoint>) -> bool {
+        breakpoint.is_some_and(|breakpoint| {
+            breakpoint.as_ptr() == self.height.as_ptr()
+                || breakpoint.as_ptr() == self.width_and_height.as_ptr()
+        })
+    }
+}
 
 pub(super) fn parent_window(widget: &impl IsA<gtk::Widget>) -> Option<gtk::Window> {
     widget.root().and_downcast::<gtk::Window>()
 }
 
 pub(super) fn setup_compact_workspace_margins<Widget>(
-    breakpoint: &adw::Breakpoint,
+    breakpoints: &AdaptiveBreakpoints,
     workspace: &Widget,
 ) where
     Widget: IsA<gtk::Widget> + IsA<glib::Object>,
 {
-    breakpoint.add_setter(workspace, "margin-start", Some(&COMPACT_MARGIN.to_value()));
-    breakpoint.add_setter(workspace, "margin-end", Some(&COMPACT_MARGIN.to_value()));
-    breakpoint.add_setter(workspace, "margin-top", Some(&COMPACT_MARGIN.to_value()));
-    breakpoint.add_setter(workspace, "margin-bottom", Some(&COMPACT_MARGIN.to_value()));
+    breakpoints.add_width_setter(workspace, "margin-start", &COMPACT_MARGIN.to_value());
+    breakpoints.add_width_setter(workspace, "margin-end", &COMPACT_MARGIN.to_value());
+    breakpoints.add_width_setter(workspace, "margin-top", &COMPACT_MARGIN.to_value());
+    breakpoints.add_width_setter(workspace, "margin-bottom", &COMPACT_MARGIN.to_value());
 }
 
-pub(super) fn setup_vertical_layout_breakpoint(breakpoint: &adw::Breakpoint, container: &gtk::Box) {
-    breakpoint.add_setter(
+pub(super) fn setup_short_status_page(
+    breakpoints: &AdaptiveBreakpoints,
+    status_page: &adw::StatusPage,
+) {
+    let no_icon: Option<&str> = None;
+    breakpoints.add_height_setter(status_page, "icon-name", &no_icon.to_value());
+}
+
+pub(super) fn setup_short_narrow_preview<Widget>(
+    breakpoints: &AdaptiveBreakpoints,
+    preview: &Widget,
+) where
+    Widget: IsA<gtk::Widget> + IsA<glib::Object>,
+{
+    breakpoints.add_width_and_height_setter(preview, "visible", &false.to_value());
+}
+
+pub(super) fn setup_short_narrow_icon_buttons(
+    breakpoints: &AdaptiveBreakpoints,
+    buttons: &[(&gtk::Button, &str)],
+) {
+    for (button, icon_name) in buttons {
+        setup_short_narrow_icon_button(breakpoints, button, icon_name);
+    }
+}
+
+fn setup_short_narrow_icon_button(
+    breakpoints: &AdaptiveBreakpoints,
+    button: &gtk::Button,
+    icon_name: &str,
+) {
+    let original_label = button.label().unwrap_or_default().to_string();
+
+    let apply_button = button.downgrade();
+    let compact_icon_name = icon_name.to_string();
+    breakpoints.width_and_height.connect_apply(move |_| {
+        if let Some(button) = apply_button.upgrade() {
+            button.set_icon_name(&compact_icon_name);
+        }
+    });
+
+    let unapply_button = button.downgrade();
+    breakpoints.width_and_height.connect_unapply(move |_| {
+        if let Some(button) = unapply_button.upgrade() {
+            button.set_label(&original_label);
+        }
+    });
+}
+
+pub(super) fn setup_vertical_layout_breakpoint(
+    breakpoints: &AdaptiveBreakpoints,
+    container: &gtk::Box,
+) {
+    breakpoints.add_width_setter(
         container,
         "orientation",
-        Some(&gtk::Orientation::Vertical.to_value()),
+        &gtk::Orientation::Vertical.to_value(),
     );
 }
 
-pub(super) fn setup_default_width_breakpoint<Widget>(breakpoint: &adw::Breakpoint, widget: &Widget)
-where
+pub(super) fn setup_default_width_breakpoint<Widget>(
+    breakpoints: &AdaptiveBreakpoints,
+    widget: &Widget,
+) where
     Widget: IsA<gtk::Widget> + IsA<glib::Object>,
 {
-    breakpoint.add_setter(
-        widget,
-        "width-request",
-        Some(&DEFAULT_SIZE_REQUEST.to_value()),
-    );
+    breakpoints.add_width_setter(widget, "width-request", &DEFAULT_SIZE_REQUEST.to_value());
 }
 
-pub(super) fn setup_default_height_breakpoint<Widget>(breakpoint: &adw::Breakpoint, widget: &Widget)
-where
+pub(super) fn setup_default_height_breakpoint<Widget>(
+    breakpoints: &AdaptiveBreakpoints,
+    widget: &Widget,
+) where
     Widget: IsA<gtk::Widget> + IsA<glib::Object>,
 {
-    breakpoint.add_setter(
-        widget,
-        "height-request",
-        Some(&DEFAULT_SIZE_REQUEST.to_value()),
-    );
+    breakpoints.add_width_setter(widget, "height-request", &DEFAULT_SIZE_REQUEST.to_value());
 }
 
-pub(super) fn adaptive_width_breakpoint() -> adw::Breakpoint {
-    adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+fn adaptive_width_condition() -> adw::BreakpointCondition {
+    adw::BreakpointCondition::new_length(
         adw::BreakpointConditionLengthType::MaxWidth,
         ADAPTIVE_WIDTH_SP,
         adw::LengthUnit::Sp,
-    ))
+    )
+}
+
+fn adaptive_height_condition() -> adw::BreakpointCondition {
+    adw::BreakpointCondition::new_length(
+        adw::BreakpointConditionLengthType::MaxHeight,
+        ADAPTIVE_HEIGHT_SP,
+        adw::LengthUnit::Sp,
+    )
+}
+
+pub(super) fn adaptive_breakpoints() -> AdaptiveBreakpoints {
+    AdaptiveBreakpoints {
+        width: adw::Breakpoint::new(adaptive_width_condition()),
+        height: adw::Breakpoint::new(adaptive_height_condition()),
+        width_and_height: adw::Breakpoint::new(adw::BreakpointCondition::new_and(
+            adaptive_width_condition(),
+            adaptive_height_condition(),
+        )),
+    }
 }
 
 pub(super) fn show_toast(widget: &impl IsA<gtk::Widget>, message: &str) {
@@ -552,10 +674,12 @@ impl OrderedItemActions {
 
 impl OrderedItemControls {
     pub(super) fn append_to_row(&self, row: &adw::ActionRow) {
-        row.add_suffix(&self.up);
-        row.add_suffix(&self.down);
-        row.add_suffix(&self.rotate);
-        row.add_suffix(&self.remove);
+        let controls = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .valign(gtk::Align::Center)
+            .build();
+        self.append_to_box(&controls);
+        row.add_suffix(&controls);
     }
 
     pub(super) fn append_to_box(&self, box_: &gtk::Box) {

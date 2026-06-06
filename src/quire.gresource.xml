@@ -18,5 +18,6 @@
     <file alias="object-rotate-right-symbolic.svg" preprocess="xml-stripblanks">icons/scalable/actions/object-rotate-right-symbolic.svg</file>
     <file alias="package-x-generic-symbolic.svg" preprocess="xml-stripblanks">icons/scalable/actions/package-x-generic-symbolic.svg</file>
     <file alias="view-paged-symbolic.svg" preprocess="xml-stripblanks">icons/scalable/actions/view-paged-symbolic.svg</file>
+    <file alias="arrow-into-box-symbolic.svg" preprocess="xml-stripblanks">icons/scalable/actions/arrow-into-box-symbolic.svg</file>
   </gresource>
 </gresources>

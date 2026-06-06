@@ -79,15 +79,17 @@ template $CompressWorkspace: Gtk.Box {
       height-request: 124;
     }
 
-    Gtk.Box compress_options_box {
+    Gtk.ScrolledWindow {
+      hscrollbar-policy: never;
+      propagate-natural-width: true;
+      propagate-natural-height: true;
+      hexpand: true;
+      vexpand: true;
+
+      child: Gtk.Box compress_options_box {
       orientation: vertical;
       spacing: 18;
       hexpand: true;
-
-      Gtk.ListBox compress_file_list {
-        selection-mode: none;
-        styles ["boxed-list"]
-      }
 
       Gtk.ListBox {
         selection-mode: none;
@@ -105,6 +107,7 @@ template $CompressWorkspace: Gtk.Box {
           active: true;
         }
       }
+      };
     }
   }
 }

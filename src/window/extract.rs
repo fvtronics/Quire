@@ -1,18 +1,19 @@
 use super::PdfTool;
 use super::ui::{
-    DelayedEntryValidationState, EntryValidation, connect_delayed_entry_validation,
-    format_page_ranges, icon_button, list_preview_widget, open_pdf_file, output_pdf_name,
-    page_count_label, page_ranges_error_message, pdf_file_row, preview_tile, save_pdf_file,
-    tile_controls, tile_label, tile_preview_widget,
+    DelayedEntryValidationState, EntryValidation, GridPreviewSize,
+    connect_delayed_entry_validation, file_title, format_page_ranges, icon_button,
+    list_preview_widget, open_pdf_file, output_pdf_name, page_ranges_error_message, preview_tile,
+    save_pdf_file, tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem, SinglePdfLoadHandlers,
-    add_item_context_menu, collection_scroll_position, flow_box_item, load_single_processable_pdf,
-    open_output, output_option_callback, parent_window, preserve_collection_scroll_position,
-    replace_collection_item, restore_collection_scroll_position, run_output_job,
-    setup_advanced_options_menu, setup_compact_workspace_margins, setup_default_width_breakpoint,
-    setup_vertical_layout_breakpoint, show_backend_error, show_toast, update_shell_title,
-    update_shell_view_mode,
+    AdaptiveBreakpoints, AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem,
+    SinglePdfLoadHandlers, add_item_context_menu, collection_scroll_position, flow_box_item,
+    load_single_processable_pdf, open_output, output_option_callback, parent_window,
+    preserve_collection_scroll_position, replace_collection_item,
+    restore_collection_scroll_position, run_output_job, setup_advanced_options_menu,
+    setup_compact_workspace_margins, setup_default_width_breakpoint,
+    setup_short_narrow_icon_buttons, setup_short_status_page, setup_vertical_layout_breakpoint,
+    show_backend_error, show_toast, update_shell_title, update_shell_view_mode,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -22,7 +23,7 @@ use std::path::PathBuf;
 
 mod imp {
     use super::super::state::ExtractState;
-    use super::DelayedEntryValidationState;
+    use super::{DelayedEntryValidationState, GridPreviewSize};
     use adw::subclass::prelude::*;
     use gtk::{TemplateChild, glib};
     use std::cell::Cell;
@@ -43,8 +44,6 @@ mod imp {
         pub extract_content: TemplateChild<gtk::Box>,
         #[template_child]
         pub extract_selection_box: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub extract_file_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub extract_ranges_list: TemplateChild<gtk::ListBox>,
         #[template_child]
@@ -71,6 +70,7 @@ mod imp {
         pub extract_open_output_button: TemplateChild<gtk::Button>,
 
         pub extract: ExtractState,
+        pub(super) grid_preview_size: Cell<GridPreviewSize>,
         pub is_running: Cell<bool>,
         pub is_syncing_ranges_entry: Cell<bool>,
         pub(super) ranges_validation: Rc<DelayedEntryValidationState>,
@@ -211,11 +211,26 @@ impl ExtractWorkspace {
         );
     }
 
-    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
+    pub(super) fn setup_responsive_layout(&self, breakpoints: &AdaptiveBreakpoints) {
         let imp = self.imp();
-        setup_compact_workspace_margins(breakpoint, self);
-        setup_vertical_layout_breakpoint(breakpoint, &imp.extract_selection_box);
-        setup_default_width_breakpoint(breakpoint, &*imp.extract_ranges_list);
+        setup_compact_workspace_margins(breakpoints, self);
+        setup_short_status_page(breakpoints, &imp.extract_empty_status);
+        setup_vertical_layout_breakpoint(breakpoints, &imp.extract_selection_box);
+        setup_default_width_breakpoint(breakpoints, &*imp.extract_ranges_list);
+        setup_short_narrow_icon_buttons(
+            breakpoints,
+            &[
+                (&imp.extract_choose_button, "document-open-symbolic"),
+                (&imp.extract_open_output_button, "arrow-into-box-symbolic"),
+                (&imp.extract_save_button, "edit-copy-symbolic"),
+            ],
+        );
+    }
+
+    pub(super) fn set_grid_preview_size(&self, size: GridPreviewSize) {
+        if self.imp().grid_preview_size.replace(size) != size {
+            self.rebuild_collection(true);
+        }
     }
 
     fn choose_file(&self) {
@@ -409,12 +424,6 @@ impl ExtractWorkspace {
         let has_selected_pages = !imp.extract.selected_pages.borrow().is_empty();
         let is_busy = imp.extract.job.is_busy(imp.is_running.get());
 
-        imp.extract_file_list.remove_all();
-        if let Some(path) = imp.extract.file.borrow().as_ref() {
-            imp.extract_file_list
-                .append(&self.extract_file_row(path, imp.extract.page_count.get()));
-        }
-
         imp.extract_empty_status.set_visible(!has_file);
         imp.extract_actions.set_visible(has_file);
         imp.extract_content.set_visible(has_file);
@@ -449,8 +458,8 @@ impl ExtractWorkspace {
             gettext("Extracting pages...")
         } else if imp.extract.job.is_loading() {
             gettext("Loading PDF...")
-        } else if has_file {
-            page_count_label(imp.extract.page_count.get())
+        } else if let Some(path) = imp.extract.file.borrow().as_ref() {
+            file_title(path).to_string()
         } else {
             gettext("No PDF selected")
         };
@@ -464,10 +473,6 @@ impl ExtractWorkspace {
             imp.extract_ranges_entry.text().as_str(),
             imp.extract.page_count.get(),
         )
-    }
-
-    fn extract_file_row(&self, path: &std::path::Path, page_count: usize) -> adw::ActionRow {
-        pdf_file_row(path, page_count_label(page_count))
     }
 
     fn extract_page_row(
@@ -520,7 +525,8 @@ impl ExtractWorkspace {
         rotation: i64,
     ) -> gtk::FlowBoxChild {
         let tile = preview_tile();
-        let preview_widget = tile_preview_widget(preview, rotation);
+        let preview_widget =
+            tile_preview_widget(preview, rotation, self.imp().grid_preview_size.get());
         tile.append(&preview_widget);
 
         let footer = tile_controls();

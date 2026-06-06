@@ -1,17 +1,18 @@
 use super::PdfTool;
 use super::ui::{
-    blank_list_preview_widget, blank_tile_preview_widget, dim_tile_label, list_preview_widget,
-    open_pdf_file, output_pdf_name, page_count_label, preview_tile, save_pdf_file, tile_controls,
-    tile_label, tile_preview_widget,
+    GridPreviewSize, blank_list_preview_widget, blank_tile_preview_widget, dim_tile_label,
+    file_title, list_preview_widget, open_pdf_file, output_pdf_name, preview_tile, save_pdf_file,
+    tile_controls, tile_label, tile_preview_widget,
 };
 use super::workspace::{
-    AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem, OrderedItemActions,
-    OrderedItemControlOptions, PendingUndo, SinglePdfLoadHandlers, add_item_context_menu,
-    collection_scroll_position, flow_box_item, load_single_processable_pdf, open_output,
-    ordered_item_context_menu_items, ordered_item_controls, output_option_callback, parent_window,
-    preserve_collection_scroll_position, replace_collection_item,
+    AdaptiveBreakpoints, AdvancedOptionsMenu, CollectionScrollPosition, ContextMenuItem,
+    OrderedItemActions, OrderedItemControlOptions, PendingUndo, SinglePdfLoadHandlers,
+    add_item_context_menu, collection_scroll_position, flow_box_item, load_single_processable_pdf,
+    open_output, ordered_item_context_menu_items, ordered_item_controls, output_option_callback,
+    parent_window, preserve_collection_scroll_position, replace_collection_item,
     restore_collection_scroll_position, run_output_job, setup_advanced_options_menu,
-    setup_compact_workspace_margins, update_shell_title, update_shell_view_mode,
+    setup_compact_workspace_margins, setup_short_narrow_icon_buttons, setup_short_status_page,
+    update_shell_title, update_shell_view_mode,
 };
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -21,7 +22,7 @@ use std::path::PathBuf;
 
 mod imp {
     use super::super::state::OrganizeState;
-    use super::PendingUndo;
+    use super::{GridPreviewSize, PendingUndo};
     use adw::subclass::prelude::*;
     use gtk::{TemplateChild, glib};
     use std::cell::Cell;
@@ -58,6 +59,7 @@ mod imp {
 
         pub organize: OrganizeState,
         pub(super) pending_undo: PendingUndo,
+        pub(super) grid_preview_size: Cell<GridPreviewSize>,
         pub is_running: Cell<bool>,
     }
 
@@ -161,8 +163,25 @@ impl OrganizeWorkspace {
         });
     }
 
-    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
-        setup_compact_workspace_margins(breakpoint, self);
+    pub(super) fn setup_responsive_layout(&self, breakpoints: &AdaptiveBreakpoints) {
+        let imp = self.imp();
+        setup_compact_workspace_margins(breakpoints, self);
+        setup_short_status_page(breakpoints, &imp.organize_empty_status);
+        setup_short_narrow_icon_buttons(
+            breakpoints,
+            &[
+                (&imp.organize_choose_button, "document-open-symbolic"),
+                (&imp.organize_open_output_button, "arrow-into-box-symbolic"),
+                (&imp.organize_reset_button, "view-refresh-symbolic"),
+                (&imp.organize_save_button, "document-save-symbolic"),
+            ],
+        );
+    }
+
+    pub(super) fn set_grid_preview_size(&self, size: GridPreviewSize) {
+        if self.imp().grid_preview_size.replace(size) != size {
+            self.rebuild_collection(true);
+        }
     }
 
     fn choose_file(&self) {
@@ -381,8 +400,8 @@ impl OrganizeWorkspace {
             gettext("Organizing pages...")
         } else if imp.organize.job.is_loading() {
             gettext("Loading PDF...")
-        } else if has_file {
-            page_count_label(page_order.len())
+        } else if let Some(path) = imp.organize.file.borrow().as_ref() {
+            file_title(path).to_string()
         } else {
             gettext("No PDF selected")
         };
@@ -434,11 +453,13 @@ impl OrganizeWorkspace {
         count: usize,
     ) -> gtk::FlowBoxChild {
         let tile = preview_tile();
-        if page.is_blank() {
-            tile.append(&blank_tile_preview_widget(preview, page.rotation));
+        let preview_size = self.imp().grid_preview_size.get();
+        let preview_widget = if page.is_blank() {
+            blank_tile_preview_widget(preview, page.rotation, preview_size)
         } else {
-            tile.append(&tile_preview_widget(preview, page.rotation));
-        }
+            tile_preview_widget(preview, page.rotation, preview_size)
+        };
+        tile.append(&preview_widget);
         tile.append(&tile_label(page_title(page)));
 
         let controls = tile_controls();

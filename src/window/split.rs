@@ -1,14 +1,15 @@
 use super::PdfTool;
 use super::ui::{
     DelayedEntryValidationState, EntryValidation, clear_box, connect_delayed_entry_validation,
-    file_subtitle, open_pdf_file, page_count_error_message, page_count_label,
-    page_numbers_error_message, pdf_file_row, select_folder, single_file_preview_widget,
+    file_title, open_pdf_file, page_count_error_message, page_numbers_error_message, select_folder,
+    single_file_preview_widget,
 };
 use super::workspace::{
-    AdvancedOptionsMenu, SinglePdfLoadHandlers, load_single_processable_pdf, open_output,
-    output_option_callback, parent_window, run_output_job, setup_advanced_options_menu,
-    setup_compact_workspace_margins, setup_default_height_breakpoint,
-    setup_default_width_breakpoint, setup_vertical_layout_breakpoint, show_backend_error,
+    AdaptiveBreakpoints, AdvancedOptionsMenu, SinglePdfLoadHandlers, load_single_processable_pdf,
+    open_output, output_option_callback, parent_window, run_output_job,
+    setup_advanced_options_menu, setup_compact_workspace_margins, setup_default_height_breakpoint,
+    setup_default_width_breakpoint, setup_short_narrow_icon_buttons, setup_short_narrow_preview,
+    setup_short_status_page, setup_vertical_layout_breakpoint, show_backend_error,
     update_shell_title, update_shell_view_mode,
 };
 use adw::prelude::*;
@@ -69,8 +70,6 @@ mod imp {
         pub split_content: TemplateChild<gtk::Box>,
         #[template_child]
         pub split_preview_box: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub split_file_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub split_after_row: TemplateChild<adw::ComboRow>,
         #[template_child]
@@ -247,12 +246,22 @@ impl SplitWorkspace {
         });
     }
 
-    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
+    pub(super) fn setup_responsive_layout(&self, breakpoints: &AdaptiveBreakpoints) {
         let imp = self.imp();
-        setup_compact_workspace_margins(breakpoint, self);
-        setup_vertical_layout_breakpoint(breakpoint, &imp.split_content);
-        setup_default_width_breakpoint(breakpoint, &*imp.split_preview_box);
-        setup_default_height_breakpoint(breakpoint, &*imp.split_preview_box);
+        setup_compact_workspace_margins(breakpoints, self);
+        setup_short_status_page(breakpoints, &imp.split_empty_status);
+        setup_vertical_layout_breakpoint(breakpoints, &imp.split_content);
+        setup_default_width_breakpoint(breakpoints, &*imp.split_preview_box);
+        setup_default_height_breakpoint(breakpoints, &*imp.split_preview_box);
+        setup_short_narrow_preview(breakpoints, &*imp.split_preview_box);
+        setup_short_narrow_icon_buttons(
+            breakpoints,
+            &[
+                (&imp.split_choose_button, "document-open-symbolic"),
+                (&imp.split_open_output_button, "arrow-into-box-symbolic"),
+                (&imp.split_save_button, "edit-cut-symbolic"),
+            ],
+        );
     }
 
     fn choose_file(&self) {
@@ -361,11 +370,8 @@ impl SplitWorkspace {
             && split_rule.is_err();
         let preview = imp.split.preview.borrow();
 
-        imp.split_file_list.remove_all();
         clear_box(&imp.split_preview_box);
-        if let Some(path) = file.as_ref() {
-            imp.split_file_list
-                .append(&self.split_file_row(path, imp.split.page_count.get()));
+        if has_file {
             imp.split_preview_box
                 .append(&single_file_preview_widget(preview.as_ref()));
         }
@@ -420,8 +426,8 @@ impl SplitWorkspace {
             gettext("Splitting PDF...")
         } else if imp.split.job.is_loading() {
             gettext("Loading PDF...")
-        } else if has_file {
-            page_count_label(imp.split.page_count.get())
+        } else if let Some(path) = file.as_ref() {
+            file_title(path).to_string()
         } else {
             gettext("No PDF selected")
         };
@@ -475,13 +481,6 @@ impl SplitWorkspace {
         } else {
             Ok(pages)
         }
-    }
-
-    fn split_file_row(&self, path: &Path, page_count: usize) -> adw::ActionRow {
-        pdf_file_row(
-            path,
-            format!("{} - {}", page_count_label(page_count), file_subtitle(path)),
-        )
     }
 
     fn open_last_output(&self) {

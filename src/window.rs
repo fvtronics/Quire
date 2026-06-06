@@ -22,6 +22,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use ui::GridPreviewSize;
 
 mod compress;
 mod extract;
@@ -259,20 +260,42 @@ impl QuireWindow {
 
     fn setup_responsive_layout(&self) {
         let imp = self.imp();
-        let breakpoint = workspace::adaptive_width_breakpoint();
-        breakpoint.add_setter(
+        let breakpoints = workspace::adaptive_breakpoints();
+        breakpoints.add_width_setter(
             &imp.navigation_split_view.get(),
             "collapsed",
-            Some(&true.to_value()),
+            &true.to_value(),
         );
-        imp.merge_workspace.setup_responsive_layout(&breakpoint);
-        imp.compress_workspace.setup_responsive_layout(&breakpoint);
-        imp.organize_workspace.setup_responsive_layout(&breakpoint);
-        imp.extract_workspace.setup_responsive_layout(&breakpoint);
-        imp.split_workspace.setup_responsive_layout(&breakpoint);
-        imp.metadata_workspace.setup_responsive_layout(&breakpoint);
-        imp.watermark_workspace.setup_responsive_layout(&breakpoint);
-        self.add_breakpoint(breakpoint);
+        imp.merge_workspace.setup_responsive_layout(&breakpoints);
+        imp.compress_workspace.setup_responsive_layout(&breakpoints);
+        imp.organize_workspace.setup_responsive_layout(&breakpoints);
+        imp.extract_workspace.setup_responsive_layout(&breakpoints);
+        imp.split_workspace.setup_responsive_layout(&breakpoints);
+        imp.metadata_workspace.setup_responsive_layout(&breakpoints);
+        imp.watermark_workspace
+            .setup_responsive_layout(&breakpoints);
+        breakpoints.add_to_window(self);
+        self.set_grid_preview_size(self.grid_preview_size(&breakpoints));
+
+        let responsive_breakpoints = breakpoints.clone();
+        self.connect_current_breakpoint_notify(move |window| {
+            window.set_grid_preview_size(window.grid_preview_size(&responsive_breakpoints));
+        });
+    }
+
+    fn grid_preview_size(&self, breakpoints: &workspace::AdaptiveBreakpoints) -> GridPreviewSize {
+        if breakpoints.is_short_height_breakpoint(self.current_breakpoint().as_ref()) {
+            GridPreviewSize::Short
+        } else {
+            GridPreviewSize::Regular
+        }
+    }
+
+    fn set_grid_preview_size(&self, size: GridPreviewSize) {
+        let imp = self.imp();
+        imp.merge_workspace.set_grid_preview_size(size);
+        imp.organize_workspace.set_grid_preview_size(size);
+        imp.extract_workspace.set_grid_preview_size(size);
     }
 
     fn switch_tool(&self, tool: PdfTool) {

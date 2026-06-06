@@ -1,16 +1,16 @@
 use super::PdfTool;
 use super::ui::{
     DelayedEntryValidationState, EntryValidation, clear_box, connect_delayed_entry_validation,
-    file_subtitle, file_title, open_image_file, open_pdf_file, output_pdf_name, page_count_label,
-    page_ranges_error_message, pdf_file_row, save_pdf_file, single_file_preview_widget,
-    texture_picture,
+    file_title, open_image_file, open_pdf_file, output_pdf_name, page_ranges_error_message,
+    save_pdf_file, single_file_preview_widget, texture_picture,
 };
 use super::workspace::{
-    AdvancedOptionsMenu, SinglePdfLoadHandlers, load_single_processable_pdf, open_output,
-    output_option_callback, parent_window, run_output_job, setup_advanced_options_menu,
-    setup_compact_workspace_margins, setup_default_height_breakpoint,
-    setup_default_width_breakpoint, setup_vertical_layout_breakpoint, show_toast,
-    update_shell_title, update_shell_view_mode,
+    AdaptiveBreakpoints, AdvancedOptionsMenu, SinglePdfLoadHandlers, load_single_processable_pdf,
+    open_output, output_option_callback, parent_window, run_output_job,
+    setup_advanced_options_menu, setup_compact_workspace_margins, setup_default_height_breakpoint,
+    setup_default_width_breakpoint, setup_short_narrow_icon_buttons, setup_short_narrow_preview,
+    setup_short_status_page, setup_vertical_layout_breakpoint, show_toast, update_shell_title,
+    update_shell_view_mode,
 };
 use crate::image::argb32_surface_texture;
 use adw::prelude::*;
@@ -19,7 +19,7 @@ use gettextrs::gettext;
 use gtk::gdk::prelude::GdkCairoContextExt;
 use gtk::gdk_pixbuf::Pixbuf;
 use gtk::glib;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 const WATERMARK_LAYER_BACKGROUND: u32 = 1;
 const WATERMARK_PAGES_ALL: u32 = 0;
@@ -71,8 +71,6 @@ mod imp {
         pub watermark_content: TemplateChild<gtk::Box>,
         #[template_child]
         pub watermark_preview_box: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub watermark_file_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub watermark_image_row: TemplateChild<adw::ActionRow>,
         #[template_child]
@@ -259,12 +257,22 @@ impl WatermarkWorkspace {
         );
     }
 
-    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
+    pub(super) fn setup_responsive_layout(&self, breakpoints: &AdaptiveBreakpoints) {
         let imp = self.imp();
-        setup_compact_workspace_margins(breakpoint, self);
-        setup_vertical_layout_breakpoint(breakpoint, &imp.watermark_content);
-        setup_default_width_breakpoint(breakpoint, &*imp.watermark_preview_box);
-        setup_default_height_breakpoint(breakpoint, &*imp.watermark_preview_box);
+        setup_compact_workspace_margins(breakpoints, self);
+        setup_short_status_page(breakpoints, &imp.watermark_empty_status);
+        setup_vertical_layout_breakpoint(breakpoints, &imp.watermark_content);
+        setup_default_width_breakpoint(breakpoints, &*imp.watermark_preview_box);
+        setup_default_height_breakpoint(breakpoints, &*imp.watermark_preview_box);
+        setup_short_narrow_preview(breakpoints, &*imp.watermark_preview_box);
+        setup_short_narrow_icon_buttons(
+            breakpoints,
+            &[
+                (&imp.watermark_choose_button, "document-open-symbolic"),
+                (&imp.watermark_open_output_button, "arrow-into-box-symbolic"),
+                (&imp.watermark_save_button, "insert-image-symbolic"),
+            ],
+        );
     }
 
     fn choose_file(&self) {
@@ -405,11 +413,8 @@ impl WatermarkWorkspace {
             && target.is_err();
         let preview = imp.watermark.preview.borrow();
 
-        imp.watermark_file_list.remove_all();
         clear_box(&imp.watermark_preview_box);
-        if let Some(path) = file.as_ref() {
-            imp.watermark_file_list
-                .append(&self.watermark_file_row(path, imp.watermark.page_count.get()));
+        if has_file {
             imp.watermark_preview_box.append(&watermark_preview_widget(
                 preview.as_ref(),
                 image_pixbuf.as_ref(),
@@ -464,8 +469,8 @@ impl WatermarkWorkspace {
             gettext("Adding watermark...")
         } else if imp.watermark.job.is_loading() {
             gettext("Loading PDF...")
-        } else if has_file {
-            page_count_label(imp.watermark.page_count.get())
+        } else if let Some(path) = file.as_ref() {
+            file_title(path).to_string()
         } else {
             gettext("No PDF selected")
         };
@@ -501,13 +506,6 @@ impl WatermarkWorkspace {
                 "Choose target pages.".to_string(),
             )),
         }
-    }
-
-    fn watermark_file_row(&self, path: &Path, page_count: usize) -> adw::ActionRow {
-        pdf_file_row(
-            path,
-            format!("{} - {}", page_count_label(page_count), file_subtitle(path)),
-        )
     }
 
     fn open_last_output(&self) {

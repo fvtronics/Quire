@@ -1,6 +1,6 @@
 use crate::image::argb32_surface_texture;
 use adw::prelude::*;
-use gettextrs::{gettext, ngettext};
+use gettextrs::gettext;
 use gtk::{gio, glib};
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
@@ -14,10 +14,18 @@ const GRID_COLLECTION_PREVIEW_WIDTH: i32 = 200;
 const GRID_COLLECTION_PREVIEW_HEIGHT: i32 = 220;
 const GRID_COLLECTION_PREVIEW_MIN_WIDTH: i32 = 120;
 const GRID_COLLECTION_PREVIEW_MIN_HEIGHT: i32 = 132;
+const SHORT_GRID_COLLECTION_PREVIEW_MIN_WIDTH: i32 = 72;
+const SHORT_GRID_COLLECTION_PREVIEW_MIN_HEIGHT: i32 = 80;
 const SINGLE_FILE_PREVIEW_MIN_WIDTH: i32 = 40;
 const SINGLE_FILE_PREVIEW_MIN_HEIGHT: i32 = 54;
-const PREVIEW_TILE_MIN_WIDTH: i32 = 150;
 const ENTRY_VALIDATION_DELAY: Duration = Duration::from_secs(1);
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(super) enum GridPreviewSize {
+    #[default]
+    Regular,
+    Short,
+}
 
 pub(super) fn pdf_filters() -> gio::ListStore {
     let filter = gtk::FileFilter::new();
@@ -317,19 +325,6 @@ pub(super) fn page_count_error_message() -> String {
     gettext("Enter a page count of 1 or more.")
 }
 
-pub(super) fn pdf_file_row(path: &Path, subtitle: String) -> adw::ActionRow {
-    let row = adw::ActionRow::builder()
-        .title(file_title(path))
-        .subtitle(subtitle)
-        .title_lines(1)
-        .subtitle_lines(1)
-        .focusable(false)
-        .build();
-
-    row.add_prefix(&gtk::Image::from_icon_name("view-paged-symbolic"));
-    row
-}
-
 pub(super) fn file_title(path: &Path) -> &str {
     path.file_name()
         .and_then(|name| name.to_str())
@@ -366,6 +361,7 @@ pub(super) fn list_preview_widget(
         rotation,
         LIST_COLLECTION_PREVIEW_WIDTH,
         LIST_COLLECTION_PREVIEW_HEIGHT,
+        GridPreviewSize::Regular,
     )
 }
 
@@ -378,6 +374,7 @@ pub(super) fn blank_list_preview_widget(
         rotation,
         LIST_COLLECTION_PREVIEW_WIDTH,
         LIST_COLLECTION_PREVIEW_HEIGHT,
+        GridPreviewSize::Regular,
     )
 }
 
@@ -405,31 +402,34 @@ pub(super) fn preview_tile() -> gtk::Box {
     gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(6)
-        .width_request(PREVIEW_TILE_MIN_WIDTH)
         .build()
 }
 
 pub(super) fn tile_preview_widget(
     preview: Option<&crate::preview::PagePreview>,
     rotation: i64,
+    preview_size: GridPreviewSize,
 ) -> gtk::Widget {
     collection_preview_widget(
         preview,
         rotation,
         GRID_COLLECTION_PREVIEW_WIDTH,
         GRID_COLLECTION_PREVIEW_HEIGHT,
+        preview_size,
     )
 }
 
 pub(super) fn blank_tile_preview_widget(
     source_preview: Option<&crate::preview::PagePreview>,
     rotation: i64,
+    preview_size: GridPreviewSize,
 ) -> gtk::Widget {
     collection_blank_preview_widget(
         source_preview,
         rotation,
         GRID_COLLECTION_PREVIEW_WIDTH,
         GRID_COLLECTION_PREVIEW_HEIGHT,
+        preview_size,
     )
 }
 
@@ -438,20 +438,33 @@ fn collection_preview_widget(
     rotation: i64,
     width: i32,
     height: i32,
+    preview_size: GridPreviewSize,
 ) -> gtk::Widget {
-    let child: gtk::Widget = if let Some(preview) = preview {
-        let picture = match rotated_preview_texture(preview, rotation)
-            .map(|texture| texture_picture(&texture))
+    if let Some(preview) = preview {
+        let Some(image) = preview.image.rotated(rotation) else {
+            return preview_picture_fallback().upcast();
+        };
+        let (request_width, request_height) =
+            collection_preview_size_request(width, height, preview_size);
+        let picture = match fixed_slot_preview_texture(
+            &image,
+            image.width,
+            image.height,
+            request_width,
+            request_height,
+        )
+        .map(|texture| texture_picture(&texture))
         {
             Some(picture) => picture,
             None => preview_picture_fallback(),
         };
+        picture.set_size_request(request_width, request_height);
+        picture.set_halign(gtk::Align::Center);
+        picture.set_valign(gtk::Align::Center);
         picture.upcast()
     } else {
-        collection_preview_placeholder(width, height)
-    };
-
-    collection_preview_slot(width, height, &child)
+        collection_preview_placeholder(width, height, preview_size)
+    }
 }
 
 fn collection_blank_preview_widget(
@@ -459,54 +472,70 @@ fn collection_blank_preview_widget(
     rotation: i64,
     width: i32,
     height: i32,
+    preview_size: GridPreviewSize,
 ) -> gtk::Widget {
     let source_size = source_preview
         .map(|preview| rotated_preview_size(preview, rotation))
         .and_then(|size| fit_size(size.0, size.1, width, height))
         .unwrap_or_else(|| blank_page_fallback_size(width, height, rotation));
-    let picture = match blank_page_texture(source_size.0, source_size.1) {
+    let (request_width, request_height) =
+        collection_preview_size_request(width, height, preview_size);
+    let picture = match fixed_slot_blank_page_texture(
+        source_size.0,
+        source_size.1,
+        request_width,
+        request_height,
+    ) {
         Some(texture) => gtk::Picture::for_paintable(&texture),
         None => preview_picture_fallback(),
     };
     picture.set_can_shrink(true);
     picture.set_content_fit(gtk::ContentFit::Contain);
-    collection_preview_slot(width, height, &picture.upcast())
+    picture.set_size_request(request_width, request_height);
+    picture.set_halign(gtk::Align::Center);
+    picture.set_valign(gtk::Align::Center);
+    picture.upcast()
 }
 
-fn collection_preview_slot(width: i32, height: i32, child: &gtk::Widget) -> gtk::Widget {
-    let slot = gtk::AspectFrame::new(0.5, 0.5, width as f32 / height as f32, false);
-    let (request_width, request_height) = collection_preview_size_request(width, height);
-    slot.set_size_request(request_width, request_height);
-    slot.set_halign(gtk::Align::Center);
-    slot.set_valign(gtk::Align::Center);
-    slot.set_child(Some(child));
-    slot.upcast()
-}
-
-fn collection_preview_placeholder(width: i32, height: i32) -> gtk::Widget {
+fn collection_preview_placeholder(
+    width: i32,
+    height: i32,
+    preview_size: GridPreviewSize,
+) -> gtk::Widget {
     let placeholder = gtk::Image::from_icon_name("view-paged-symbolic");
     placeholder.set_pixel_size((width.min(height) / 2).max(16));
-    let (request_width, request_height) = collection_preview_size_request(width, height);
+    let (request_width, request_height) =
+        collection_preview_size_request(width, height, preview_size);
     placeholder.set_size_request(request_width, request_height);
     placeholder.upcast()
 }
 
-fn collection_preview_size_request(width: i32, height: i32) -> (i32, i32) {
+fn collection_preview_size_request(
+    width: i32,
+    height: i32,
+    preview_size: GridPreviewSize,
+) -> (i32, i32) {
     if width <= LIST_COLLECTION_PREVIEW_WIDTH {
         (
             LIST_COLLECTION_PREVIEW_MIN_SIZE,
             LIST_COLLECTION_PREVIEW_MIN_SIZE,
         )
     } else {
-        (
-            GRID_COLLECTION_PREVIEW_MIN_WIDTH,
-            GRID_COLLECTION_PREVIEW_MIN_HEIGHT.min(height),
-        )
+        match preview_size {
+            GridPreviewSize::Regular => (
+                GRID_COLLECTION_PREVIEW_MIN_WIDTH,
+                GRID_COLLECTION_PREVIEW_MIN_HEIGHT.min(height),
+            ),
+            GridPreviewSize::Short => (
+                SHORT_GRID_COLLECTION_PREVIEW_MIN_WIDTH,
+                SHORT_GRID_COLLECTION_PREVIEW_MIN_HEIGHT.min(height),
+            ),
+        }
     }
 }
 
-fn blank_page_texture(width: i32, height: i32) -> Option<gtk::gdk::Texture> {
-    let mut surface =
+fn blank_page_surface(width: i32, height: i32) -> Option<cairo::ImageSurface> {
+    let surface =
         cairo::ImageSurface::create(cairo::Format::ARgb32, width.max(1), height.max(1)).ok()?;
     let context = cairo::Context::new(&surface).ok()?;
 
@@ -516,6 +545,71 @@ fn blank_page_texture(width: i32, height: i32) -> Option<gtk::gdk::Texture> {
     context.set_line_width(1.0);
     context.rectangle(0.5, 0.5, width as f64 - 1.0, height as f64 - 1.0);
     context.stroke().ok()?;
+    drop(context);
+
+    Some(surface)
+}
+
+fn fixed_slot_preview_texture(
+    image: &crate::image::Argb32Image,
+    source_width: i32,
+    source_height: i32,
+    slot_width: i32,
+    slot_height: i32,
+) -> Option<gtk::gdk::Texture> {
+    let source = image.surface()?;
+    fixed_slot_surface_texture(
+        &source,
+        source_width,
+        source_height,
+        slot_width,
+        slot_height,
+    )
+}
+
+fn fixed_slot_blank_page_texture(
+    source_width: i32,
+    source_height: i32,
+    slot_width: i32,
+    slot_height: i32,
+) -> Option<gtk::gdk::Texture> {
+    let (content_width, content_height) =
+        fit_size(source_width, source_height, slot_width, slot_height)?;
+    let source = blank_page_surface(content_width, content_height)?;
+    fixed_slot_surface_texture(
+        &source,
+        content_width,
+        content_height,
+        slot_width,
+        slot_height,
+    )
+}
+
+fn fixed_slot_surface_texture(
+    source: &cairo::ImageSurface,
+    source_width: i32,
+    source_height: i32,
+    slot_width: i32,
+    slot_height: i32,
+) -> Option<gtk::gdk::Texture> {
+    let (content_width, content_height) =
+        fit_size(source_width, source_height, slot_width, slot_height)?;
+    let mut surface =
+        cairo::ImageSurface::create(cairo::Format::ARgb32, slot_width, slot_height).ok()?;
+    let context = cairo::Context::new(&surface).ok()?;
+    context.set_operator(cairo::Operator::Clear);
+    context.paint().ok()?;
+    context.set_operator(cairo::Operator::Over);
+    context.translate(
+        ((slot_width - content_width) / 2) as f64,
+        ((slot_height - content_height) / 2) as f64,
+    );
+    context.scale(
+        content_width as f64 / source_width as f64,
+        content_height as f64 / source_height as f64,
+    );
+    context.set_source_surface(source, 0.0, 0.0).ok()?;
+    context.paint().ok()?;
     drop(context);
 
     argb32_surface_texture(&mut surface)
@@ -583,7 +677,6 @@ pub(super) fn dim_tile_label(text: impl AsRef<str>) -> gtk::Label {
 pub(super) fn tile_controls() -> gtk::Box {
     let controls = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
-        .spacing(6)
         .build();
     let key = gtk::EventControllerKey::new();
     key.set_propagation_phase(gtk::PropagationPhase::Capture);
@@ -634,10 +727,6 @@ pub(super) fn format_page_ranges(pages: &[u32]) -> String {
 
     parts.push(format_page_range(start, end));
     parts.join(",")
-}
-
-pub(super) fn page_count_label(count: usize) -> String {
-    ngettext("1 page", "{} pages", count as u32).replace("{}", &count.to_string())
 }
 
 fn format_size(bytes: u64) -> String {
@@ -703,8 +792,9 @@ fn format_page_range(start: u32, end: u32) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        DelayedEntryValidationState, EntryValidationDisplay, fit_size, format_page_ranges,
-        output_pdf_name, tile_control_focus_direction,
+        DelayedEntryValidationState, EntryValidationDisplay, GridPreviewSize,
+        collection_preview_size_request, fit_size, format_page_ranges, output_pdf_name,
+        tile_control_focus_direction,
     };
     use std::path::Path;
 
@@ -760,6 +850,18 @@ mod tests {
     fn fit_size_rejects_invalid_dimensions() {
         assert_eq!(fit_size(0, 100, 200, 220), None);
         assert_eq!(fit_size(100, 100, -1, 220), None);
+    }
+
+    #[test]
+    fn grid_preview_size_request_supports_short_windows() {
+        assert_eq!(
+            collection_preview_size_request(200, 220, GridPreviewSize::Regular),
+            (120, 132)
+        );
+        assert_eq!(
+            collection_preview_size_request(200, 220, GridPreviewSize::Short),
+            (72, 80)
+        );
     }
 
     #[test]

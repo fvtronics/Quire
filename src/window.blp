@@ -3,10 +3,10 @@ using Adw 1;
 
 template $QuireWindow: Adw.ApplicationWindow {
   title: _("Quire");
-  default-width: 1200;
-  default-height: 840;
-  width-request: 410;
-  height-request: 600;
+  default-width: 1000;
+  default-height: 700;
+  width-request: 360;
+  height-request: 294;
 
   content: Adw.ToastOverlay toast_overlay {
     child: Adw.NavigationSplitView navigation_split_view {
@@ -32,8 +32,11 @@ template $QuireWindow: Adw.ApplicationWindow {
             }
           }
 
-          content: Adw.Bin {
-            Gtk.ListBox sidebar_list {
+          content: Gtk.ScrolledWindow {
+            hscrollbar-policy: never;
+            vexpand: true;
+
+            child: Gtk.ListBox sidebar_list {
               selection-mode: single;
               margin-start: 12;
               margin-end: 12;

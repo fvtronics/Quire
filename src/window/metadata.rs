@@ -1,14 +1,14 @@
 use super::PdfTool;
 use super::ui::{
     DelayedEntryValidationState, EntryValidation, clear_box, connect_delayed_entry_validation,
-    file_subtitle, open_pdf_file, output_pdf_name, pdf_file_row, save_pdf_file,
-    single_file_preview_widget,
+    file_title, open_pdf_file, output_pdf_name, save_pdf_file, single_file_preview_widget,
 };
 use super::workspace::{
-    AdvancedOptionsMenu, SinglePdfLoadHandlers, load_single_processable_pdf, open_output,
-    output_option_callback, parent_window, run_output_job, setup_advanced_options_menu,
-    setup_compact_workspace_margins, setup_default_height_breakpoint,
-    setup_default_width_breakpoint, setup_vertical_layout_breakpoint, update_shell_title,
+    AdaptiveBreakpoints, AdvancedOptionsMenu, SinglePdfLoadHandlers, load_single_processable_pdf,
+    open_output, output_option_callback, parent_window, run_output_job,
+    setup_advanced_options_menu, setup_compact_workspace_margins, setup_default_height_breakpoint,
+    setup_default_width_breakpoint, setup_short_narrow_icon_buttons, setup_short_narrow_preview,
+    setup_short_status_page, setup_vertical_layout_breakpoint, update_shell_title,
     update_shell_view_mode,
 };
 use adw::prelude::*;
@@ -44,8 +44,6 @@ mod imp {
         pub metadata_content: TemplateChild<gtk::Box>,
         #[template_child]
         pub metadata_preview_box: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub metadata_file_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub metadata_title_entry: TemplateChild<adw::EntryRow>,
         #[template_child]
@@ -177,12 +175,22 @@ impl MetadataWorkspace {
         );
     }
 
-    pub(super) fn setup_responsive_layout(&self, breakpoint: &adw::Breakpoint) {
+    pub(super) fn setup_responsive_layout(&self, breakpoints: &AdaptiveBreakpoints) {
         let imp = self.imp();
-        setup_compact_workspace_margins(breakpoint, self);
-        setup_vertical_layout_breakpoint(breakpoint, &imp.metadata_content);
-        setup_default_width_breakpoint(breakpoint, &*imp.metadata_preview_box);
-        setup_default_height_breakpoint(breakpoint, &*imp.metadata_preview_box);
+        setup_compact_workspace_margins(breakpoints, self);
+        setup_short_status_page(breakpoints, &imp.metadata_empty_status);
+        setup_vertical_layout_breakpoint(breakpoints, &imp.metadata_content);
+        setup_default_width_breakpoint(breakpoints, &*imp.metadata_preview_box);
+        setup_default_height_breakpoint(breakpoints, &*imp.metadata_preview_box);
+        setup_short_narrow_preview(breakpoints, &*imp.metadata_preview_box);
+        setup_short_narrow_icon_buttons(
+            breakpoints,
+            &[
+                (&imp.metadata_choose_button, "document-open-symbolic"),
+                (&imp.metadata_open_output_button, "arrow-into-box-symbolic"),
+                (&imp.metadata_save_button, "document-save-symbolic"),
+            ],
+        );
     }
 
     fn connect_metadata_changed(&self, entry: &adw::EntryRow) {
@@ -286,11 +294,8 @@ impl MetadataWorkspace {
         let is_busy = imp.metadata.job.is_busy(imp.is_running.get());
         let preview = imp.metadata.preview.borrow();
 
-        imp.metadata_file_list.remove_all();
         clear_box(&imp.metadata_preview_box);
-        if let Some(path) = file.as_ref() {
-            imp.metadata_file_list
-                .append(&pdf_file_row(path, file_subtitle(path)));
+        if has_file {
             imp.metadata_preview_box
                 .append(&single_file_preview_widget(preview.as_ref()));
         }
@@ -320,7 +325,7 @@ impl MetadataWorkspace {
         } else if imp.metadata.job.is_loading() {
             gettext("Loading PDF...")
         } else if let Some(path) = file.as_ref() {
-            file_subtitle(path)
+            file_title(path).to_string()
         } else {
             gettext("No PDF selected")
         };
