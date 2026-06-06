@@ -24,8 +24,7 @@
     <binary>quire</binary>
   </provides>
   <requires>
-    <display_length compare="ge" side="shortest">410</display_length>
-    <display_length compare="ge" side="longest">600</display_length>
+    <display_length compare="ge">small</display_length>
   </requires>
   <recommends>
     <control>keyboard</control>
