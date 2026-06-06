@@ -183,7 +183,8 @@ where
     let mut password = None;
 
     loop {
-        match load(password.clone()).await {
+        let load_result = load(password.clone()).await;
+        match load_result {
             Ok(output) => return PdfLoadResult::Loaded { output, password },
             Err(crate::preview::PreviewError::PasswordRequired) => {
                 password = ask_pdf_password(parent, path, PasswordPromptReason::Required).await;
@@ -425,8 +426,9 @@ pub(super) fn setup_advanced_options_menu(
 
 pub(super) fn open_output(widget: &impl IsA<gtk::Widget>, path: &Path) {
     let file = gio::File::for_path(path);
+    let uri = file.uri();
     if let Err(error) =
-        gio::AppInfo::launch_default_for_uri(file.uri().as_str(), None::<&gio::AppLaunchContext>)
+        gio::AppInfo::launch_default_for_uri(uri.as_str(), None::<&gio::AppLaunchContext>)
     {
         eprintln!("Could not open output: {error}");
         show_toast(widget, &gettext("Could not open output"));

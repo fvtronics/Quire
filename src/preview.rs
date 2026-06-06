@@ -175,7 +175,8 @@ fn load_document(
     password: Option<&str>,
 ) -> Result<poppler::Document, PreviewError> {
     let file = gio::File::for_path(input_file);
-    poppler::Document::from_file(file.uri().as_str(), password)
+    let uri = file.uri();
+    poppler::Document::from_file(uri.as_str(), password)
         .map_err(|error| document_load_error(error, password.is_some()))
 }
 

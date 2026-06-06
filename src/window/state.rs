@@ -307,8 +307,8 @@ impl MergeState {
 
     pub fn pdf_inputs(&self) -> Vec<crate::pdf::PdfInput> {
         let passwords = self.passwords.borrow();
-        self.files
-            .borrow()
+        let files = self.files.borrow();
+        files
             .iter()
             .map(|item| crate::pdf::PdfInput {
                 path: item.path.clone(),

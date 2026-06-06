@@ -134,14 +134,13 @@ pub(super) fn set_app_producer_metadata(document: &mut Document) {
         .ok()
         .and_then(|object| object.as_reference().ok());
 
-    if let Some(info_id) = info_id {
-        if let Ok(dictionary) = document
+    if let Some(info_id) = info_id
+        && let Ok(dictionary) = document
             .get_object_mut(info_id)
             .and_then(Object::as_dict_mut)
-        {
-            dictionary.set("Producer", text_string(&producer));
-            return;
-        }
+    {
+        dictionary.set("Producer", text_string(&producer));
+        return;
     }
 
     let info_id = document.add_object(dictionary! {

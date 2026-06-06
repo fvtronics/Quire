@@ -243,10 +243,10 @@ fn collect_document_roots(
                     .as_dict()
                     .map_err(|error| PdfBackendError::InvalidDocument(error.to_string()))?;
                 let mut dictionary = dictionary.clone();
-                if let Some((_, previous)) = pages_object.as_ref() {
-                    if let Ok(previous_dictionary) = previous.as_dict() {
-                        dictionary.extend(previous_dictionary);
-                    }
+                if let Some((_, previous)) = pages_object.as_ref()
+                    && let Ok(previous_dictionary) = previous.as_dict()
+                {
+                    dictionary.extend(previous_dictionary);
                 }
 
                 pages_object = Some((

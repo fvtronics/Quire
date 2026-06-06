@@ -605,7 +605,10 @@ pub(super) fn tile_controls() -> gtk::Box {
 }
 
 pub(super) fn clear_box(box_: &gtk::Box) {
-    while let Some(child) = box_.first_child() {
+    loop {
+        let Some(child) = box_.first_child() else {
+            break;
+        };
         box_.remove(&child);
     }
 }
