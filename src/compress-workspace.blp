@@ -55,8 +55,8 @@ template $CompressWorkspace: Gtk.Box {
   Adw.StatusPage compress_empty_status {
     vexpand: true;
     icon-name: "package-x-generic-symbolic";
-    title: _("Open a PDF to Compress");
-    description: _("Choose a PDF, then save a smaller copy.");
+    title: _("No PDF Open");
+    description: _("Open a PDF to save a smaller copy");
 
     child: Gtk.Button compress_empty_choose_button {
       halign: center;
@@ -87,26 +87,26 @@ template $CompressWorkspace: Gtk.Box {
       vexpand: true;
 
       child: Gtk.Box compress_options_box {
-      orientation: vertical;
-      spacing: 18;
-      hexpand: true;
+        orientation: vertical;
+        spacing: 18;
+        hexpand: true;
 
-      Gtk.ListBox {
-        selection-mode: none;
-        styles ["boxed-list"]
+        Gtk.ListBox {
+          selection-mode: none;
+          styles ["boxed-list"]
 
-        Adw.SwitchRow compress_prune_row {
-          title: _("Remove Unused Data");
-          subtitle: _("Discard unreferenced PDF objects");
-          active: true;
+          Adw.SwitchRow compress_prune_row {
+            title: _("Remove Unused Data");
+            subtitle: _("Discard unreferenced PDF objects");
+            active: true;
+          }
+
+          Adw.SwitchRow compress_empty_streams_row {
+            title: _("Remove Empty Streams");
+            subtitle: _("Discard empty PDF data streams");
+            active: true;
+          }
         }
-
-        Adw.SwitchRow compress_empty_streams_row {
-          title: _("Remove Empty Streams");
-          subtitle: _("Discard empty PDF data streams");
-          active: true;
-        }
-      }
       };
     }
   }

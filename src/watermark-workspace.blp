@@ -55,8 +55,8 @@ template $WatermarkWorkspace: Gtk.Box {
   Adw.StatusPage watermark_empty_status {
     vexpand: true;
     icon-name: "insert-image-symbolic";
-    title: _("Open a PDF to Add a Watermark");
-    description: _("Choose an image watermark, then save a new document.");
+    title: _("No PDF Open");
+    description: _("Open a PDF to add an image watermark");
 
     child: Gtk.Button watermark_empty_choose_button {
       halign: center;
@@ -87,54 +87,54 @@ template $WatermarkWorkspace: Gtk.Box {
       vexpand: true;
 
       child: Gtk.Box watermark_options_box {
-      orientation: vertical;
-      spacing: 18;
-      hexpand: true;
+        orientation: vertical;
+        spacing: 18;
+        hexpand: true;
 
-      Gtk.ListBox {
-        selection-mode: none;
-        styles ["boxed-list"]
+        Gtk.ListBox {
+          selection-mode: none;
+          styles ["boxed-list"]
 
-        Adw.ActionRow watermark_image_row {
-          title: _("Watermark Image");
-          subtitle: _("No image selected");
-          activatable: true;
+          Adw.ActionRow watermark_image_row {
+            title: _("Watermark Image");
+            subtitle: _("No image selected");
+            activatable: true;
+          }
+
+          Adw.ComboRow watermark_layer_row {
+            title: _("Layer");
+          }
+
+          Adw.SpinRow watermark_opacity_row {
+            title: _("Opacity");
+            subtitle: _("Percent");
+          }
+
+          Adw.ComboRow watermark_pages_row {
+            title: _("Pages");
+          }
+
+          Adw.EntryRow watermark_specific_pages_entry {
+            title: _("Specific Pages");
+          }
+
+          Gtk.ListBoxRow watermark_specific_pages_error_row {
+            visible: false;
+            selectable: false;
+            activatable: false;
+
+            child: Gtk.Label watermark_specific_pages_error_label {
+              xalign: 0;
+              wrap: true;
+              margin-start: 12;
+              margin-end: 12;
+              margin-top: 6;
+              margin-bottom: 6;
+
+              styles ["error"]
+            };
+          }
         }
-
-        Adw.ComboRow watermark_layer_row {
-          title: _("Layer");
-        }
-
-        Adw.SpinRow watermark_opacity_row {
-          title: _("Opacity");
-          subtitle: _("Percent");
-        }
-
-        Adw.ComboRow watermark_pages_row {
-          title: _("Pages");
-        }
-
-        Adw.EntryRow watermark_specific_pages_entry {
-          title: _("Specific Pages");
-        }
-
-        Gtk.ListBoxRow watermark_specific_pages_error_row {
-          visible: false;
-          selectable: false;
-          activatable: false;
-
-          child: Gtk.Label watermark_specific_pages_error_label {
-            xalign: 0;
-            wrap: true;
-            margin-start: 12;
-            margin-end: 12;
-            margin-top: 6;
-            margin-bottom: 6;
-
-            styles ["error"]
-          };
-        }
-      }
       };
     }
   }

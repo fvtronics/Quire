@@ -55,8 +55,8 @@ template $SplitWorkspace: Gtk.Box {
   Adw.StatusPage split_empty_status {
     vexpand: true;
     icon-name: "edit-cut-symbolic";
-    title: _("Open a PDF to Split");
-    description: _("Choose where the PDF should be split by page.");
+    title: _("No PDF Open");
+    description: _("Open a PDF to choose where to split it");
 
     child: Gtk.Button split_empty_choose_button {
       halign: center;
@@ -87,64 +87,64 @@ template $SplitWorkspace: Gtk.Box {
       vexpand: true;
 
       child: Gtk.Box split_options_box {
-      orientation: vertical;
-      spacing: 18;
-      hexpand: true;
+        orientation: vertical;
+        spacing: 18;
+        hexpand: true;
 
-      Gtk.ListBox {
-        selection-mode: none;
-        styles ["boxed-list"]
+        Gtk.ListBox {
+          selection-mode: none;
+          styles ["boxed-list"]
 
-        Adw.ComboRow split_after_row {
-          title: _("Split After");
+          Adw.ComboRow split_after_row {
+            title: _("Split After");
+          }
+
+          Adw.EntryRow split_specific_pages_entry {
+            title: _("Specific Pages");
+          }
+
+          Gtk.ListBoxRow split_specific_pages_error_row {
+            visible: false;
+            selectable: false;
+            activatable: false;
+
+            child: Gtk.Label split_specific_pages_error_label {
+              xalign: 0;
+              wrap: true;
+              margin-start: 12;
+              margin-end: 12;
+              margin-top: 6;
+              margin-bottom: 6;
+
+              styles ["error"]
+            };
+          }
+
+          Adw.EntryRow split_pages_entry {
+            title: _("Every N Pages");
+          }
+
+          Gtk.ListBoxRow split_pages_error_row {
+            visible: false;
+            selectable: false;
+            activatable: false;
+
+            child: Gtk.Label split_pages_error_label {
+              xalign: 0;
+              wrap: true;
+              margin-start: 12;
+              margin-end: 12;
+              margin-top: 6;
+              margin-bottom: 6;
+
+              styles ["error"]
+            };
+          }
+
+          Adw.EntryRow split_prefix_entry {
+            title: _("Output Name Prefix");
+          }
         }
-
-        Adw.EntryRow split_specific_pages_entry {
-          title: _("Specific Pages");
-        }
-
-        Gtk.ListBoxRow split_specific_pages_error_row {
-          visible: false;
-          selectable: false;
-          activatable: false;
-
-          child: Gtk.Label split_specific_pages_error_label {
-            xalign: 0;
-            wrap: true;
-            margin-start: 12;
-            margin-end: 12;
-            margin-top: 6;
-            margin-bottom: 6;
-
-            styles ["error"]
-          };
-        }
-
-        Adw.EntryRow split_pages_entry {
-          title: _("Every N Pages");
-        }
-
-        Gtk.ListBoxRow split_pages_error_row {
-          visible: false;
-          selectable: false;
-          activatable: false;
-
-          child: Gtk.Label split_pages_error_label {
-            xalign: 0;
-            wrap: true;
-            margin-start: 12;
-            margin-end: 12;
-            margin-top: 6;
-            margin-bottom: 6;
-
-            styles ["error"]
-          };
-        }
-
-        Adw.EntryRow split_prefix_entry {
-          title: _("Output Name Prefix");
-        }
-      }
       };
     }
   }

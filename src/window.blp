@@ -44,36 +44,36 @@ template $QuireWindow: Adw.ApplicationWindow {
               styles ["navigation-sidebar"]
 
               Adw.ActionRow merge_tool_row {
-                title: _("Merge");
-                subtitle: _("Combine PDFs");
+                title: _("Merge PDFs");
+                subtitle: _("Combine files");
                 icon-name: "view-paged-symbolic";
                 activatable: true;
               }
 
               Adw.ActionRow organize_tool_row {
                 title: _("Organize Pages");
-                subtitle: _("Reorder or remove pages");
+                subtitle: _("Reorder or remove");
                 icon-name: "view-grid-symbolic";
                 activatable: true;
               }
 
               Adw.ActionRow extract_tool_row {
                 title: _("Extract Pages");
-                subtitle: _("Save selected pages");
+                subtitle: _("Save page ranges");
                 icon-name: "edit-copy-symbolic";
                 activatable: true;
               }
 
               Adw.ActionRow split_tool_row {
-                title: _("Split");
-                subtitle: _("Split by page");
+                title: _("Split PDF");
+                subtitle: _("Create separate files");
                 icon-name: "edit-cut-symbolic";
                 activatable: true;
               }
 
               Adw.ActionRow compress_tool_row {
-                title: _("Compress");
-                subtitle: _("Reduce PDF size");
+                title: _("Compress PDF");
+                subtitle: _("Reduce file size");
                 icon-name: "package-x-generic-symbolic";
                 activatable: true;
               }
@@ -86,12 +86,12 @@ template $QuireWindow: Adw.ApplicationWindow {
               }
 
               Adw.ActionRow metadata_tool_row {
-                title: _("Metadata");
-                subtitle: _("View and edit details");
+                title: _("Edit Metadata");
+                subtitle: _("Update document details");
                 icon-name: "document-properties-symbolic";
                 activatable: true;
               }
-            }
+            };
           };
         };
       };
