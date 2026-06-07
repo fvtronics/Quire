@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: quire\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-06 14:40-0400\n"
+"POT-Creation-Date: 2026-06-06 20:32-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -513,13 +513,13 @@ msgid "Compressed PDF saved"
 msgstr ""
 
 #: src/window/compress.rs:262
-msgid "Compressing PDF..."
+msgid "Compressing PDF…"
 msgstr ""
 
 #: src/window/compress.rs:264 src/window/extract.rs:460
 #: src/window/metadata.rs:326 src/window/organize.rs:402
 #: src/window/split.rs:428 src/window/watermark.rs:471
-msgid "Loading PDF..."
+msgid "Loading PDF…"
 msgstr ""
 
 #: src/window/extract.rs:146
@@ -539,7 +539,7 @@ msgid "Extracted pages saved"
 msgstr ""
 
 #: src/window/extract.rs:458
-msgid "Extracting pages..."
+msgid "Extracting pages…"
 msgstr ""
 
 #: src/window/extract.rs:487 src/window/extract.rs:544
@@ -585,11 +585,11 @@ msgid "Merged PDF saved"
 msgstr ""
 
 #: src/window/merge.rs:434
-msgid "Merging PDFs..."
+msgid "Merging PDFs…"
 msgstr ""
 
 #: src/window/merge.rs:436
-msgid "Loading PDFs..."
+msgid "Loading PDFs…"
 msgstr ""
 
 #: src/window/merge.rs:440
@@ -628,7 +628,7 @@ msgid "PDF metadata saved"
 msgstr ""
 
 #: src/window/metadata.rs:324
-msgid "Saving metadata..."
+msgid "Saving metadata…"
 msgstr ""
 
 #: src/window/metadata.rs:389
@@ -648,7 +648,7 @@ msgid "Organized PDF saved"
 msgstr ""
 
 #: src/window/organize.rs:400
-msgid "Organizing pages..."
+msgid "Organizing pages…"
 msgstr ""
 
 #: src/window/organize.rs:421
@@ -688,7 +688,7 @@ msgid "Split PDFs saved"
 msgstr ""
 
 #: src/window/split.rs:426
-msgid "Splitting PDF..."
+msgid "Splitting PDF…"
 msgstr ""
 
 #: src/window/workspace.rs:230
@@ -849,5 +849,5 @@ msgid "Watermarked PDF saved"
 msgstr ""
 
 #: src/window/watermark.rs:469
-msgid "Adding watermark..."
+msgid "Adding watermark…"
 msgstr ""

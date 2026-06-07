@@ -321,9 +321,9 @@ impl MetadataWorkspace {
         self.update_keywords_entry_state(has_keywords_error);
 
         let detail = if imp.is_running.get() {
-            gettext("Saving metadata...")
+            gettext("Saving metadata…")
         } else if imp.metadata.job.is_loading() {
-            gettext("Loading PDF...")
+            gettext("Loading PDF…")
         } else if let Some(path) = file.as_ref() {
             file_title(path).to_string()
         } else {

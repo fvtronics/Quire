@@ -455,9 +455,9 @@ impl ExtractWorkspace {
         );
 
         let detail = if imp.is_running.get() {
-            gettext("Extracting pages...")
+            gettext("Extracting pages…")
         } else if imp.extract.job.is_loading() {
-            gettext("Loading PDF...")
+            gettext("Loading PDF…")
         } else if let Some(path) = imp.extract.file.borrow().as_ref() {
             file_title(path).to_string()
         } else {

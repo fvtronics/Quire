@@ -423,9 +423,9 @@ impl SplitWorkspace {
         );
 
         let detail = if imp.is_running.get() {
-            gettext("Splitting PDF...")
+            gettext("Splitting PDF…")
         } else if imp.split.job.is_loading() {
-            gettext("Loading PDF...")
+            gettext("Loading PDF…")
         } else if let Some(path) = file.as_ref() {
             file_title(path).to_string()
         } else {

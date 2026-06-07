@@ -466,9 +466,9 @@ impl WatermarkWorkspace {
         );
 
         let detail = if imp.is_running.get() {
-            gettext("Adding watermark...")
+            gettext("Adding watermark…")
         } else if imp.watermark.job.is_loading() {
-            gettext("Loading PDF...")
+            gettext("Loading PDF…")
         } else if let Some(path) = file.as_ref() {
             file_title(path).to_string()
         } else {

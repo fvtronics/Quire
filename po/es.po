@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Quire 0.1.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-06 14:40-0400\n"
+"POT-Creation-Date: 2026-06-06 20:32-0400\n"
 "PO-Revision-Date: 2026-06-06 14:42-0400\n"
 "Last-Translator: Francisco <fvasquez>\n"
 "Language-Team: es_DO\n"
@@ -525,14 +525,14 @@ msgid "Compressed PDF saved"
 msgstr "Archivo PDF comprimido guardado"
 
 #: src/window/compress.rs:262
-msgid "Compressing PDF..."
-msgstr "Comprimiendo archivo PDF..."
+msgid "Compressing PDF…"
+msgstr "Comprimiendo archivo PDF…"
 
 #: src/window/compress.rs:264 src/window/extract.rs:460
 #: src/window/metadata.rs:326 src/window/organize.rs:402
 #: src/window/split.rs:428 src/window/watermark.rs:471
-msgid "Loading PDF..."
-msgstr "Cargando archivo PDF..."
+msgid "Loading PDF…"
+msgstr "Cargando archivo PDF…"
 
 #: src/window/extract.rs:146
 msgid "Rotate Selected Pages"
@@ -551,8 +551,8 @@ msgid "Extracted pages saved"
 msgstr "Páginas extraídas guardadas"
 
 #: src/window/extract.rs:458
-msgid "Extracting pages..."
-msgstr "Extrayendo páginas..."
+msgid "Extracting pages…"
+msgstr "Extrayendo páginas…"
 
 #: src/window/extract.rs:487 src/window/extract.rs:544
 msgid "Select Page"
@@ -597,12 +597,12 @@ msgid "Merged PDF saved"
 msgstr "Archivo PDF combinado guardado"
 
 #: src/window/merge.rs:434
-msgid "Merging PDFs..."
-msgstr "Combinando archivos PDF..."
+msgid "Merging PDFs…"
+msgstr "Combinando archivos PDF…"
 
 #: src/window/merge.rs:436
-msgid "Loading PDFs..."
-msgstr "Cargando archivos PDF..."
+msgid "Loading PDFs…"
+msgstr "Cargando archivos PDF…"
 
 #: src/window/merge.rs:440
 #, rust-format
@@ -640,8 +640,8 @@ msgid "PDF metadata saved"
 msgstr "Metadatos del PDF guardados"
 
 #: src/window/metadata.rs:324
-msgid "Saving metadata..."
-msgstr "Guardando metadatos..."
+msgid "Saving metadata…"
+msgstr "Guardando metadatos…"
 
 #: src/window/metadata.rs:389
 msgid "N/A"
@@ -660,8 +660,8 @@ msgid "Organized PDF saved"
 msgstr "Archivo PDF organizado guardado"
 
 #: src/window/organize.rs:400
-msgid "Organizing pages..."
-msgstr "Organizando páginas..."
+msgid "Organizing pages…"
+msgstr "Organizando páginas…"
 
 #: src/window/organize.rs:421
 msgid "Position"
@@ -700,8 +700,8 @@ msgid "Split PDFs saved"
 msgstr "Archivos PDF divididos guardados"
 
 #: src/window/split.rs:426
-msgid "Splitting PDF..."
-msgstr "Dividiendo archivo PDF..."
+msgid "Splitting PDF…"
+msgstr "Dividiendo archivo PDF…"
 
 #: src/window/workspace.rs:230
 msgid "_Undo"
@@ -861,8 +861,8 @@ msgid "Watermarked PDF saved"
 msgstr "Archivo PDF con marca de agua guardado"
 
 #: src/window/watermark.rs:469
-msgid "Adding watermark..."
-msgstr "Añadiendo marca de agua..."
+msgid "Adding watermark…"
+msgstr "Añadiendo marca de agua…"
 
 #~ msgid "Improved keyboard navigation throughout the app"
 #~ msgstr "Mejoras de navegación con teclado en la aplicación"

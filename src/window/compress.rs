@@ -259,9 +259,9 @@ impl CompressWorkspace {
             .set_sensitive(has_file && !is_busy);
 
         let detail = if imp.is_running.get() {
-            gettext("Compressing PDF...")
+            gettext("Compressing PDF…")
         } else if imp.compress.job.is_loading() {
-            gettext("Loading PDF...")
+            gettext("Loading PDF…")
         } else if let Some(path) = file.as_ref() {
             file_title(path).to_string()
         } else {

@@ -397,9 +397,9 @@ impl OrganizeWorkspace {
             .set_sensitive(imp.organize.job.has_last_output() && !is_busy);
 
         let detail = if imp.is_running.get() {
-            gettext("Organizing pages...")
+            gettext("Organizing pages…")
         } else if imp.organize.job.is_loading() {
-            gettext("Loading PDF...")
+            gettext("Loading PDF…")
         } else if let Some(path) = imp.organize.file.borrow().as_ref() {
             file_title(path).to_string()
         } else {

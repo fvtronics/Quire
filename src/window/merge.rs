@@ -431,9 +431,9 @@ impl MergeWorkspace {
             .set_sensitive(imp.merge.job.has_last_output() && !is_busy);
 
         let count_text = if imp.is_running.get() {
-            gettext("Merging PDFs...")
+            gettext("Merging PDFs…")
         } else if imp.merge.job.is_loading() {
-            gettext("Loading PDFs...")
+            gettext("Loading PDFs…")
         } else {
             match files.len() {
                 0 => gettext("No files selected"),
