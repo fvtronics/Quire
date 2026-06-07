@@ -57,6 +57,14 @@ To install the built package on your system, run the following command:
 meson install -C build
 ```
 
+## Translation
+
+This project's translations are handled by **[Codeberg Translate](https://translate.codeberg.org/engage/quire/)**, a community-hosted instance of Weblate.
+
+New languages and translation improvements are appreciated.
+
+[![Translation status](https://translate.codeberg.org/widgets/quire/-/multi-auto.svg)](https://translate.codeberg.org/engage/quire/)
+
 ## Code Quality
 
 [![Scanned on SonarQube](https://sonarcloud.io/images/project_badges/sonarcloud-white.svg)](https://sonarcloud.io/summary/overall?id=fvtronics_quire)
