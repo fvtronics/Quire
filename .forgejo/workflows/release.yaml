@@ -1,0 +1,110 @@
+name: Quire release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  flatpak-bundle:
+    name: Flatpak Bundle
+    runs-on: flatpak-builder
+
+    steps:
+      - name: Checkout
+        uses: https://data.forgejo.org/actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Cache Flatpak Sources
+        uses: https://data.forgejo.org/actions/cache@v4
+        with:
+          path: |
+            .flatpak-builder/downloads
+            .flatpak-builder/git
+          key: ${{ runner.os }}-flatpak-sources-${{ hashFiles('com.fvtronics.Quire.json', 'cargo-sources.json', 'Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-flatpak-sources-
+
+      - name: Cache Flatpak Builds
+        uses: https://data.forgejo.org/actions/cache@v4
+        with:
+          path: .flatpak-builder/cache
+          key: ${{ runner.os }}-flatpak-builds-${{ hashFiles('com.fvtronics.Quire.json', 'cargo-sources.json', 'Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-flatpak-builds-
+
+      - name: Build Flatpak Bundle
+        run: |
+          flatpak-builder \
+            --repo=repo \
+            --default-branch=stable \
+            --disable-rofiles-fuse \
+            --disable-updates \
+            --force-clean \
+            build-dir \
+            com.fvtronics.Quire.json
+
+          FLATPAK_BUNDLE="quire-${FORGEJO_REF#refs/tags/}.flatpak"
+          flatpak build-bundle \
+            repo \
+            "$FLATPAK_BUNDLE" \
+            --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo \
+            com.fvtronics.Quire \
+            stable
+          echo "FLATPAK_BUNDLE=$FLATPAK_BUNDLE" >> "$FORGEJO_ENV"
+
+      - name: Upload Flatpak Bundle
+        uses: https://data.forgejo.org/actions/upload-artifact@v3
+        with:
+          name: flatpak-bundle
+          path: quire-*.flatpak
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    name: Create Forgejo Release
+    needs: flatpak-bundle
+    runs-on: linux-amd64
+
+    steps:
+      - name: Checkout
+        uses: https://data.forgejo.org/actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate Release Version
+        run: |
+          VERSION="${FORGEJO_REF#refs/tags/v}"
+          CARGO_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
+          MESON_VERSION="$(sed -n "s/^ *version: '\(.*\)',/\1/p" meson.build | head -n 1)"
+
+          test "$VERSION" = "$CARGO_VERSION"
+          test "$VERSION" = "$MESON_VERSION"
+          grep -q "<release version=\"$VERSION\"" data/com.fvtronics.Quire.metainfo.xml.in
+
+      - name: Install metadata validation tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends appstream desktop-file-utils
+
+      - name: Validate App Metadata
+        run: |
+          python3 -m json.tool com.fvtronics.Quire.json >/dev/null
+          python3 -m json.tool cargo-sources.json >/dev/null
+          appstreamcli validate --no-net --explain data/com.fvtronics.Quire.metainfo.xml.in
+          cp data/com.fvtronics.Quire.desktop.in /tmp/com.fvtronics.Quire.desktop
+          desktop-file-validate /tmp/com.fvtronics.Quire.desktop
+
+      - name: Download Flatpak Bundle
+        uses: https://data.forgejo.org/actions/download-artifact@v3
+        with:
+          name: flatpak-bundle
+          path: dist/release
+
+      - name: Create Forgejo Release
+        uses: https://data.forgejo.org/actions/forgejo-release@v2.12.1
+        with:
+          direction: upload
+          release-dir: dist/release
+          release-notes-file: CHANGELOG.md

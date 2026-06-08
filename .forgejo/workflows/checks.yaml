@@ -1,0 +1,105 @@
+name: Quire checks
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  SONAR_USER_HOME: ${{ forgejo.workspace }}/.sonar
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: fedora
+
+    steps:
+      - name: Checkout
+        uses: https://data.forgejo.org/actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Cache Cargo
+        uses: https://data.forgejo.org/actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Generate Build Configuration
+        run: meson setup builddir
+
+      - name: Blueprint Check
+        run: meson compile -C builddir blueprints
+
+      - name: Format Check
+        run: cargo fmt --all -- --check
+
+      - name: Whitespace Check
+        run: git diff --check
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --locked
+
+      - name: Generate Sonar Reports
+        if: vars.SONAR_ENABLED == 'true' && forgejo.event_name == 'push'
+        run: |
+          mkdir -p target/sonar
+          cargo clippy --locked --message-format=json > target/sonar/clippy.json
+          cargo llvm-cov --locked --lcov --output-path target/sonar/lcov.info
+
+      - name: Upload Sonar Reports
+        if: vars.SONAR_ENABLED == 'true' && forgejo.event_name == 'push'
+        uses: https://data.forgejo.org/actions/upload-artifact@v3
+        with:
+          name: sonar-reports
+          path: target/sonar
+          if-no-files-found: error
+          retention-days: 1
+
+  sonarqube:
+    name: SonarQube Cloud
+    needs: checks
+    if: vars.SONAR_ENABLED == 'true' && forgejo.event_name == 'push'
+    runs-on: sonar
+
+    steps:
+      - name: Checkout
+        uses: https://data.forgejo.org/actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Cache Sonar
+        uses: https://data.forgejo.org/actions/cache@v4
+        with:
+          path: .sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: |
+            ${{ runner.os }}-sonar-
+
+      - name: Download Sonar Reports
+        uses: https://data.forgejo.org/actions/download-artifact@v3
+        with:
+          name: sonar-reports
+          path: target/sonar
+
+      - name: Prepare Sonar Cache
+        run: mkdir -p "$FORGEJO_WORKSPACE/.sonar/cache"
+
+      - name: SonarQube Cloud Scan
+        run: |
+          export SONAR_USER_HOME="$FORGEJO_WORKSPACE/.sonar"
+          sonar-scanner
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
