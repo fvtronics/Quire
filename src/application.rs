@@ -118,9 +118,11 @@ impl QuireApplication {
             .developer_name("Francisco Vásquez Cuevas")
             .version(VERSION)
             .developers(vec!["Francisco Vásquez Cuevas"])
-            // Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
             .translator_credits(gettext("translator-credits"))
             .copyright("© 2026 Francisco Vásquez Cuevas")
+            .website("https://fvtronics.com/en/projects/quire")
+            .issue_url("https://codeberg.org/FVtronics/Quire/issues")
+            .license_type(gtk::License::Gpl30)
             .build();
 
         about.present(Some(&window));
