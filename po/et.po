@@ -1,0 +1,852 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the quire package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: quire\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-06 20:32-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: et\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+#: data/com.fvtronics.Quire.desktop.in:2
+#: data/com.fvtronics.Quire.metainfo.xml.in:7 src/window.blp:5
+#: src/window.blp:17 src/window.blp:23 src/window.blp:100
+msgid "Quire"
+msgstr ""
+
+#: data/com.fvtronics.Quire.desktop.in:3
+#: data/com.fvtronics.Quire.metainfo.xml.in:8
+msgid "Combine and edit PDF files"
+msgstr ""
+
+#: data/com.fvtronics.Quire.desktop.in:9
+msgid "PDF;Merge;Split;Extract;Organize;Watermark;"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:10
+msgid ""
+"Quire is a simple GNOME utility for working with local PDF files without a "
+"complex document suite."
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:11
+msgid ""
+"Merge multiple PDFs, organize pages, extract page ranges, split documents, "
+"compress files, and edit metadata without sending them to an online service."
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:15
+msgid "Francisco Vásquez Cuevas"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:39
+msgid "Merge multiple PDF files into a single document"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:43
+msgid "Reorder and remove pages before saving a new PDF"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:47
+msgid "Extract selected pages into a new document"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:51
+msgid "Split a PDF into multiple documents"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:55
+msgid "Compress PDF files for smaller output"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:59
+msgid "View and edit PDF metadata"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:63
+msgid "Add a watermark to specific PDF pages"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:75
+#: data/com.fvtronics.Quire.metainfo.xml.in:96
+#: data/com.fvtronics.Quire.metainfo.xml.in:125
+msgid "New"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:77
+msgid "Add support for mobile window sizes"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:79
+#: data/com.fvtronics.Quire.metainfo.xml.in:87
+#: data/com.fvtronics.Quire.metainfo.xml.in:100
+#: data/com.fvtronics.Quire.metainfo.xml.in:108
+#: data/com.fvtronics.Quire.metainfo.xml.in:116
+#: data/com.fvtronics.Quire.metainfo.xml.in:129
+msgid "Changes"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:81
+msgid "Improve app responsiveness when resizing it"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:89
+msgid "Fixed missing icons and previews in some environments"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:90
+msgid "Improved touchscreen support"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:98
+msgid "Added a Watermark section"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:102
+msgid "Improved feedback when fields need attention"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:110
+msgid "Improved icon scalability and shadows"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:118
+msgid "Rename app from Folios to Quire"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:119
+msgid "Modify app icon"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:127
+msgid ""
+"Added an undo action for clearing the document list in the merge section"
+msgstr ""
+
+#: data/com.fvtronics.Quire.metainfo.xml.in:131
+msgid "Improved app usability in small windows"
+msgstr ""
+
+#. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
+#: src/application.rs:122
+msgid "translator-credits"
+msgstr ""
+
+#: src/compress-workspace.blp:23 src/compress-workspace.blp:24
+#: src/compress-workspace.blp:63 src/compress-workspace.blp:66
+#: src/extract-workspace.blp:23 src/extract-workspace.blp:24
+#: src/extract-workspace.blp:63 src/extract-workspace.blp:66
+#: src/metadata-workspace.blp:23 src/metadata-workspace.blp:24
+#: src/metadata-workspace.blp:63 src/metadata-workspace.blp:66
+#: src/organize-workspace.blp:23 src/organize-workspace.blp:24
+#: src/organize-workspace.blp:72 src/organize-workspace.blp:75
+#: src/split-workspace.blp:23 src/split-workspace.blp:24
+#: src/split-workspace.blp:63 src/split-workspace.blp:66
+#: src/watermark-workspace.blp:23 src/watermark-workspace.blp:24
+#: src/watermark-workspace.blp:63 src/watermark-workspace.blp:66
+#: src/window/compress.rs:156 src/window/extract.rs:242
+#: src/window/metadata.rs:210 src/window/organize.rs:193
+#: src/window/split.rs:273 src/window/watermark.rs:284
+msgid "Open PDF"
+msgstr ""
+
+#: src/compress-workspace.blp:31 src/extract-workspace.blp:31
+#: src/merge-workspace.blp:31 src/metadata-workspace.blp:31
+#: src/organize-workspace.blp:31 src/watermark-workspace.blp:31
+msgid "Open Output File"
+msgstr ""
+
+#: src/compress-workspace.blp:33 src/extract-workspace.blp:33
+#: src/merge-workspace.blp:33 src/metadata-workspace.blp:33
+#: src/organize-workspace.blp:33 src/watermark-workspace.blp:33
+msgid "Open Output"
+msgstr ""
+
+#: src/compress-workspace.blp:40 src/window.rs:73 src/window.blp:75
+msgid "Compress PDF"
+msgstr ""
+
+#: src/compress-workspace.blp:43 src/window/compress.rs:177
+msgid "Compress"
+msgstr ""
+
+#: src/compress-workspace.blp:50 src/extract-workspace.blp:50
+#: src/merge-workspace.blp:59 src/metadata-workspace.blp:50
+#: src/organize-workspace.blp:59 src/split-workspace.blp:50
+#: src/watermark-workspace.blp:50
+msgid "Advanced Options"
+msgstr ""
+
+#: src/compress-workspace.blp:58 src/extract-workspace.blp:58
+#: src/metadata-workspace.blp:58 src/organize-workspace.blp:67
+#: src/split-workspace.blp:58 src/watermark-workspace.blp:58
+msgid "No PDF Open"
+msgstr ""
+
+#: src/compress-workspace.blp:59
+msgid "Open a PDF to save a smaller copy"
+msgstr ""
+
+#: src/compress-workspace.blp:99
+msgid "Remove Unused Data"
+msgstr ""
+
+#: src/compress-workspace.blp:100
+msgid "Discard unreferenced PDF objects"
+msgstr ""
+
+#: src/compress-workspace.blp:105
+msgid "Remove Empty Streams"
+msgstr ""
+
+#: src/compress-workspace.blp:106
+msgid "Discard empty PDF data streams"
+msgstr ""
+
+#: src/extract-workspace.blp:40
+msgid "Extract Selected Pages"
+msgstr ""
+
+#: src/extract-workspace.blp:43 src/window/extract.rs:287
+msgid "Extract"
+msgstr ""
+
+#: src/extract-workspace.blp:59
+msgid "Open a PDF to choose pages to extract"
+msgstr ""
+
+#: src/extract-workspace.blp:86 src/watermark-workspace.blp:114
+msgid "Pages"
+msgstr ""
+
+#: src/extract-workspace.blp:113 src/organize-workspace.blp:85
+msgid "List"
+msgstr ""
+
+#: src/extract-workspace.blp:126 src/organize-workspace.blp:100
+msgid "Grid"
+msgstr ""
+
+#: src/merge-workspace.blp:23 src/merge-workspace.blp:72
+msgid "Add PDF Files"
+msgstr ""
+
+#: src/merge-workspace.blp:24 src/merge-workspace.blp:75
+#: src/window/merge.rs:192
+msgid "Add PDFs"
+msgstr ""
+
+#: src/merge-workspace.blp:40
+msgid "Clear File List"
+msgstr ""
+
+#: src/merge-workspace.blp:42
+msgid "Clear"
+msgstr ""
+
+#: src/merge-workspace.blp:49
+msgid "Merge Selected PDFs"
+msgstr ""
+
+#: src/merge-workspace.blp:52 src/window/merge.rs:208
+msgid "Merge"
+msgstr ""
+
+#: src/merge-workspace.blp:67
+msgid "No PDFs Added"
+msgstr ""
+
+#: src/merge-workspace.blp:68
+msgid "Add two or more PDFs to merge them"
+msgstr ""
+
+#: src/metadata-workspace.blp:40
+msgid "Save Metadata"
+msgstr ""
+
+#: src/metadata-workspace.blp:43 src/organize-workspace.blp:52
+#: src/window/metadata.rs:235 src/window/organize.rs:213
+msgid "Save"
+msgstr ""
+
+#: src/metadata-workspace.blp:59
+msgid "Open a PDF to edit its metadata"
+msgstr ""
+
+#: src/metadata-workspace.blp:99
+msgid "Title"
+msgstr ""
+
+#: src/metadata-workspace.blp:103
+msgid "Author"
+msgstr ""
+
+#: src/metadata-workspace.blp:107
+msgid "Subject"
+msgstr ""
+
+#: src/metadata-workspace.blp:111
+msgid "Keywords"
+msgstr ""
+
+#: src/metadata-workspace.blp:132
+msgid "Creator"
+msgstr ""
+
+#: src/metadata-workspace.blp:136
+msgid "Producer"
+msgstr ""
+
+#: src/organize-workspace.blp:40
+msgid "Reset Page Order"
+msgstr ""
+
+#: src/organize-workspace.blp:42
+msgid "Reset"
+msgstr ""
+
+#: src/organize-workspace.blp:49 src/window/organize.rs:212
+msgid "Save Organized PDF"
+msgstr ""
+
+#: src/organize-workspace.blp:68
+msgid "Open a PDF to reorder or remove pages"
+msgstr ""
+
+#: src/password-dialog.blp:5
+msgid "Password Required"
+msgstr ""
+
+#: src/password-dialog.blp:11
+msgid "Cancel"
+msgstr ""
+
+#: src/password-dialog.blp:12
+msgid "Unlock"
+msgstr ""
+
+#: src/password-dialog.blp:21
+msgid "Password"
+msgstr ""
+
+#: src/password-dialog.blp:30 src/window/workspace.rs:907
+#: src/window/workspace.rs:919
+msgid "Invalid password"
+msgstr ""
+
+#: src/split-workspace.blp:31
+msgid "Open Output Folder"
+msgstr ""
+
+#: src/split-workspace.blp:33
+msgid "Open Folder"
+msgstr ""
+
+#: src/split-workspace.blp:40 src/window.rs:76 src/window.blp:68
+msgid "Split PDF"
+msgstr ""
+
+#: src/split-workspace.blp:43 src/window/split.rs:300
+msgid "Split"
+msgstr ""
+
+#: src/split-workspace.blp:59
+msgid "Open a PDF to choose where to split it"
+msgstr ""
+
+#: src/split-workspace.blp:99
+msgid "Split After"
+msgstr ""
+
+#: src/split-workspace.blp:103 src/watermark-workspace.blp:118
+#: src/window/split.rs:144 src/window/watermark.rs:161
+msgid "Specific Pages"
+msgstr ""
+
+#: src/split-workspace.blp:124 src/window/split.rs:145
+msgid "Every N Pages"
+msgstr ""
+
+#: src/split-workspace.blp:145
+msgid "Output Name Prefix"
+msgstr ""
+
+#: src/shortcuts-dialog.blp:6
+msgid "Shortcuts"
+msgstr ""
+
+#: src/shortcuts-dialog.blp:9
+msgctxt "shortcut window"
+msgid "Show Shortcuts"
+msgstr ""
+
+#: src/shortcuts-dialog.blp:14
+msgctxt "shortcut window"
+msgid "Quit"
+msgstr ""
+
+#: src/watermark-workspace.blp:40 src/watermark-workspace.blp:43
+#: src/window.rs:78 src/window.blp:82 src/window/watermark.rs:348
+msgid "Add Watermark"
+msgstr ""
+
+#: src/watermark-workspace.blp:59
+msgid "Open a PDF to add an image watermark"
+msgstr ""
+
+#: src/watermark-workspace.blp:99
+msgid "Watermark Image"
+msgstr ""
+
+#: src/watermark-workspace.blp:100 src/window/watermark.rs:429
+msgid "No image selected"
+msgstr ""
+
+#: src/watermark-workspace.blp:105
+msgid "Layer"
+msgstr ""
+
+#: src/watermark-workspace.blp:109
+msgid "Opacity"
+msgstr ""
+
+#: src/watermark-workspace.blp:110
+msgid "Percent"
+msgstr ""
+
+#: src/window.rs:72 src/window.blp:47 src/window.blp:106
+msgid "Merge PDFs"
+msgstr ""
+
+#: src/window.rs:74 src/window.blp:54
+msgid "Organize Pages"
+msgstr ""
+
+#: src/window.rs:75 src/window.blp:61
+msgid "Extract Pages"
+msgstr ""
+
+#: src/window.rs:77 src/window.blp:89
+msgid "Edit Metadata"
+msgstr ""
+
+#: src/window.rs:84 src/window.blp:107 src/window/merge.rs:439
+msgid "No files selected"
+msgstr ""
+
+#: src/window.rs:90 src/window/compress.rs:268 src/window/extract.rs:464
+#: src/window/metadata.rs:330 src/window/organize.rs:406
+#: src/window/split.rs:432 src/window/watermark.rs:475
+msgid "No PDF selected"
+msgstr ""
+
+#: src/window.blp:30
+msgid "Main Menu"
+msgstr ""
+
+#: src/window.blp:48
+msgid "Combine files"
+msgstr ""
+
+#: src/window.blp:55
+msgid "Reorder or remove"
+msgstr ""
+
+#: src/window.blp:62
+msgid "Save page ranges"
+msgstr ""
+
+#: src/window.blp:69
+msgid "Create separate files"
+msgstr ""
+
+#: src/window.blp:76
+msgid "Reduce file size"
+msgstr ""
+
+#: src/window.blp:83
+msgid "Overlay an image"
+msgstr ""
+
+#: src/window.blp:90
+msgid "Update document details"
+msgstr ""
+
+#: src/window.blp:116
+msgid "List View"
+msgstr ""
+
+#: src/window.blp:121
+msgid "Grid View"
+msgstr ""
+
+#: src/window.blp:144
+msgid "_Keyboard Shortcuts"
+msgstr ""
+
+#: src/window.blp:148
+msgid "_About Quire"
+msgstr ""
+
+#: src/window/compress.rs:156 src/window/extract.rs:242
+#: src/window/metadata.rs:210 src/window/organize.rs:193
+#: src/window/split.rs:273 src/window/watermark.rs:284
+msgid "Open"
+msgstr ""
+
+#: src/window/compress.rs:176
+msgid "Save Compressed PDF"
+msgstr ""
+
+#: src/window/compress.rs:220
+msgid "Compressed PDF saved"
+msgstr ""
+
+#: src/window/compress.rs:262
+msgid "Compressing PDF…"
+msgstr ""
+
+#: src/window/compress.rs:264 src/window/extract.rs:460
+#: src/window/metadata.rs:326 src/window/organize.rs:402
+#: src/window/split.rs:428 src/window/watermark.rs:471
+msgid "Loading PDF…"
+msgstr ""
+
+#: src/window/extract.rs:146
+msgid "Rotate Selected Pages"
+msgstr ""
+
+#: src/window/extract.rs:260 src/window/workspace.rs:899
+msgid "Choose at least one page"
+msgstr ""
+
+#: src/window/extract.rs:286
+msgid "Save Extracted Pages"
+msgstr ""
+
+#: src/window/extract.rs:331
+msgid "Extracted pages saved"
+msgstr ""
+
+#: src/window/extract.rs:458
+msgid "Extracting pages…"
+msgstr ""
+
+#: src/window/extract.rs:487 src/window/extract.rs:544
+msgid "Select Page"
+msgstr ""
+
+#: src/window/extract.rs:491 src/window/extract.rs:533
+#: src/window/organize.rs:657
+msgid "Page"
+msgstr ""
+
+#: src/window/extract.rs:500 src/window/extract.rs:536
+#: src/window/workspace.rs:704
+msgid "Rotate Clockwise"
+msgstr ""
+
+#: src/window/extract.rs:582 src/window/workspace.rs:739
+msgid "Rotate _Clockwise"
+msgstr ""
+
+#: src/window/extract.rs:586
+msgid "_Unselect"
+msgstr ""
+
+#: src/window/extract.rs:588
+msgid "_Select"
+msgstr ""
+
+#: src/window/merge.rs:132
+msgid "Rotate All Files"
+msgstr ""
+
+#: src/window/merge.rs:192
+msgid "Add"
+msgstr ""
+
+#: src/window/merge.rs:207
+msgid "Save Merged PDF"
+msgstr ""
+
+#: src/window/merge.rs:300
+msgid "Merged PDF saved"
+msgstr ""
+
+#: src/window/merge.rs:434
+msgid "Merging PDFs…"
+msgstr ""
+
+#: src/window/merge.rs:436
+msgid "Loading PDFs…"
+msgstr ""
+
+#: src/window/merge.rs:440
+#, rust-format
+msgid "1 PDF selected"
+msgid_plural "{} PDFs selected"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/window/merge.rs:538 src/window/organize.rs:520
+msgid "Du_plicate"
+msgstr ""
+
+#: src/window/merge.rs:621
+msgid "PDF removed"
+msgstr ""
+
+#: src/window/merge.rs:663
+msgid "Merge list cleared"
+msgstr ""
+
+#: src/window/metadata.rs:21
+msgid "Enter keywords separated by commas."
+msgstr ""
+
+#: src/window/metadata.rs:133
+msgid "Producer will be replaced when saving"
+msgstr ""
+
+#: src/window/metadata.rs:234
+msgid "Save PDF Metadata"
+msgstr ""
+
+#: src/window/metadata.rs:279
+msgid "PDF metadata saved"
+msgstr ""
+
+#: src/window/metadata.rs:324
+msgid "Saving metadata…"
+msgstr ""
+
+#: src/window/metadata.rs:389
+msgid "N/A"
+msgstr ""
+
+#: src/window/organize.rs:133
+msgid "Rotate All Pages"
+msgstr ""
+
+#: src/window/organize.rs:253
+msgid "Page order reset"
+msgstr ""
+
+#: src/window/organize.rs:274
+msgid "Organized PDF saved"
+msgstr ""
+
+#: src/window/organize.rs:400
+msgid "Organizing pages…"
+msgstr ""
+
+#: src/window/organize.rs:421
+msgid "Position"
+msgstr ""
+
+#: src/window/organize.rs:516
+msgid "Insert _Blank Page After"
+msgstr ""
+
+#: src/window/organize.rs:604
+msgid "Page removed"
+msgstr ""
+
+#: src/window/organize.rs:655
+msgid "Blank Page"
+msgstr ""
+
+#: src/window/split.rs:141
+msgid "Every Page"
+msgstr ""
+
+#: src/window/split.rs:142
+msgid "Even Pages"
+msgstr ""
+
+#: src/window/split.rs:143
+msgid "Odd Pages"
+msgstr ""
+
+#: src/window/split.rs:300
+msgid "Choose Output Folder"
+msgstr ""
+
+#: src/window/split.rs:345
+msgid "Split PDFs saved"
+msgstr ""
+
+#: src/window/split.rs:426
+msgid "Splitting PDF…"
+msgstr ""
+
+#: src/window/workspace.rs:230
+msgid "_Undo"
+msgstr ""
+
+#: src/window/workspace.rs:517
+msgid "Modern PDF Format"
+msgstr ""
+
+#: src/window/workspace.rs:518
+msgid "Save with PDF 1.5 object streams"
+msgstr ""
+
+#: src/window/workspace.rs:523
+msgid "Remove Metadata"
+msgstr ""
+
+#: src/window/workspace.rs:524
+msgid "Remove existing metadata before saving"
+msgstr ""
+
+#: src/window/workspace.rs:533
+msgid "Normalize Page Size"
+msgstr ""
+
+#: src/window/workspace.rs:534
+msgid "Resize output pages to the largest page size"
+msgstr ""
+
+#: src/window/workspace.rs:556
+msgid "Could not open output"
+msgstr ""
+
+#: src/window/workspace.rs:694
+msgid "Move Up"
+msgstr ""
+
+#: src/window/workspace.rs:699
+msgid "Move Down"
+msgstr ""
+
+#: src/window/workspace.rs:708
+msgid "Remove"
+msgstr ""
+
+#: src/window/workspace.rs:727
+msgid "Move _Up"
+msgstr ""
+
+#: src/window/workspace.rs:733
+msgid "Move _Down"
+msgstr ""
+
+#: src/window/workspace.rs:745
+msgid "_Remove"
+msgstr ""
+
+#: src/window/workspace.rs:898
+msgid "Choose at least two PDFs"
+msgstr ""
+
+#: src/window/workspace.rs:901
+msgid "Choose a different output file"
+msgstr ""
+
+#: src/window/workspace.rs:904
+msgid "Could not open PDF"
+msgstr ""
+
+#: src/window/workspace.rs:905 src/window/watermark.rs:308
+msgid "Could not open image"
+msgstr ""
+
+#: src/window/workspace.rs:906 src/window/workspace.rs:918
+msgid "Password required"
+msgstr ""
+
+#: src/window/workspace.rs:908
+msgid "Could not process PDF"
+msgstr ""
+
+#: src/window/workspace.rs:910
+msgid "Could not save PDF"
+msgstr ""
+
+#: src/window/workspace.rs:912
+msgid "Could not finish operation"
+msgstr ""
+
+#: src/window/workspace.rs:920
+msgid "Could not preview PDF"
+msgstr ""
+
+#: src/window/ui.rs:32
+msgid "PDF Documents"
+msgstr ""
+
+#: src/window/ui.rs:44
+msgid "Images"
+msgstr ""
+
+#: src/window/ui.rs:157
+#, rust-format
+msgid "Enter the password for {}."
+msgstr ""
+
+#: src/window/ui.rs:317
+msgid "Enter page ranges like 1,3-5,8."
+msgstr ""
+
+#: src/window/ui.rs:321
+msgid "Enter pages like 2,4,7."
+msgstr ""
+
+#: src/window/ui.rs:325
+msgid "Enter a page count of 1 or more."
+msgstr ""
+
+#: src/window/ui.rs:337
+msgid "Size unavailable"
+msgstr ""
+
+#: src/window/watermark.rs:146
+msgid "Foreground"
+msgstr ""
+
+#: src/window/watermark.rs:146
+msgid "Background"
+msgstr ""
+
+#: src/window/watermark.rs:158
+msgid "All Pages"
+msgstr ""
+
+#: src/window/watermark.rs:159
+msgid "First Page"
+msgstr ""
+
+#: src/window/watermark.rs:160
+msgid "Last Page"
+msgstr ""
+
+#: src/window/watermark.rs:299
+msgid "Choose Watermark Image"
+msgstr ""
+
+#: src/window/watermark.rs:300
+msgid "Choose"
+msgstr ""
+
+#: src/window/watermark.rs:347
+msgid "Save Watermarked PDF"
+msgstr ""
+
+#: src/window/watermark.rs:390
+msgid "Watermarked PDF saved"
+msgstr ""
+
+#: src/window/watermark.rs:469
+msgid "Adding watermark…"
+msgstr ""
