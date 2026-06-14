@@ -8,29 +8,32 @@ msgstr ""
 "Project-Id-Version: quire\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-06-06 20:32-0400\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"PO-Revision-Date: 2026-06-14 20:08+0000\n"
+"Last-Translator: Priit Jõerüüt <jrtcdbrg@noreply.codeberg.org>\n"
+"Language-Team: Estonian <https://translate.codeberg.org/projects/quire/quire-"
+"ui/et/>\n"
 "Language: et\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 2026.6.1\n"
 
 #: data/com.fvtronics.Quire.desktop.in:2
 #: data/com.fvtronics.Quire.metainfo.xml.in:7 src/window.blp:5
 #: src/window.blp:17 src/window.blp:23 src/window.blp:100
 msgid "Quire"
-msgstr ""
+msgstr "Quire"
 
 #: data/com.fvtronics.Quire.desktop.in:3
 #: data/com.fvtronics.Quire.metainfo.xml.in:8
 msgid "Combine and edit PDF files"
-msgstr ""
+msgstr "Kombineeri ja muuda PDF-faile"
 
 #: data/com.fvtronics.Quire.desktop.in:9
 msgid "PDF;Merge;Split;Extract;Organize;Watermark;"
 msgstr ""
+"PDF;Merge;Split;Extract;Organize;Watermark;liitmine;mestimine;tükeldamine;eraldamine;haldamine;haldus;metateave;metainfo;vesimärk;vesimärgid;"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:10
 msgid ""
@@ -80,11 +83,11 @@ msgstr ""
 #: data/com.fvtronics.Quire.metainfo.xml.in:96
 #: data/com.fvtronics.Quire.metainfo.xml.in:125
 msgid "New"
-msgstr ""
+msgstr "Uus"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:77
 msgid "Add support for mobile window sizes"
-msgstr ""
+msgstr "Lisandus nutiseadmete akende tugi"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:79
 #: data/com.fvtronics.Quire.metainfo.xml.in:87
@@ -93,7 +96,7 @@ msgstr ""
 #: data/com.fvtronics.Quire.metainfo.xml.in:116
 #: data/com.fvtronics.Quire.metainfo.xml.in:129
 msgid "Changes"
-msgstr ""
+msgstr "Muudatused"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:81
 msgid "Improve app responsiveness when resizing it"
@@ -134,12 +137,12 @@ msgstr ""
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:131
 msgid "Improved app usability in small windows"
-msgstr ""
+msgstr "Parandasime rakenduse kasutust väikestest akendest"
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
 #: src/application.rs:122
 msgid "translator-credits"
-msgstr ""
+msgstr "Priit Jõerüüt 2026"
 
 #: src/compress-workspace.blp:23 src/compress-workspace.blp:24
 #: src/compress-workspace.blp:63 src/compress-workspace.blp:66
@@ -157,211 +160,211 @@ msgstr ""
 #: src/window/metadata.rs:210 src/window/organize.rs:193
 #: src/window/split.rs:273 src/window/watermark.rs:284
 msgid "Open PDF"
-msgstr ""
+msgstr "Ava pdf-fail"
 
 #: src/compress-workspace.blp:31 src/extract-workspace.blp:31
 #: src/merge-workspace.blp:31 src/metadata-workspace.blp:31
 #: src/organize-workspace.blp:31 src/watermark-workspace.blp:31
 msgid "Open Output File"
-msgstr ""
+msgstr "Ava väljundfail"
 
 #: src/compress-workspace.blp:33 src/extract-workspace.blp:33
 #: src/merge-workspace.blp:33 src/metadata-workspace.blp:33
 #: src/organize-workspace.blp:33 src/watermark-workspace.blp:33
 msgid "Open Output"
-msgstr ""
+msgstr "Ava väljund"
 
 #: src/compress-workspace.blp:40 src/window.rs:73 src/window.blp:75
 msgid "Compress PDF"
-msgstr ""
+msgstr "Paki PDF-fail kokku"
 
 #: src/compress-workspace.blp:43 src/window/compress.rs:177
 msgid "Compress"
-msgstr ""
+msgstr "Paki kokku"
 
 #: src/compress-workspace.blp:50 src/extract-workspace.blp:50
 #: src/merge-workspace.blp:59 src/metadata-workspace.blp:50
 #: src/organize-workspace.blp:59 src/split-workspace.blp:50
 #: src/watermark-workspace.blp:50
 msgid "Advanced Options"
-msgstr ""
+msgstr "Täpsemad valikud"
 
 #: src/compress-workspace.blp:58 src/extract-workspace.blp:58
 #: src/metadata-workspace.blp:58 src/organize-workspace.blp:67
 #: src/split-workspace.blp:58 src/watermark-workspace.blp:58
 msgid "No PDF Open"
-msgstr ""
+msgstr "Ükski PDF-fail pole avatud"
 
 #: src/compress-workspace.blp:59
 msgid "Open a PDF to save a smaller copy"
-msgstr ""
+msgstr "Väiksemahulisema koopa salvestamiseks ava PDF-fail"
 
 #: src/compress-workspace.blp:99
 msgid "Remove Unused Data"
-msgstr ""
+msgstr "Eemalda kasutamata andmed"
 
 #: src/compress-workspace.blp:100
 msgid "Discard unreferenced PDF objects"
-msgstr ""
+msgstr "Eemalda PDF-failist objektid, millele on viide puudu"
 
 #: src/compress-workspace.blp:105
 msgid "Remove Empty Streams"
-msgstr ""
+msgstr "Eemalda tühjad sisuvood"
 
 #: src/compress-workspace.blp:106
 msgid "Discard empty PDF data streams"
-msgstr ""
+msgstr "Eemalda PDF-failid leiduvad andmeteta sisuvood"
 
 #: src/extract-workspace.blp:40
 msgid "Extract Selected Pages"
-msgstr ""
+msgstr "Eralda valitud lehed"
 
 #: src/extract-workspace.blp:43 src/window/extract.rs:287
 msgid "Extract"
-msgstr ""
+msgstr "Eralda lehed"
 
 #: src/extract-workspace.blp:59
 msgid "Open a PDF to choose pages to extract"
-msgstr ""
+msgstr "Ava PDF-fail, millest tahad lehti eraldada"
 
 #: src/extract-workspace.blp:86 src/watermark-workspace.blp:114
 msgid "Pages"
-msgstr ""
+msgstr "Leheküljed"
 
 #: src/extract-workspace.blp:113 src/organize-workspace.blp:85
 msgid "List"
-msgstr ""
+msgstr "Loend"
 
 #: src/extract-workspace.blp:126 src/organize-workspace.blp:100
 msgid "Grid"
-msgstr ""
+msgstr "Ruudustik"
 
 #: src/merge-workspace.blp:23 src/merge-workspace.blp:72
 msgid "Add PDF Files"
-msgstr ""
+msgstr "Lisa PDF-faile"
 
 #: src/merge-workspace.blp:24 src/merge-workspace.blp:75
 #: src/window/merge.rs:192
 msgid "Add PDFs"
-msgstr ""
+msgstr "Lisa PDF-e"
 
 #: src/merge-workspace.blp:40
 msgid "Clear File List"
-msgstr ""
+msgstr "Kustuta faililoend"
 
 #: src/merge-workspace.blp:42
 msgid "Clear"
-msgstr ""
+msgstr "Kustuta"
 
 #: src/merge-workspace.blp:49
 msgid "Merge Selected PDFs"
-msgstr ""
+msgstr "Mesti valitud PDF-failid"
 
 #: src/merge-workspace.blp:52 src/window/merge.rs:208
 msgid "Merge"
-msgstr ""
+msgstr "Mesti"
 
 #: src/merge-workspace.blp:67
 msgid "No PDFs Added"
-msgstr ""
+msgstr "Ühtegi PDF-faili pole lisatud"
 
 #: src/merge-workspace.blp:68
 msgid "Add two or more PDFs to merge them"
-msgstr ""
+msgstr "Mestimiseks lisa kaks või enam PDF-faili"
 
 #: src/metadata-workspace.blp:40
 msgid "Save Metadata"
-msgstr ""
+msgstr "Salvesta metateave"
 
 #: src/metadata-workspace.blp:43 src/organize-workspace.blp:52
 #: src/window/metadata.rs:235 src/window/organize.rs:213
 msgid "Save"
-msgstr ""
+msgstr "Salvesta"
 
 #: src/metadata-workspace.blp:59
 msgid "Open a PDF to edit its metadata"
-msgstr ""
+msgstr "Ava PDF-fail tema metateabe muutmiseks"
 
 #: src/metadata-workspace.blp:99
 msgid "Title"
-msgstr ""
+msgstr "Pealkiri"
 
 #: src/metadata-workspace.blp:103
 msgid "Author"
-msgstr ""
+msgstr "Autor"
 
 #: src/metadata-workspace.blp:107
 msgid "Subject"
-msgstr ""
+msgstr "Teema"
 
 #: src/metadata-workspace.blp:111
 msgid "Keywords"
-msgstr ""
+msgstr "Märksõnad"
 
 #: src/metadata-workspace.blp:132
 msgid "Creator"
-msgstr ""
+msgstr "Looja"
 
 #: src/metadata-workspace.blp:136
 msgid "Producer"
-msgstr ""
+msgstr "Tootja"
 
 #: src/organize-workspace.blp:40
 msgid "Reset Page Order"
-msgstr ""
+msgstr "Lähtesta lehtede järjestus"
 
 #: src/organize-workspace.blp:42
 msgid "Reset"
-msgstr ""
+msgstr "Lähtesta"
 
 #: src/organize-workspace.blp:49 src/window/organize.rs:212
 msgid "Save Organized PDF"
-msgstr ""
+msgstr "Salvesta ümberkorraldatud PDF-fail"
 
 #: src/organize-workspace.blp:68
 msgid "Open a PDF to reorder or remove pages"
-msgstr ""
+msgstr "Ava PDF-fail tema lehtede eraldamiseks või nende järjekorra muutmiseks"
 
 #: src/password-dialog.blp:5
 msgid "Password Required"
-msgstr ""
+msgstr "Salasõna on vajalik"
 
 #: src/password-dialog.blp:11
 msgid "Cancel"
-msgstr ""
+msgstr "Katkesta"
 
 #: src/password-dialog.blp:12
 msgid "Unlock"
-msgstr ""
+msgstr "Ava lukustus"
 
 #: src/password-dialog.blp:21
 msgid "Password"
-msgstr ""
+msgstr "Salasõna"
 
 #: src/password-dialog.blp:30 src/window/workspace.rs:907
 #: src/window/workspace.rs:919
 msgid "Invalid password"
-msgstr ""
+msgstr "Vigane või vale salasõna"
 
 #: src/split-workspace.blp:31
 msgid "Open Output Folder"
-msgstr ""
+msgstr "Ava väljundkaust"
 
 #: src/split-workspace.blp:33
 msgid "Open Folder"
-msgstr ""
+msgstr "Ava kaust"
 
 #: src/split-workspace.blp:40 src/window.rs:76 src/window.blp:68
 msgid "Split PDF"
-msgstr ""
+msgstr "Jaga PDF-fail kaheks"
 
 #: src/split-workspace.blp:43 src/window/split.rs:300
 msgid "Split"
-msgstr ""
+msgstr "Jaga kaheks"
 
 #: src/split-workspace.blp:59
 msgid "Open a PDF to choose where to split it"
-msgstr ""
+msgstr "Ava PDF-fail tema kaheks jagamiseks"
 
 #: src/split-workspace.blp:99
 msgid "Split After"
@@ -382,34 +385,34 @@ msgstr ""
 
 #: src/shortcuts-dialog.blp:6
 msgid "Shortcuts"
-msgstr ""
+msgstr "Kiirklahvid"
 
 #: src/shortcuts-dialog.blp:9
 msgctxt "shortcut window"
 msgid "Show Shortcuts"
-msgstr ""
+msgstr "Näita kiirklahve"
 
 #: src/shortcuts-dialog.blp:14
 msgctxt "shortcut window"
 msgid "Quit"
-msgstr ""
+msgstr "Välju"
 
 #: src/watermark-workspace.blp:40 src/watermark-workspace.blp:43
 #: src/window.rs:78 src/window.blp:82 src/window/watermark.rs:348
 msgid "Add Watermark"
-msgstr ""
+msgstr "Lisa vesimärk"
 
 #: src/watermark-workspace.blp:59
 msgid "Open a PDF to add an image watermark"
-msgstr ""
+msgstr "Ava PDF-fail, kuhu tahad vesimärki lisada"
 
 #: src/watermark-workspace.blp:99
 msgid "Watermark Image"
-msgstr ""
+msgstr "Vesimärgi pilt"
 
 #: src/watermark-workspace.blp:100 src/window/watermark.rs:429
 msgid "No image selected"
-msgstr ""
+msgstr "Ühtegi pilti pole valitud"
 
 #: src/watermark-workspace.blp:105
 msgid "Layer"
@@ -483,33 +486,33 @@ msgstr ""
 
 #: src/window.blp:116
 msgid "List View"
-msgstr ""
+msgstr "Loendivaade"
 
 #: src/window.blp:121
 msgid "Grid View"
-msgstr ""
+msgstr "Ruudustikuvaade"
 
 #: src/window.blp:144
 msgid "_Keyboard Shortcuts"
-msgstr ""
+msgstr "_Klaviatuuri kiirklahvid"
 
 #: src/window.blp:148
 msgid "_About Quire"
-msgstr ""
+msgstr "R_akenduse teave: Quire"
 
 #: src/window/compress.rs:156 src/window/extract.rs:242
 #: src/window/metadata.rs:210 src/window/organize.rs:193
 #: src/window/split.rs:273 src/window/watermark.rs:284
 msgid "Open"
-msgstr ""
+msgstr "Ava"
 
 #: src/window/compress.rs:176
 msgid "Save Compressed PDF"
-msgstr ""
+msgstr "Salvesta pakitud PDF-fail"
 
 #: src/window/compress.rs:220
 msgid "Compressed PDF saved"
-msgstr ""
+msgstr "Pakitud PDF-fail on salvestatud"
 
 #: src/window/compress.rs:262
 msgid "Compressing PDF…"
