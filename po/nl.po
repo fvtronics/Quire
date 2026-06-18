@@ -8,83 +8,91 @@ msgstr ""
 "Project-Id-Version: quire\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-06-06 20:32-0400\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"PO-Revision-Date: 2026-06-18 10:51+0000\n"
+"Last-Translator: Vistaus <vistaus@noreply.codeberg.org>\n"
+"Language-Team: Dutch <https://translate.codeberg.org/projects/quire/quire-ui/"
+"nl/>\n"
 "Language: nl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 2026.6.1\n"
 
 #: data/com.fvtronics.Quire.desktop.in:2
 #: data/com.fvtronics.Quire.metainfo.xml.in:7 src/window.blp:5
 #: src/window.blp:17 src/window.blp:23 src/window.blp:100
 msgid "Quire"
-msgstr ""
+msgstr "Quire"
 
 #: data/com.fvtronics.Quire.desktop.in:3
 #: data/com.fvtronics.Quire.metainfo.xml.in:8
 msgid "Combine and edit PDF files"
-msgstr ""
+msgstr "Combineer en bewerk pdf-bestanden"
 
 #: data/com.fvtronics.Quire.desktop.in:9
 msgid "PDF;Merge;Split;Extract;Organize;Watermark;"
 msgstr ""
+"Pdf;Samenvoegen;Splitsen;Extraheren;Opsplitsen;Ordenen;Organiseren;Watermerk;Combineren;"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:10
 msgid ""
 "Quire is a simple GNOME utility for working with local PDF files without a "
 "complex document suite."
 msgstr ""
+"Quire is een eenvoudige toepassing voor GNOME, waarmee u pdf-bestanden kunt "
+"bewerken, zonder daarvoor een complex programma nodig te hebben."
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:11
 msgid ""
 "Merge multiple PDFs, organize pages, extract page ranges, split documents, "
 "compress files, and edit metadata without sending them to an online service."
 msgstr ""
+"Combineer pdf-bestanden, orden pagina's, extraheer pagina's, splits "
+"documenten op, comprimeer bestanden en bewerk metagegevens. Alles gebeurt op "
+"uw computer, dus zónder online-dienst."
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:15
 msgid "Francisco Vásquez Cuevas"
-msgstr ""
+msgstr "Francisco Vásquez Cuevas"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:39
 msgid "Merge multiple PDF files into a single document"
-msgstr ""
+msgstr "Combineer meerdere pdf-bestanden tot één document"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:43
 msgid "Reorder and remove pages before saving a new PDF"
-msgstr ""
+msgstr "Order en verwijder pagina's alvorens op te slaan als nieuw pdf-bestand"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:47
 msgid "Extract selected pages into a new document"
-msgstr ""
+msgstr "Extraheer bepaalde pagina's om een nieuw document samen te stellen"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:51
 msgid "Split a PDF into multiple documents"
-msgstr ""
+msgstr "Splits een pdf-bestand op in meerdere"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:55
 msgid "Compress PDF files for smaller output"
-msgstr ""
+msgstr "Comprimeer pdf-bestanden om de bestandsgrootte te verkleinen"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:59
 msgid "View and edit PDF metadata"
-msgstr ""
+msgstr "Bekijk en bewerk pdf-metagegevens"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:63
 msgid "Add a watermark to specific PDF pages"
-msgstr ""
+msgstr "Voorzie bepaalde pagina's van een watermerk"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:75
 #: data/com.fvtronics.Quire.metainfo.xml.in:96
 #: data/com.fvtronics.Quire.metainfo.xml.in:125
 msgid "New"
-msgstr ""
+msgstr "Nieuw"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:77
 msgid "Add support for mobile window sizes"
-msgstr ""
+msgstr "Ondersteuning voor mobiele apparaten"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:79
 #: data/com.fvtronics.Quire.metainfo.xml.in:87
@@ -93,39 +101,41 @@ msgstr ""
 #: data/com.fvtronics.Quire.metainfo.xml.in:116
 #: data/com.fvtronics.Quire.metainfo.xml.in:129
 msgid "Changes"
-msgstr ""
+msgstr "Wijzigingslog"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:81
 msgid "Improve app responsiveness when resizing it"
-msgstr ""
+msgstr "Verbeterde prestaties tijdens het aanpassen van de venstergrootte"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:89
 msgid "Fixed missing icons and previews in some environments"
 msgstr ""
+"Opgelost: ontbrekende pictogrammen en voorvertoningen in sommige "
+"werkomgevingen"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:90
 msgid "Improved touchscreen support"
-msgstr ""
+msgstr "Verbeterd: touchscreenondersteuning"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:98
 msgid "Added a Watermark section"
-msgstr ""
+msgstr "Nieuw: watermerksectie"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:102
 msgid "Improved feedback when fields need attention"
-msgstr ""
+msgstr "Verbeterd: feedback bij velden die aandacht nodig hebben"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:110
 msgid "Improved icon scalability and shadows"
-msgstr ""
+msgstr "Verbeterd: schaalbaarheid van pictogrammen en schaduwen"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:118
 msgid "Rename app from Folios to Quire"
-msgstr ""
+msgstr "Nieuw: de toepassing heet voortaan Quire in plaats van Folios"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:119
 msgid "Modify app icon"
-msgstr ""
+msgstr "Verbeterd: toepassingspictogram"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:127
 msgid ""
