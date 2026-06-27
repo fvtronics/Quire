@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: quire\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-06-06 20:32-0400\n"
-"PO-Revision-Date: 2026-06-14 20:08+0000\n"
+"PO-Revision-Date: 2026-06-28 11:07+0000\n"
 "Last-Translator: Priit Jõerüüt <jrtcdbrg@noreply.codeberg.org>\n"
 "Language-Team: Estonian <https://translate.codeberg.org/projects/quire/quire-"
 "ui/et/>\n"
@@ -40,44 +40,50 @@ msgid ""
 "Quire is a simple GNOME utility for working with local PDF files without a "
 "complex document suite."
 msgstr ""
+"Quire on lihtne GNOME'i tarvik, mis aitab teha lihtsamaid toiminguid "
+"kohalike PDF-failidega ilma keeruka tarkvara kasutamiseta."
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:11
 msgid ""
 "Merge multiple PDFs, organize pages, extract page ranges, split documents, "
 "compress files, and edit metadata without sending them to an online service."
 msgstr ""
+"Mesti mitu PDF-faili üheks, halda lehti, jaga dokumente tükkideks, paki "
+"faile kokku ja muuda metateavet ilma neid edastamata võrguteenusele."
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:15
 msgid "Francisco Vásquez Cuevas"
-msgstr ""
+msgstr "Francisco Vásquez Cuevas"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:39
 msgid "Merge multiple PDF files into a single document"
-msgstr ""
+msgstr "Mesti mitu PDF-faili üheks dokumendiks"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:43
 msgid "Reorder and remove pages before saving a new PDF"
 msgstr ""
+"Muuda lehtede järjestust ja eemalda lehti ning salvesta tulemus uue PDF-"
+"failina"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:47
 msgid "Extract selected pages into a new document"
-msgstr ""
+msgstr "Eralda valitud lehed uueks dokumendiks"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:51
 msgid "Split a PDF into multiple documents"
-msgstr ""
+msgstr "Jaga PDF-fail mitmeks dokumendiks"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:55
 msgid "Compress PDF files for smaller output"
-msgstr ""
+msgstr "Tihenda ja paki PDF-fail väiksemaks"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:59
 msgid "View and edit PDF metadata"
-msgstr ""
+msgstr "Vaata ja muuda PDF-faili metateavet"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:63
 msgid "Add a watermark to specific PDF pages"
-msgstr ""
+msgstr "Lisa vesimärk PDF-faili konkreetsetele lehtedele"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:75
 #: data/com.fvtronics.Quire.metainfo.xml.in:96
@@ -100,40 +106,42 @@ msgstr "Muudatused"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:81
 msgid "Improve app responsiveness when resizing it"
-msgstr ""
+msgstr "Rakendus reageerib paremini selle suuruse muutmisel"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:89
 msgid "Fixed missing icons and previews in some environments"
-msgstr ""
+msgstr "Lisaime puuduolevad ikoonid ja eelvaated mõnede keskkondade puhul"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:90
 msgid "Improved touchscreen support"
-msgstr ""
+msgstr "Parandasime puuteekraani tuge"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:98
 msgid "Added a Watermark section"
-msgstr ""
+msgstr "Lisasime vesimärkide kasutamise võimaluse"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:102
 msgid "Improved feedback when fields need attention"
-msgstr ""
+msgstr "Parandasime teavitusi, kui mõni andmeväli vajab regaarimist"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:110
 msgid "Improved icon scalability and shadows"
-msgstr ""
+msgstr "Parandasime ikoonide skaleeritavust ja varjutamist"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:118
 msgid "Rename app from Folios to Quire"
-msgstr ""
+msgstr "Muutsime rakenduse nime: Folios on nüüd Quire"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:119
 msgid "Modify app icon"
-msgstr ""
+msgstr "Kohendasime rakenduse ikooni"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:127
 msgid ""
 "Added an undo action for clearing the document list in the merge section"
 msgstr ""
+"Lisasime võimaluse mestimisvaate dokumentide loendi kustutamist tagasi "
+"pöörata"
 
 #: data/com.fvtronics.Quire.metainfo.xml.in:131
 msgid "Improved app usability in small windows"
@@ -368,20 +376,20 @@ msgstr "Ava PDF-fail tema kaheks jagamiseks"
 
 #: src/split-workspace.blp:99
 msgid "Split After"
-msgstr ""
+msgstr "Poolita pärast"
 
 #: src/split-workspace.blp:103 src/watermark-workspace.blp:118
 #: src/window/split.rs:144 src/window/watermark.rs:161
 msgid "Specific Pages"
-msgstr ""
+msgstr "Konkreetsed lehed"
 
 #: src/split-workspace.blp:124 src/window/split.rs:145
 msgid "Every N Pages"
-msgstr ""
+msgstr "Iga N lehe järel"
 
 #: src/split-workspace.blp:145
 msgid "Output Name Prefix"
-msgstr ""
+msgstr "Väljundnime prefiks"
 
 #: src/shortcuts-dialog.blp:6
 msgid "Shortcuts"
@@ -416,73 +424,73 @@ msgstr "Ühtegi pilti pole valitud"
 
 #: src/watermark-workspace.blp:105
 msgid "Layer"
-msgstr ""
+msgstr "Ülekattekiht"
 
 #: src/watermark-workspace.blp:109
 msgid "Opacity"
-msgstr ""
+msgstr "Läbipaistmatus"
 
 #: src/watermark-workspace.blp:110
 msgid "Percent"
-msgstr ""
+msgstr "Protsent"
 
 #: src/window.rs:72 src/window.blp:47 src/window.blp:106
 msgid "Merge PDFs"
-msgstr ""
+msgstr "Mesti PDF-failid"
 
 #: src/window.rs:74 src/window.blp:54
 msgid "Organize Pages"
-msgstr ""
+msgstr "Halda lehti"
 
 #: src/window.rs:75 src/window.blp:61
 msgid "Extract Pages"
-msgstr ""
+msgstr "Eralda lehti"
 
 #: src/window.rs:77 src/window.blp:89
 msgid "Edit Metadata"
-msgstr ""
+msgstr "Muuda metateavet"
 
 #: src/window.rs:84 src/window.blp:107 src/window/merge.rs:439
 msgid "No files selected"
-msgstr ""
+msgstr "Mitte ükski fail pole valitud"
 
 #: src/window.rs:90 src/window/compress.rs:268 src/window/extract.rs:464
 #: src/window/metadata.rs:330 src/window/organize.rs:406
 #: src/window/split.rs:432 src/window/watermark.rs:475
 msgid "No PDF selected"
-msgstr ""
+msgstr "Mitte ükski PDF-fail pole valitud"
 
 #: src/window.blp:30
 msgid "Main Menu"
-msgstr ""
+msgstr "Põhimenüü"
 
 #: src/window.blp:48
 msgid "Combine files"
-msgstr ""
+msgstr "Ühenda faile"
 
 #: src/window.blp:55
 msgid "Reorder or remove"
-msgstr ""
+msgstr "Muuda lehtede järjestust või eemalda lehti"
 
 #: src/window.blp:62
 msgid "Save page ranges"
-msgstr ""
+msgstr "Salvesta lehevahemik uue failina"
 
 #: src/window.blp:69
 msgid "Create separate files"
-msgstr ""
+msgstr "Loo eraldi failid"
 
 #: src/window.blp:76
 msgid "Reduce file size"
-msgstr ""
+msgstr "Vähenda faili suurust"
 
 #: src/window.blp:83
 msgid "Overlay an image"
-msgstr ""
+msgstr "Lisa pildiga ülekattekiht"
 
 #: src/window.blp:90
 msgid "Update document details"
-msgstr ""
+msgstr "Muuda dokumendi üksikasju"
 
 #: src/window.blp:116
 msgid "List View"
@@ -516,340 +524,340 @@ msgstr "Pakitud PDF-fail on salvestatud"
 
 #: src/window/compress.rs:262
 msgid "Compressing PDF…"
-msgstr ""
+msgstr "Pakin PDF-faili kokku…"
 
 #: src/window/compress.rs:264 src/window/extract.rs:460
 #: src/window/metadata.rs:326 src/window/organize.rs:402
 #: src/window/split.rs:428 src/window/watermark.rs:471
 msgid "Loading PDF…"
-msgstr ""
+msgstr "Laadin PDF-faili…"
 
 #: src/window/extract.rs:146
 msgid "Rotate Selected Pages"
-msgstr ""
+msgstr "Pööra valitud lehed"
 
 #: src/window/extract.rs:260 src/window/workspace.rs:899
 msgid "Choose at least one page"
-msgstr ""
+msgstr "Vali vähemalt üks leht"
 
 #: src/window/extract.rs:286
 msgid "Save Extracted Pages"
-msgstr ""
+msgstr "Salvesta eraldatud lehed"
 
 #: src/window/extract.rs:331
 msgid "Extracted pages saved"
-msgstr ""
+msgstr "Eraldatud lehed on salvestatud"
 
 #: src/window/extract.rs:458
 msgid "Extracting pages…"
-msgstr ""
+msgstr "Eraldan lehti…"
 
 #: src/window/extract.rs:487 src/window/extract.rs:544
 msgid "Select Page"
-msgstr ""
+msgstr "Vali leht"
 
 #: src/window/extract.rs:491 src/window/extract.rs:533
 #: src/window/organize.rs:657
 msgid "Page"
-msgstr ""
+msgstr "Leht"
 
 #: src/window/extract.rs:500 src/window/extract.rs:536
 #: src/window/workspace.rs:704
 msgid "Rotate Clockwise"
-msgstr ""
+msgstr "Pööra päripäeva"
 
 #: src/window/extract.rs:582 src/window/workspace.rs:739
 msgid "Rotate _Clockwise"
-msgstr ""
+msgstr "Pööra _päripäeva"
 
 #: src/window/extract.rs:586
 msgid "_Unselect"
-msgstr ""
+msgstr "_Eemalda valik"
 
 #: src/window/extract.rs:588
 msgid "_Select"
-msgstr ""
+msgstr "_Vali"
 
 #: src/window/merge.rs:132
 msgid "Rotate All Files"
-msgstr ""
+msgstr "Pööra kõik lehed"
 
 #: src/window/merge.rs:192
 msgid "Add"
-msgstr ""
+msgstr "Lisa"
 
 #: src/window/merge.rs:207
 msgid "Save Merged PDF"
-msgstr ""
+msgstr "Salvesta mestitud PDF-fail"
 
 #: src/window/merge.rs:300
 msgid "Merged PDF saved"
-msgstr ""
+msgstr "Mestitud PDF-fail on salvestatud"
 
 #: src/window/merge.rs:434
 msgid "Merging PDFs…"
-msgstr ""
+msgstr "Mestin PDF-faile…"
 
 #: src/window/merge.rs:436
 msgid "Loading PDFs…"
-msgstr ""
+msgstr "Laadin PDF-faile…"
 
 #: src/window/merge.rs:440
 #, rust-format
 msgid "1 PDF selected"
 msgid_plural "{} PDFs selected"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Valitud on 1 PDF-fail"
+msgstr[1] "Valitud on {} PDF-faili"
 
 #: src/window/merge.rs:538 src/window/organize.rs:520
 msgid "Du_plicate"
-msgstr ""
+msgstr "Tee to_peltfail"
 
 #: src/window/merge.rs:621
 msgid "PDF removed"
-msgstr ""
+msgstr "PDF-fail on eemaldatud"
 
 #: src/window/merge.rs:663
 msgid "Merge list cleared"
-msgstr ""
+msgstr "Mestimisloendi sisu on kustutatud"
 
 #: src/window/metadata.rs:21
 msgid "Enter keywords separated by commas."
-msgstr ""
+msgstr "Sisesta komadega eraldatud märksõnad."
 
 #: src/window/metadata.rs:133
 msgid "Producer will be replaced when saving"
-msgstr ""
+msgstr "Salvestamisel muutub ka faili vormistanud rakenduse nimi"
 
 #: src/window/metadata.rs:234
 msgid "Save PDF Metadata"
-msgstr ""
+msgstr "Salvesta PDF-faili metateave"
 
 #: src/window/metadata.rs:279
 msgid "PDF metadata saved"
-msgstr ""
+msgstr "PDF-faili metateave on salvestatud"
 
 #: src/window/metadata.rs:324
 msgid "Saving metadata…"
-msgstr ""
+msgstr "Salvestan metateavet…"
 
 #: src/window/metadata.rs:389
 msgid "N/A"
-msgstr ""
+msgstr "pole teade"
 
 #: src/window/organize.rs:133
 msgid "Rotate All Pages"
-msgstr ""
+msgstr "Pööra kõik lehed"
 
 #: src/window/organize.rs:253
 msgid "Page order reset"
-msgstr ""
+msgstr "Lähtesta lehtede järjestus"
 
 #: src/window/organize.rs:274
 msgid "Organized PDF saved"
-msgstr ""
+msgstr "Ümberkorraldatud PDF-fail on salvestatud"
 
 #: src/window/organize.rs:400
 msgid "Organizing pages…"
-msgstr ""
+msgstr "Korraldan faili ümber…"
 
 #: src/window/organize.rs:421
 msgid "Position"
-msgstr ""
+msgstr "Asukoht"
 
 #: src/window/organize.rs:516
 msgid "Insert _Blank Page After"
-msgstr ""
+msgstr "Lisa _tühi leht enne"
 
 #: src/window/organize.rs:604
 msgid "Page removed"
-msgstr ""
+msgstr "Leht on eemaldatud"
 
 #: src/window/organize.rs:655
 msgid "Blank Page"
-msgstr ""
+msgstr "Tühi leht"
 
 #: src/window/split.rs:141
 msgid "Every Page"
-msgstr ""
+msgstr "Iga leht"
 
 #: src/window/split.rs:142
 msgid "Even Pages"
-msgstr ""
+msgstr "Paaris lehed"
 
 #: src/window/split.rs:143
 msgid "Odd Pages"
-msgstr ""
+msgstr "Paaritud lehed"
 
 #: src/window/split.rs:300
 msgid "Choose Output Folder"
-msgstr ""
+msgstr "Vali väljundkaust"
 
 #: src/window/split.rs:345
 msgid "Split PDFs saved"
-msgstr ""
+msgstr "Tükkideks jagatud PDF-failid on salvestatud"
 
 #: src/window/split.rs:426
 msgid "Splitting PDF…"
-msgstr ""
+msgstr "Jagan PDF-faili tükkideks…"
 
 #: src/window/workspace.rs:230
 msgid "_Undo"
-msgstr ""
+msgstr "Pööra tegev_us tagasi"
 
 #: src/window/workspace.rs:517
 msgid "Modern PDF Format"
-msgstr ""
+msgstr "Moodne PDF-vorming"
 
 #: src/window/workspace.rs:518
 msgid "Save with PDF 1.5 object streams"
-msgstr ""
+msgstr "Salvestamisel kasuta PDF 1.5 versiooni objektivoogude loogikat"
 
 #: src/window/workspace.rs:523
 msgid "Remove Metadata"
-msgstr ""
+msgstr "Eemalda metaandmed"
 
 #: src/window/workspace.rs:524
 msgid "Remove existing metadata before saving"
-msgstr ""
+msgstr "Enne salvestamist eemalda olemasolevad metaandmed"
 
 #: src/window/workspace.rs:533
 msgid "Normalize Page Size"
-msgstr ""
+msgstr "Normaliseeri lehe mõõt"
 
 #: src/window/workspace.rs:534
 msgid "Resize output pages to the largest page size"
-msgstr ""
+msgstr "Muuda kõikide lehtede suurust suurime lehe mõõdu alusel"
 
 #: src/window/workspace.rs:556
 msgid "Could not open output"
-msgstr ""
+msgstr "Väljundi avamine ei õnnestunud"
 
 #: src/window/workspace.rs:694
 msgid "Move Up"
-msgstr ""
+msgstr "Nihuta ülespoole"
 
 #: src/window/workspace.rs:699
 msgid "Move Down"
-msgstr ""
+msgstr "Nihuta allapoole"
 
 #: src/window/workspace.rs:708
 msgid "Remove"
-msgstr ""
+msgstr "Eemalda"
 
 #: src/window/workspace.rs:727
 msgid "Move _Up"
-msgstr ""
+msgstr "Nihuta _ülespoole"
 
 #: src/window/workspace.rs:733
 msgid "Move _Down"
-msgstr ""
+msgstr "Nihuta _allapoole"
 
 #: src/window/workspace.rs:745
 msgid "_Remove"
-msgstr ""
+msgstr "_Eemalda"
 
 #: src/window/workspace.rs:898
 msgid "Choose at least two PDFs"
-msgstr ""
+msgstr "Vali vähemalt kaks PDF-faili"
 
 #: src/window/workspace.rs:901
 msgid "Choose a different output file"
-msgstr ""
+msgstr "Vali mõnu muu väljundfail"
 
 #: src/window/workspace.rs:904
 msgid "Could not open PDF"
-msgstr ""
+msgstr "PDF-faili avamine ei õnnestunud"
 
 #: src/window/workspace.rs:905 src/window/watermark.rs:308
 msgid "Could not open image"
-msgstr ""
+msgstr "Pildi avamine ei õnnestunud"
 
 #: src/window/workspace.rs:906 src/window/workspace.rs:918
 msgid "Password required"
-msgstr ""
+msgstr "Salasõna on vajalik"
 
 #: src/window/workspace.rs:908
 msgid "Could not process PDF"
-msgstr ""
+msgstr "PDF-faili töötlemine ei õnnestunud"
 
 #: src/window/workspace.rs:910
 msgid "Could not save PDF"
-msgstr ""
+msgstr "PDF-faili salvestamine ei õnnestunud"
 
 #: src/window/workspace.rs:912
 msgid "Could not finish operation"
-msgstr ""
+msgstr "Tegevuse lõpetamine ei õnnestunud"
 
 #: src/window/workspace.rs:920
 msgid "Could not preview PDF"
-msgstr ""
+msgstr "PDF-faili eelvaate kuvamine ei õnnestunud"
 
 #: src/window/ui.rs:32
 msgid "PDF Documents"
-msgstr ""
+msgstr "PDF-dokumendid"
 
 #: src/window/ui.rs:44
 msgid "Images"
-msgstr ""
+msgstr "Pildid"
 
 #: src/window/ui.rs:157
 #, rust-format
 msgid "Enter the password for {}."
-msgstr ""
+msgstr "Sisesta {} faili salasõna."
 
 #: src/window/ui.rs:317
 msgid "Enter page ranges like 1,3-5,8."
-msgstr ""
+msgstr "Sisesta lehevahemikud nagu 1,3-5,8."
 
 #: src/window/ui.rs:321
 msgid "Enter pages like 2,4,7."
-msgstr ""
+msgstr "Sisesta lehed nagu 2,4,7."
 
 #: src/window/ui.rs:325
 msgid "Enter a page count of 1 or more."
-msgstr ""
+msgstr "Sisesta 1 või enam lehte."
 
 #: src/window/ui.rs:337
 msgid "Size unavailable"
-msgstr ""
+msgstr "Mõõt pole saadaval"
 
 #: src/window/watermark.rs:146
 msgid "Foreground"
-msgstr ""
+msgstr "Esiplaanil"
 
 #: src/window/watermark.rs:146
 msgid "Background"
-msgstr ""
+msgstr "Tagaplaanil"
 
 #: src/window/watermark.rs:158
 msgid "All Pages"
-msgstr ""
+msgstr "Kõik lehed"
 
 #: src/window/watermark.rs:159
 msgid "First Page"
-msgstr ""
+msgstr "Esimene leht"
 
 #: src/window/watermark.rs:160
 msgid "Last Page"
-msgstr ""
+msgstr "Viimane leht"
 
 #: src/window/watermark.rs:299
 msgid "Choose Watermark Image"
-msgstr ""
+msgstr "Vali vesimärgina kasutatav pilt"
 
 #: src/window/watermark.rs:300
 msgid "Choose"
-msgstr ""
+msgstr "Vali"
 
 #: src/window/watermark.rs:347
 msgid "Save Watermarked PDF"
-msgstr ""
+msgstr "Salvesta vesimärgiga PDF-fail"
 
 #: src/window/watermark.rs:390
 msgid "Watermarked PDF saved"
-msgstr ""
+msgstr "Vesimärgiga PDF-fail on salvestatud"
 
 #: src/window/watermark.rs:469
 msgid "Adding watermark…"
-msgstr ""
+msgstr "Lisan vesimärki…"
