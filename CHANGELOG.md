@@ -1,10 +1,10 @@
-# v0.3.1
+# v0.3.2
 
 <p>New</p>
 <ul>
-  <li>Add support for mobile window sizes</li>
+  <li>Add estonian translation (thanks to Priit Jõerüüt)</li>
 </ul>
 <p>Changes</p>
 <ul>
-  <li>Improve app responsiveness when resizing it</li>
+  <li>Change app icon to higher quality version</li>
 </ul>

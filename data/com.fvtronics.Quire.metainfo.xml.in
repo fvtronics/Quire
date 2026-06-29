@@ -35,31 +35,31 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.1/data/screenshots/merge.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.2/data/screenshots/merge.png</image>
       <caption>Merge multiple PDF files into a single document</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.1/data/screenshots/organize.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.2/data/screenshots/organize.png</image>
       <caption>Reorder and remove pages before saving a new PDF</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.1/data/screenshots/extract.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.2/data/screenshots/extract.png</image>
       <caption>Extract selected pages into a new document</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.1/data/screenshots/split.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.2/data/screenshots/split.png</image>
       <caption>Split a PDF into multiple documents</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.1/data/screenshots/compress.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.2/data/screenshots/compress.png</image>
       <caption>Compress PDF files for smaller output</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.1/data/screenshots/metadata.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.2/data/screenshots/metadata.png</image>
       <caption>View and edit PDF metadata</caption>
     </screenshot>
     <screenshot>
-      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.1/data/screenshots/watermark.png</image>
+      <image>https://codeberg.org/fvtronics/quire/raw/tag/v0.3.2/data/screenshots/watermark.png</image>
       <caption>Add a watermark to specific PDF pages</caption>
     </screenshot>
   </screenshots>
@@ -70,6 +70,18 @@
   </branding>
 
   <releases>
+    <release version="0.3.2" date="2026-06-29">
+      <description>
+        <p>New</p>
+        <ul>
+          <li>Add estonian translation (thanks to Priit Jõerüüt)</li>
+        </ul>
+        <p>Changes</p>
+        <ul>
+          <li>Change app icon to higher quality version</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.1" date="2026-06-06">
       <description>
         <p>New</p>
@@ -117,18 +129,6 @@
         <ul>
           <li>Rename app from Folios to Quire</li>
           <li>Modify app icon</li>
-        </ul>
-      </description>
-    </release>
-    <release version="0.2.2" date="2026-06-03">
-      <description>
-        <p>New</p>
-        <ul>
-          <li>Added an undo action for clearing the document list in the merge section</li>
-        </ul>
-        <p>Changes</p>
-        <ul>
-          <li>Improved app usability in small windows</li>
         </ul>
       </description>
     </release>
