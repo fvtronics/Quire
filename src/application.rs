@@ -118,6 +118,7 @@ impl QuireApplication {
             .developer_name("Francisco Vásquez Cuevas")
             .version(VERSION)
             .developers(vec!["Francisco Vásquez Cuevas"])
+            .artists(vec!["Matthew Thu https://matthew-thu.netlify.app/"])
             .translator_credits(gettext("translator-credits"))
             .copyright("© 2026 Francisco Vásquez Cuevas")
             .website("https://fvtronics.com/en/projects/quire")
